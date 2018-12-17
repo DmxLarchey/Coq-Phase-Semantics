@@ -259,3 +259,5 @@ End Cut_Admissibility.
 
 Check ill_cut_elimination.
 Print Assumptions ill_cut_elimination.
+
+Recursive Extraction ill_cut_elimination.

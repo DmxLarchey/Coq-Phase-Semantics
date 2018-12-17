@@ -195,7 +195,7 @@
     \hfil$\displaystyle#3$
   \end{tabularx}$$}
 
-\title{Mechanizing Cut-Admissibility in Coq\\ via Relational Phase Semantics}
+\title{Mechanizing Cut-Elimination in Coq\\ via Relational Phase Semantics}
 \author{Dominique Larchey-Wendling}
 \institute{Université de Lorraine, LORIA, CNRS, Nancy, France}
 \date{Preuves de logique linéaire sur machine, ENS-Lyon, Dec. 18, 2018}
@@ -232,7 +232,13 @@
 \item formulas cannot be freely duplicated or discarded
   \begin{itemize}
   \item no weakening (C) or contraction rule (W)
-  \item exponentials re-introduce controlled C\&W
+  \item exponentials $\lbang A$ re-introduce controlled C\&W
+  \item generally undecidable
+  \end{itemize}
+\item Mechanized cut-elimination via phase semantics
+  \begin{itemize}
+  \item A relational phase semantics (no monoid)
+  \item via Okada's lemma, both in \Prop\ and \Type
   \end{itemize}
 \end{itemize}
 
@@ -324,8 +330,8 @@
   \infer1[W]         {\Gamma,  \seq B}
                      {\lbang A,\Gamma \seq B}
 %
-& \infer1[C]        {\lbang A,\Gamma \seq B}
-                    {\lbang A,\lbang A,\Gamma \seq \lbang B}
+& \infer1[C]        {\lbang A,\lbang A,\Gamma \seq B}
+                    {\lbang A,\Gamma \seq B}
 \end{tabular}}
 
 \vspace{0.5cm}
@@ -349,7 +355,7 @@ $$\infer1[\Gamma\cperm\Delta]{\Gamma\seq A}{\Delta\seq A}$$
   \end{itemize}
 \item Usual phase semantics based on
   \begin{itemize}
-  \item monoidal structure (contexts)
+  \item commutative monoidal structure (contexts)
   \item a stable closure
   \end{itemize}
 \item Relational phase semantics
@@ -391,7 +397,7 @@ $$\infer1[\Gamma\cperm\Delta]{\Gamma\seq A}{\Delta\seq A}$$
 
 \begin{frame}
 
-\frametitle{Relational Phase Sem.\ (exponential, soundness)}
+\frametitle{Rel.\ Phase Sem.\ (exponential, soundness)}
 
 \begin{itemize}
 \item Let $\set J \cdef \{x \mid x\in\cl\{\munit\} \wedge x\in\cl(x\mmult x)\}$
@@ -462,8 +468,8 @@ $$
                       {\Gamma, \Delta \pable A \ltime B}$$
 \item $\ulist{A\ltime B}\in\cl\{\ulist{A,B}\}$ iff
 $$
- \infer2[\text{for any $\Gamma,C$}]    {\Gamma \seq A}{B,\Delta \pable C}
-                      {A \limp B,\Gamma, \Delta\pable C}$$
+\infer1[\text{for any $\Gamma,C$}]   {A,B,\Gamma \seq C} 
+                      { A \ltime B, \Gamma\seq C}$$
 \item $\set K\subseteq\set J$ iff $\pable$ closed under \frule W and \frule C.
 \end{itemize}
 
@@ -475,7 +481,7 @@ $$
 
 \begin{itemize}
 \item For ${\pable}$ defined as ${\seq_{\textrm{cf}}}$ closed under cut-free ILL
-$$\forall A,\;\ulist A\in\sem A\subseteq\dc A\quad\text{and}\quad \forall\Gamma,\;\Gamma\in\sem\Gamma$$ 
+$$\fbox{$\forall A,\;\ulist A\in\sem A\subseteq\dc A$}\quad\text{and}\quad \forall\Gamma,\;\Gamma\in\sem\Gamma$$ 
 \item By induction on $A$, then by induction on $\Gamma$
 \item By soundness, from a (cut using) proof of $\Gamma\seq A$
   \begin{itemize}
@@ -490,15 +496,23 @@ $$\forall A,\;\ulist A\in\sem A\subseteq\dc A\quad\text{and}\quad \forall\Gamma,
 
 \begin{frame}
 
-\frametitle{Extensions, other logics}
+\frametitle{Extensions, other logics, cut-elimination}
 
 \begin{itemize}
-\item of course fragments of ILL, but also CLL
-\item ILL with modality, Linear time ILL
-\item Bunched Implications 
-\item Relevance logic, prop.\ Intuitionistic Logic
-\item Display calculi
-\item Phase semantics and contextual closure are very generic
+\item Extensions to other logics:
+  \begin{itemize}
+  \item of course fragments of ILL, but also CLL
+  \item ILL with modality, Linear time ILL
+  \item Bunched Implications (BI)
+  \item Relevance logic, prop.\ Intuitionistic Logic
+  \item Display calculi (context = consecutions)?
+  \end{itemize}
+\item Computational content
+  \begin{itemize}
+  \item Phase semantics, contextual closure very generic
+  \item $\coq{Prop} \rightsquigarrow \coq{Type}$ gives cut-elimination algo.
+  \item can be extracted (you do not want to read it...)
+  \end{itemize}
 \end{itemize}
 
 \end{frame}
