@@ -1,0 +1,507 @@
+\documentclass[xcolor=pdftex,graphicx=pdftex,12pt]{beamer}
+
+\usepackage[utf8]{inputenc}
+
+\usepackage{deduc}
+\usepackage{export}
+\usepackage{tree}
+\usepackage{domdeduc}
+
+\makeatletter
+
+\newbox\@tempboxb
+
+\def\centertwo#1#2{%
+  \bgroup
+  \setbox\@tempboxa\hbox{#1}%
+  \setbox\@tempboxb\hbox{#2}%
+  \@tempdima=\linewidth
+  \@tempdimb=\wd\@tempboxa
+  \advance\@tempdima-\@tempdimb
+  \@tempdimb=\wd\@tempboxb
+  \advance\@tempdima-\@tempdimb
+  \divide\@tempdima 3%
+  \hbox{\box\@tempboxa\hskip\@tempdima\box\@tempboxb}%
+  \egroup}
+
+\makeatother
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Macros for proof trees
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\vertcenter}[1]{\hbox{$\vcenter{\hbox{#1}}$}}
+
+\newcommand{\pftreesmacs}{%
+  \def\VC##1{\hbox{$\vcenter{\hbox{##1\unskip\buildproof{}}}$}}%
+  \def\CR##1##2{\createrule{##1}{$##2$}}%
+  \def\CA##1##2{\createaxiom{##1}{$##2$}}%
+}
+
+%\usepackage[pdftex]{graphicx}
+\DeclareGraphicsRule{*}{mps}{*}{}
+
+\newcommand\ofr[2]{\only<#1>{\includegraphics{th.#2}}}
+
+\usepackage{tabularx}
+
+\usepackage{amssymb,amsmath}
+\usepackage{latexsym,stmaryrd}
+\usepackage{mathtools}
+
+\usepackage{inferance}
+\renewcommand\frule[1]{\ensuremath{\langle#1\rangle}}
+
+\usepackage{color}
+\usepackage{url}
+
+\makeatletter
+\def\url@domistyle{%
+  \@ifundefined{selectfont}{\def\UrlFont{\sffamily}}{\def\UrlFont{\sffamily}}}
+\makeatother
+
+\newcommand{\TaH}{\text{\sf T\&H}}
+
+\newcommand{\fileurl}{https://github.com/DmxLarchey/Coq-Phase-Semantics}
+\newcommand{\filename}[1]{{\href{\fileurl/#1}{\sffamily #1}}}
+%\newcommand{\filename}[1]{{\urlstyle{domi}\nolinkurl{#1}}}
+
+\newcommand{\coq}[1]{\ensuremath{\mathalpha{\mathtt{#1}}}}
+
+\newcommand{\mathbinop}[3]{\mathop{\mathop{#1}{#2}}{#3}}
+
+\newcommand{\cst}[1]{\coq{cst}_{#1}}
+\newcommand{\zero}{\coq{zero}}
+\newcommand{\suc}{\coq{succ}}
+\newcommand{\proj}[1]{\coq{proj}_{#1}}
+\newcommand{\comp}{\mathbinop{\coq{comp}}} 
+\newcommand{\rec}{\mathbinop{\coq{rec}}}
+\newcommand{\umin}{\mathop{\coq{min}}}
+\newcommand{\ra}[1]{\mathcal{A}_{#1}}
+
+\newcommand{\ot}{\mathrel{:}}
+\newcommand{\nat}{\coq{nat}}
+\newcommand{\pos}{\mathop{\coq{pos}}}
+
+\newcommand{\fst}{\coq{fst}}
+\newcommand{\nxt}[1]{\mathalpha{\coq{nxt}\,{#1}}}
+%\newcommand{\vect}{\mathbinop{\coq{vec}}}
+\newcommand{\vect}[2]{#1^{#2}}
+\newcommand{\pton}[1]{\mathalpha{\overline{#1}}}
+
+%\newcommand{\vnil}{\coq{vnil}}
+\newcommand{\vcons}{{\#}}
+\newcommand{\coord}[2]{#1_{#2}}
+\newcommand{\sem}[1]{\llbracket{#1}\rrbracket}
+\newcommand{\us}{\_}
+
+\newcommand{\NN}{\ensuremath{\mathbb N}}
+\newcommand{\pfun}{\mathbin{{-}\mskip -3mu{\rightharpoondown}}}
+\renewcommand{\pfun}{\mathbin{\rightharpoondown}}
+\newcommand{\fun}{\mathbin{{-}\mskip -3mu{\rightarrow}}}
+
+\newcommand{\cfun}{\mathbin{\rightarrow}}
+\newcommand{\Prop}{\coq{Prop}}
+\newcommand{\Set}{\coq{Set}}
+\newcommand{\Type}{\coq{Type}}
+\newcommand{\cdef}{\mathrel{\mathtt{:=}}}
+\newcommand{\mt}{\mathrel{\mapsto}}
+%\newcommand{\ctimes}{\mathbin{\mathtt{*}}}
+\newcommand{\ctimes}{\mathbin{\times}}
+\newcommand{\cF}{\coq{False}}
+\newcommand{\cT}{\coq{True}}
+\newcommand{\dect}{\coq{decidable\_t}}
+\newcommand{\Acc}{\coq{Acc}}
+\newcommand{\cmid}{\mathrel{\&}}
+\newcommand{\iter}[1]{\ensuremath{\mathit{f}^{#1}}}
+
+\renewcommand{\leq}{\mathrel{\leqslant}}
+%\newcommand{\lnot}{\mathop{\neg}}
+\newcommand{\conj}{\mathrel{\wedge}}
+\newcommand{\disj}{\mathrel{\vee}}
+\renewcommand{\iff}{\mathrel\Longleftrightarrow}
+\renewcommand{\implies}{\mathrel\Rightarrow}
+\newcommand{\seq}{\mathrel\vdash}
+
+\newcommand{\eqdec}{\mathrel{=^?_X}}
+\newcommand{\goal}[1]{\ensuremath{\mathbb{\color{teal}G}^?_{#1}}}
+
+\newcommand{\bargen}[1]{\mathalpha{\coq{bar}_{\coq{#1}}}}
+\newcommand{\cbar}{\mathalpha{\coq{bar}}}
+\newcommand{\bartl}{\cbar}
+\newcommand{\barth}{\cbar}
+\newcommand{\barin}{\bargen{in}}
+\newcommand{\barpe}{\bargen{pe}}
+\newcommand{\cS}{\coq{S}}
+
+\newcommand{\extract}{\textsc{extr}}
+
+\newcommand{\carrowlft}{\mbox{${-}\mskip -4mu{\lbrack}$}}
+%\newcommand{\carrowrt}{\mbox{$\rbrack\mskip -9mu\rightarrow$}}
+\newcommand{\carrowrt}{\mbox{${\rangle}\mskip -4mu{\rangle}$}}
+
+\DeclarePairedDelimiter{\carrow}{\carrowlft}{\carrowrt}
+\DeclarePairedDelimiter{\brackets}{\lbrack}{\rbrack}
+
+\newcommand{\bstep}[4]{\brackets{{#2};{#3}}\mathrel{#1}#4}
+\newcommand{\cwoc}[4]{\bstep\rightsquigarrow{#1}{#2}{#4}}
+\newcommand{\cwc}[4]{\bstep{\carrow{#3}}{#1}{#2}{#4}}
+
+\newcommand{\lwith}{\mathbin{\text{\upshape \&}}}
+\newcommand{\lpar}{\mathbin{\bindnasrepma}}
+\newcommand{\lplus}{\mathbin{\varoplus}}
+\newcommand{\ltime}{\mathbin{\varotimes}}
+\newcommand{\lunit}{\mathalpha{\epsilon}}
+\newcommand{\limp}{\mathbin{\multimap}}
+
+\newcommand{\ltop}{\mathalpha{\top}}
+\newcommand{\lbot}{\mathalpha{\bot}}
+\newcommand{\lbang}{\mathop{!}}
+
+\newcommand{\cperm}{\mathrel{\sim_p}}
+\newcommand{\cl}{\mathop{\mathrm{cl}}}
+\newcommand{\mmult}{\mathbin{\bullet}}
+\newcommand{\mimp}{\mathbin{\multimap\mskip -14mu\bullet}}
+\newcommand{\munit}{\mathalpha{\mathsf e}}
+\newcommand{\mcomp}[3]{{#1}\mmult{#2}\mathop{\triangleright}{#3}}
+%\newcommand{\sem}[1]{\mathopen{\llbracket}#1\mathclose{\rrbracket}}
+\newcommand{\set}[1]{\mathcal{#1}}
+
+\newcommand{\pable}{\mathrel{\models}}
+
+
+\newcommand{\leftcoqspace}{\hskip 0.0em}
+
+\def\displayedcoq{$$\hbox to \textwidth\bgroup\leftcoqspace$\displaystyle}
+\def\enddisplayedcoq{$\hfil\egroup$$}
+%\newenvironment{displayedcoq}
+%  {$$\hbox to \textwidth\bgroup\leftcoqspace$\displaystyle}
+%  {$\hfil\egroup$$}
+
+\newcommand{\onelinethmold}[2]{%
+  $$\begin{tabularx}{\textwidth}{>{$\displaystyle}X<{$\hfil}}%
+    \coq{#1}~~#2
+  \end{tabularx}$$}
+
+\newcommand{\onelinethm}[2]
+  {$$\hbox to \textwidth\bgroup$\displaystyle\begin{array}{@{\leftcoqspace}l}\coq{#1}~~#2\end{array}$\hfil\egroup$$}
+
+\newcommand{\twolinesinductive}[2]{%
+  \onelinethm{Inductive}{#1\\[0.4ex]\qquad|~#2}}
+
+\newcommand{\displayedthm}[3]{%
+  $$\begin{tabularx}{\textwidth}{@{}>{\leftcoqspace}X<{\hfil}}
+    $\displaystyle\coq{#1}~~#2$\\[0.4ex]
+    \hfil$\displaystyle#3$
+  \end{tabularx}$$}
+
+\title{Mechanizing Cut-Admissibility in Coq\\ via Relational Phase Semantics}
+\author{Dominique Larchey-Wendling}
+\institute{Université de Lorraine, LORIA, CNRS, Nancy, France}
+\date{Preuves de logique linéaire sur machine, ENS-Lyon, Dec. 18, 2018}
+
+\newcommand\badcolor{\color{red}}
+\newcommand\goodcolor{\color{blue}}
+
+%\usetheme{Warsaw}
+%\usetheme{Madrid}
+\usetheme{Goettingen}
+
+\begin{document}
+
+\begin{frame}\titlepage\end{frame}
+
+\section{Introduction to ILL}
+
+\begin{frame}
+
+\frametitle{Overview of the talk}
+
+\begin{itemize}
+\item Linear logic introduced by Girard
+  \begin{itemize}
+  \item both classical and intuitionistic
+  \end{itemize}
+\item ILL via its sequent calculus
+  \begin{itemize}
+  \item separate multiplicatives (${\ltime},{\limp},{\lunit}$)
+  \item from additives (${\lwith},{\lplus},\lbot, \ltop$)
+  \item multiplicatives split the context
+  \item additives share the context
+  \end{itemize}
+\item formulas cannot be freely duplicated or discarded
+  \begin{itemize}
+  \item no weakening (C) or contraction rule (W)
+  \item exponentials re-introduce controlled C\&W
+  \end{itemize}
+\end{itemize}
+
+\end{frame}
+
+\section{Sequent calculus}
+
+\begin{frame}
+  
+\frametitle{ILL sequent calculus (multiplicatives)}
+
+\centerline{%
+\begin{tabular}{cc}
+  \infer1[\ltime_L]   {A,B,\Gamma \seq C} 
+                      { A \ltime B, \Gamma\seq C}
+& \infer2[\ltime_R]   {\Gamma \seq A}{\Delta \seq B}
+                      {\Gamma, \Delta \seq A \ltime B} \\
+%
+  \infer2[\limp_L]    {\Gamma \seq A}{B,\Delta \seq C}
+                      {A \limp B,\Gamma, \Delta\seq C}
+& \infer1[\limp_R]    {\Gamma, A \seq B}
+                      {\Gamma \seq A \limp B} \\
+%
+  \infer1[\lunit_L]   {\Gamma \seq A}
+                      {\lunit,\Gamma \seq A}
+&  \infer0[\lunit_R]   {\seq \lunit}\\
+%
+\end{tabular}}
+
+\end{frame}
+
+\begin{frame}
+  
+\frametitle{ILL sequent calculus (additives)}
+
+\centerline{%
+\begin{tabular}{cc}
+%
+  \infer1[\lwith^1_L] {A,\Gamma \seq C}
+                      {A \lwith B,\Gamma\seq C}
+%
+& \infer1[\lwith^2_L] {B,\Gamma \seq C}
+                      {A \lwith B, \Gamma\seq C}\\
+%
+  \infer2[\lwith_R]   {\Gamma \seq A}{\Gamma \seq B}
+                      {\Gamma \seq A \lwith B}
+%
+&  \infer2[\lplus_L]  {A,\Gamma\seq C}{B,\Gamma\seq C}
+                      {A \lplus B,\Gamma\seq C}\\
+%
+  \infer1[\lplus^1_R] {\Gamma \seq A}
+                      {\Gamma \seq A\lplus B}
+%
+& \infer1[\lplus^2_R] {\Gamma \seq B}
+                      {\Gamma \seq A\lplus B}\\
+%
+  \infer0[\lbot_L]    {\Gamma, \lbot \seq A} 
+%
+&  \infer0[\ltop_R]    {\Gamma \seq \ltop} \\
+%
+%
+\end{tabular}}
+
+\end{frame}
+
+\begin{frame}
+  
+\frametitle{ILL (exponentials and structural)}
+
+\centerline{%
+\begin{tabular}{cc}
+%
+  \infer1[\lbang_L] {A,\Gamma,  \seq B}
+                     {\lbang A,\Gamma \seq B}
+%
+& \infer1[\lbang_R] {\lbang\Gamma \seq A}
+                    {\lbang\Gamma \seq \lbang A}
+\end{tabular}}
+
+\vspace{1cm}
+
+\centerline{%
+\begin{tabular}{cc}
+  \infer0[\text{id}]  {A \seq A}  
+%
+& \infer2[\text{cut}] {\Gamma  \seq A}{A,\Delta\seq B}
+                      {\Gamma, \Delta \seq B} \\[2ex]
+%
+  \infer1[W]         {\Gamma,  \seq B}
+                     {\lbang A,\Gamma \seq B}
+%
+& \infer1[C]        {\lbang A,\Gamma \seq B}
+                    {\lbang A,\lbang A,\Gamma \seq \lbang B}
+\end{tabular}}
+
+\vspace{0.5cm}
+
+$$\infer1[\Gamma\cperm\Delta]{\Gamma\seq A}{\Delta\seq A}$$
+
+\end{frame}
+
+\section{Phase semantics}
+
+\begin{frame}
+
+\frametitle{Relational Phase semantics (overview)}
+
+\begin{itemize}
+\item It is an algebraic semantics
+  \begin{itemize}
+  \item Comparable to Lindenbaum construction
+  \item Interpret formula by ``themselves'' (completeness)
+  \item {\bf does not require \frule{cut}} (cut-admissibility)
+  \end{itemize}
+\item Usual phase semantics based on
+  \begin{itemize}
+  \item monoidal structure (contexts)
+  \item a stable closure
+  \end{itemize}
+\item Relational phase semantics
+  \begin{itemize}
+  \item a composition relation (no axiom)
+  \item closure axioms absord the monoidal structure
+  \end{itemize}
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}
+
+\frametitle{Relational Phase Semantics (details)}
+
+\begin{itemize}
+\item Closure $\cl: (M\cfun\Prop)\cfun (M\cfun\Prop)$ 
+  \begin{itemize}
+  \item with predicates $\set X,\set Y:M\cfun\Prop$
+  $$\set X\subseteq\cl \set X\quad \set X\subseteq \set Y\cfun \cl{\set X}\subseteq \cl{\set Y}\quad\cl(\cl\set X)\subseteq \cl \set X$$
+  \end{itemize}
+\item Composition ${\mmult}: M\cfun M\cfun M\cfun\Prop$, $\munit: M$
+  \begin{itemize}
+  \item extended to predicates $M\cfun\Prop$ by
+  $$ \begin{array}{rcl}
+     \set X\mmult \set Y & \cdef & \bigcup\{x\mmult y\mid x\in\set X, y\in\set Y\}\\ 
+     \set X\mimp \set Y & \cdef & \{ z\mid z\mmult \set X\subseteq\set Y\}
+   \end{array}$$
+  \item $x\in\cl(\munit\mmult x)$ \quad (neutral1)
+  \item $\munit\mmult x \subseteq \cl\{x\}$ \quad (neutral2)
+  \item $x\mmult y\subseteq \cl(y\mmult x)$ \quad (commutativity)
+  \item $x\mmult(y\mmult z)\subseteq\cl((x\mmult y)\mmult z)$ \quad (associativity)
+  \end{itemize}
+\medskip
+\item Stability: $(\cl\set X)\mmult\set Y\subseteq\cl(\set X\mmult\set Y)$
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}
+
+\frametitle{Relational Phase Sem.\ (exponential, soundness)}
+
+\begin{itemize}
+\item Let $\set J \cdef \{x \mid x\in\cl\{\munit\} \wedge x\in\cl(x\mmult x)\}$
+\item Choose $\set K\subseteq \set J$ such that $\munit\in\cl\set K$ and $\set K\mmult\set K\subseteq\set K$ 
+\item Semantics for variables: $\sem\cdot:\mathsf{Var}\cfun M\cfun\Prop$
+  \begin{itemize}
+  \item which is closed: $\cl\sem{V}\subseteq \sem V$
+  \item extended to formulas
+  \end{itemize} 
+\end{itemize}
+
+\vspace{-0.5cm}
+
+$$
+\begin{array}{c}
+\sem{A\ltime B}\cdef\cl(\sem A\mmult\sem B)\quad \sem{A\limp B}\cdef \sem A\mimp\sem B\\[1ex]
+\sem{A\lwith B}\cdef \sem A\cap\sem B \quad \sem{A\lplus B}\cdef \cl(\sem A\cup\sem B)\\[1ex]
+\sem{\lbot}\cdef \cl\emptyset\quad \sem\ltop\cdef M\quad \sem\lunit\cdef\cl\{\munit\}\\[1ex]
+\sem{\lbang A} \cdef \cl(\set K\cap\sem A)\quad \sem{\Gamma_1,\ldots,\Gamma_n}\cdef\sem{\Gamma_1\ltime\cdots\ltime\Gamma_n}
+\end{array}
+$$
+
+\begin{itemize}
+\item Soundness: if $\Gamma\seq A$ has a proof then $\sem\Gamma\subseteq\sem A$
+\end{itemize}
+
+\end{frame}
+
+\section{Cut-admissibility}
+
+\newcommand{\ulist}[1]{\lfloor#1\rfloor}
+
+\begin{frame}
+
+\frametitle{Relational Phase Sem.\ (cut-admissibility)}
+
+
+\begin{itemize}
+\item A syntactic model  $M\cdef \coq{list}~\mathsf{Form}$
+\item for $\Gamma,\Delta,\Theta\in M$
+$$\Theta\in \Gamma\mmult \Delta \quad\iff\quad\ulist{\Gamma,\Delta}\cperm\Theta$$
+\item $\set K\cdef \{\lbang\Gamma\mid\Gamma\in M\}$ ($\emptyset\in\set K$ and $\set K\mmult\set K\subseteq\set K$)
+\item \emph{contextual closure}  $\cl: (M\cfun\Prop)\cfun (M\cfun\Prop)$ 
+$$\Delta\in\cl\set X\quad\iff\quad \fbox{$\forall\,\Gamma\,A,\;\set X,\Gamma\pable A\cfun \Delta,\Gamma\pable A$}$$ 
+\item where ${\pable}:\coq{list}~\mathsf{Form}\cfun\mathsf{Form}\cfun\Prop$
+  \begin{itemize}
+  \item such as provability or \emph{cut-free provability}
+  \item permutations: $\Gamma\cperm\Delta\cfun \Gamma\pable A\cfun \Delta\pable A$
+  \end{itemize}
+\end{itemize}
+
+\end{frame}
+
+\newcommand{\dc}{\mathop{\downarrow}}
+\renewcommand\frule[1]{#1}
+
+
+\begin{frame}
+
+\frametitle{Rules as algebraic equations}
+
+\begin{itemize}
+
+\item Define $\dc A\cdef \{\Gamma\mid \Gamma\pable A\}$, then $\cl(\dc A)\subseteq \dc A$ 
+\item $\dc A\mmult\dc B\subseteq \dc(A\ltime B)$ iff 
+$$
+\infer2[\text{for any $\Gamma,\Delta$}]   {\Gamma \pable A}{\Delta \pable B}
+                      {\Gamma, \Delta \pable A \ltime B}$$
+\item $\ulist{A\ltime B}\in\cl\{\ulist{A,B}\}$ iff
+$$
+ \infer2[\text{for any $\Gamma,C$}]    {\Gamma \seq A}{B,\Delta \pable C}
+                      {A \limp B,\Gamma, \Delta\pable C}$$
+\item $\set K\subseteq\set J$ iff $\pable$ closed under \frule W and \frule C.
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}
+
+\frametitle{Okada's lemma}
+
+\begin{itemize}
+\item For ${\pable}$ defined as ${\seq_{\textrm{cf}}}$ closed under cut-free ILL
+$$\forall A,\;\ulist A\in\sem A\subseteq\dc A\quad\text{and}\quad \forall\Gamma,\;\Gamma\in\sem\Gamma$$ 
+\item By induction on $A$, then by induction on $\Gamma$
+\item By soundness, from a (cut using) proof of $\Gamma\seq A$
+  \begin{itemize}
+  \item we deduce $\sem\Gamma\subseteq\sem A\subseteq\dc A$
+  \item hence $\Gamma \seq_{\textrm{cf}} A$
+  \item hence $\Gamma\seq A$ is cut-free provable
+  \end{itemize}
+\item Hence a semantic proof of cut-admissibility
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}
+
+\frametitle{Extensions, other logics}
+
+\begin{itemize}
+\item of course fragments of ILL, but also CLL
+\item ILL with modality, Linear time ILL
+\item Bunched Implications 
+\item Relevance logic, prop.\ Intuitionistic Logic
+\item Display calculi
+\item Phase semantics and contextual closure are very generic
+\end{itemize}
+
+\end{frame}
+
+
+\end{document}

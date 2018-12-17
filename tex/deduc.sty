@@ -1,0 +1,782 @@
+% Please, don't distribute.
+% This is completely experimental.
+% A lot of things are yet to be done.
+% If I only had the time!
+% NO WARRANTY AT ALL.
+% D. Roegel. November 17, 1994.
+%
+%
+\def\fileversion{0.974}
+\def\filedate{95/12/18}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                                                          %
+%                              DEDUC.STY                                   %
+%                                                                          %   
+%                            Version  0.974                                %
+%                                                                          %
+%                       D. Roegel (roegel@loria.fr)                        %
+%                                                                          %
+% ------------------------------------------------------------------------ %
+%                                                                          %
+%         Macros pour repre'senter des se'quents et des preuves            %
+%         Ces macros ne fonctionnent qu'avec LaTeX2e.                      %
+%         (et TeX au prix de quelques changements mineurs)                 %
+%         L'inte're^t de ces macros est de bien placer la barre            %
+%         de fraction et de ne pas la faire de'border inutilement.         %
+%                                                                          %
+%         En effet, l'emploi du \frac de LaTeX pour representer            %
+%                                                                          %   
+%            xxxxxxx   y                 xxxxxxx  y                        %
+%            -------  ---                ------- ---                       %
+%               b     ccc       donne       b    ccc                       %
+%               ---------                -----------                       %
+%                   a                         a                            %
+%                                                                          %
+%         alors que les macros presentees ici donnent bien                 %
+%         la fraction de gauche.                                           %
+%                                                                          %
+% ------------------------------------------------------------------------ %
+%                                                                          %
+%           Historique des versions:                                       %
+%                                                                          %
+%                       1-2/ 7/1993  (premiere ecriture,                   %
+%                                     pour representer une preuve dans     %
+%                                     le travail de Chrystel Barraband)    %
+%                                    (le fichier s'est appele' sequent.tex %
+%                                     jusqu'a la version 0.961)            %
+%                        10/ 7/1993  (un commentaire)                      %
+%                        11/ 7/1993  (introduction de \seqbarthickness)    %
+%                        27/ 7/1993  (exemple d'utilisation)               %
+%                        29/ 7/1993  (commentaires detailles dans \seqI)   %
+%                                    (correction d'un bug passe' inapercu) %
+%                0.94    17/ 8/1993  (une idee d'amelioration)             %
+%                0.95     1/10/1993  (un commentaire)                      %
+%                0.96    19/ 3/1994  (retrait de `%' inutiles;             %
+%                                     ajout de la definition de            %
+%                                     \newlinechar a \showdim              %
+%                                     (pas teste'))                        %
+%                0.961   16/ 8/1994  (renommage en deduc.sty et            %
+%                                     legere adaptation a LaTeX2e) (GP)    %
+%                0.962    1/ 9/1994  (les expressions n'ont plus besoin    %
+%                                     d'etre des boites) (GP)              %
+%                0.963    1/ 9/1994  (ajout de \ruleformat et \seqspacing) %
+%                                      (GP)                                %
+%                0.964    2/ 9/1994  (la regle n'est mentionnee que        %
+%                                     si elle n'est pas vide) (GP)         %
+%                0.965    6/ 9/1994  (modification de la syntaxe de        %
+%                                     \seqII: le second argument devient   %
+%                                     l'avant-dernier)  (GP)               %
+%                                    (\leavevmode ajoute' dans \showseq)   %
+%                                        (GP)                              %
+%                0.966    9/ 9/1994  (\initseq modifie': \strut n'est      %
+%                                     utilise' que si la valeur initiale   %
+%                                     n'est pas vide)  (GP)                %
+%                0.967   13/ 9/1994  (\checkseq{#1} a ete deplace' avant   %
+%                                     les affectations a \seqdimleft@#1    %
+%                                     et \seqdimright@#1 dans \seqI) (GP)  %
+%                0.968   20/ 9/1994  \@stickseq modifie' pour corriger     %
+%                                    des inegalites de profondeur dans     %
+%                                    les deux parties que l'on colle.      %
+%                                    (GP)                                  %
+%                0.969    6/ 3/1995  \@stickseq modifie' pour repercuter   %
+%                                    correctement la profondeur des boites %
+%                                    (DB)                                  %
+%                                    introduction provisoire de \seqIII    %
+%                                    (en attendant \seqn)                  %
+%                0.970   20/ 3/1995  modification de \seqscratchboxIII     %
+%                                    pour bien centrer la regle.           %
+%                0.971   20/ 3/1995  introduction de \vshowseq.            %
+%                0.972   27/ 3/1995  introduction de \seqIV, \seqminsep    %
+%                                    et renommage de \@stickseq en         %
+%                                    \stickseq. (DB)                       %
+%                0.973    6/11/1995  valeur par defaut de \ruleformat      %
+%                                    modifiee (~ -> \ ) (DM)               %
+%                                    ajout de l'option ensuremath qui      %
+%                                    evite de mettre les formules en mode  %
+%                                    mathematique (DM)                     %
+%                                    commandes \seqmathtrue et             %
+%                                       \seqmathfalse                      %
+%                0.974   18/12/1995  modification de \seqIII et \seqIV     %
+%                                      (introduction du sequent            %
+%                                        intermediaire `@/@') (DB)         %
+%                                                                          %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Mode d'emploi:
+% =============
+%
+% Les macros suivantes sont celles susceptibles d'e^tre normalement
+% utilise'es:
+%
+%   \initseq : initialisation d'une preuve
+%   \seqI    : constructeur 1
+%   \seqII   : constructeur 2
+%   \seqIII  : constructeur 3
+%   \seqIV   : constructeur 4
+%   \stickseq : constructeur horizontal
+%   \showseq : affichage d'une preuve
+%   \ruleformat : pour le formatage des regles
+%   \seqminsep  : cette commande est ajoutee a un terme pour augmenter
+%              (et en general homogeneiser) sa hauteur;
+%              pour avoir la hauteur naturelle d'un terme, on ecrira
+%              \renewcommand\seqminsep{}
+%
+%   \seqmathtrue, \seqmathfalse: voir option `ensuremath'.
+%        
+%   
+% Parametres:
+%   \seqbarthickness (defaut=0.4pt)
+%       (peut etre modifie' en cours de route)
+%   \seqspacing : espacement additionnel entre les expressions et
+%                 les barres
+%       (peut etre modifie' en cours de route)
+%
+% Option du package: 
+%
+%   ensuremath  -> \usepackage[ensuremath]{deduc}
+%       Cette option rend inutile le mode mathematique dans les formules.
+%       Si on met cette option, IL NE FAUT PAS METTRE LES FORMULES ENTRE $$.
+%       L'effet de cette option peut etre localement modifie' avec
+%       \seqmathtrue et \seqmathfalse.
+%
+% Voir plus loin l'emploi de chacune de ces commandes.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Exemple d'utilisation:
+% =====================
+%
+% Supposons que \pA, \pB, \pC, etc., soient definis comme etant des
+% expressions, par exemple des lambda-termes.
+%
+% Si la preuve a construire presente l'aspect suivant:
+%
+%      \pM    \pP
+%      \pL    \pO     \pT
+%      \pK    \pN     \pS
+%      \pI    \pJ     \pR  \pV
+%      ----------     --------
+%         \pH            \pU   \pQ
+%                        ---------
+%         \pF               \pG
+%         ----------------------
+%                  \pE
+%                  \pD
+%                  \pC
+%                  \pB
+%                  \pA
+%
+%
+%   on peut ecrire:
+%
+%  \documentclass[...]{...}
+%  \usepackage{deduc}
+%  \begin{document}
+%
+%  ...
+%  \newcommand{\pM}{...}
+%  \newcommand{\pL}{...}
+%  ...
+%  \setlength{\seqbarthickness}{4pt}
+%  \setlength{\seqspacing}{2mm}
+%
+%  \renewcommand{\ruleformat}[1]{\ [#1]} % pour mettre la regle entre crochets
+%
+%  \initseq{metaI}{\pM}
+%  \seqI{metaI}{metaI}{\pL}{fold\_it}
+%  \seqI{metaI}{metaI}{\pK}{sp\'e.2}
+%  \seqI{metaI}{metaI}{\pI}{rew} 
+%  \initseq{metaJ}{\pP}
+%  \seqI{metaJ}{metaJ}{\pO}{g\'en.1}
+%  \seqI{metaJ}{metaJ}{\pN}{sp\'e.2}
+%  \seqI{metaJ}{metaJ}{\pJ}{rew}
+%  \seqII{metaF}{metaI}{metaJ}{\pH}{app}
+%  \seqI{metaF}{metaF}{\pF}{rew}
+%  \initseq{metaG}{\pT}
+%  \seqI{metaG}{metaG}{\pS}{fold\_it}
+%  \seqI{metaG}{metaG}{\pR}{sp\'e.2}
+%  \initseq{metaV}{\pV}
+%  \seqII{metaG}{metaG}{metaV}{\pU}{app}
+%  \initseq{metaQ}{\pQ}
+%  \seqII{metaG}{metaG}{metaQ}{\pG}{app}
+%  \seqII{metaF}{metaF}{metaG}{\pE}{app}
+%  \seqI{metaF}{metaF}{\pD}{abs+abs+g\'en.2}
+%  \seqI{metaF}{metaF}{\pC}{unfold\_it}
+%  \seqI{metaF}{metaF}{\pB}{abs+g\'en.1+abs}
+%  \seqI{metaF}{metaF}{\pA}{g\'en.1}
+%  \showseq{metaF}
+%  
+%  ...
+%  \end{document}
+%
+%
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Ame'liorations a` apporter:
+% ==========================
+%
+%
+%  1) Lorsque l'on utilise \seqII, l'espacement entre SEQ1 et SEQ2 doit
+%     pouvoir e^tre donne' en argument, mais il doit y avoir une valeur
+%     par de'faut.
+%
+%  2) Il faudrait aussi donner la possibilite' de parametrer la
+%     longueur de la barre (en fait, la quantite' a ajouter: par defaut 0)
+%
+%  3) On doit pouvoir me'langer des de'rivations ou` la regle est place'e
+%     a` gauche, et d'autres ou` la re`gle est place'e a` droite.
+%
+%  4) Prevenir les erreurs pouvant survenir lorsqu'une variable
+%     de preuve n'est pas correctement initialisee.
+%  
+%  5) Donner la possibilite' de remplacer la barre horizontale par
+%     un objet extensible quelconque. (utilisation de \leaders)
+%
+%  ...
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{deduc}
+      [\filedate\space v\fileversion\space deduc (Denis Roegel)]
+\immediate\write\sixt@@n{Package: deduc
+\fileversion\space <\filedate> (Denis Roegel)}
+\newif\ifseqmath
+\DeclareOption{ensuremath}{\seqmathtrue}
+\ProcessOptions
+%
+%
+% On commence par rendre \newbox et \newdimen non-\outer:
+% A enlever par la suite puisque utilise' seulement tres localement.
+%
+\edef\inner@newbox{\noexpand\newbox}
+\edef\inner@newdimen{\noexpand\newdimen}
+
+%
+% Variables utilisees localement
+%
+\newdimen\seqleftI
+\newdimen\seqrightI
+\newdimen\seqtmpdima
+\newdimen\seqtmpdimb
+\newdimen\seqtmpdiml
+\newdimen\seqtmpdimr
+\newdimen\seqbarlength
+\newdimen\seqskiptoI
+\newdimen\seqskiptobar
+\newdimen\seqskiptoII
+\newdimen\seqskiptoleft
+\newdimen\seqlastlinewidth
+\newdimen\seqdelta
+\newdimen\seqwidth
+\newdimen\seqbarthickness \seqbarthickness=0.4pt
+\newdimen\seqspacing \seqspacing1mm
+%
+\newbox\seqscratchboxI
+\newbox\seqscratchboxII
+\newbox\seqscratchboxIII
+%
+
+\newcommand\ruleformat[1]{\ (#1)}
+
+\newcommand\seqminsep{\strut}
+
+
+% Un sequent est un ensemble de trois variables TeX. Le sequent
+% de nom generique FOO consiste en la boite \seqbox@FOO, 
+% et les deux dimensions \seqdimleft@FOO et \seqdimright@FOO
+% Ces noms ne sont jamais tapes directement par celui qui ecrit
+% une preuve.
+%
+%
+%  \checkseq{NAME}  Si le sequent NAME n'existe pas encore,
+%                   les variables necessaires sont declarees.
+%
+\def\checkseq#1{%
+        \expandafter\ifx\csname seqbox@#1\endcsname\relax 
+                 \expandafter\inner@newbox\csname seqbox@#1\endcsname
+                 \expandafter\inner@newdimen\csname seqdimleft@#1\endcsname
+                 \expandafter\inner@newdimen\csname seqdimright@#1\endcsname
+        \fi}
+
+%
+%
+% \initseq{NAME}{EXP} Initialisation du sequent NAME avec EXP.
+%   (NAME doit etre different de `@/@')
+
+\def\initseq#1#2{%
+             \checkseq{#1}%
+             \expandafter\setbox\csname seqbox@#1\endcsname
+                   \hbox{\ifseqmath\ensuremath{#2}\else#2\fi}%
+             \ifdim\wd\csname seqbox@#1\endcsname=0pt%
+             \else
+               \expandafter\setbox\csname seqbox@#1\endcsname
+                   \hbox{\seqminsep\ifseqmath\ensuremath{#2}\else#2\fi}% 
+             \fi
+             \expandafter\csname seqdimleft@#1\endcsname=0pt%
+             \expandafter\csname seqdimright@#1\endcsname=0pt}
+
+
+% \vshowseq{NAME} Affichage du sequent NAME. En fait, on affiche
+%                simplement la boite \seqbox@NAME.
+%                Cette commande est adaptee pour des endroits ou`
+%                des \vbox conviennent. Exemple:
+%                      $\vcenter{\vshowseq{...}}$
+%
+
+\def\vshowseq#1{\expandafter\copy\csname seqbox@#1\endcsname}
+
+% \showseq{NAME} Affichage du sequent NAME. En fait, on affiche
+%                simplement la boite \seqbox@NAME.
+%                Cette commande est adaptee pour des endroits ou`
+%                l'on se trouve en mode horizontal. Exemple:
+%                     \begin{center}
+%                     \showseq{...}
+%                     \end{center}
+
+\def\showseq#1{\leavevmode\vshowseq{#1}}
+
+% \showdim{NAME} Affichage des dimensions cachees du sequent NAME. 
+%                (uniquement pour debugger)
+
+\def\showdim#1{{\seqtmpdima\expandafter\csname seqdimleft@#1\endcsname 
+                \seqtmpdimb\expandafter\csname seqdimright@#1\endcsname 
+                \newlinechar=`\^^J%
+                \message{^^JSequent #1:}%
+                \message{^^J(gauche=\the\seqtmpdima;}%
+                \message{droite=\the\seqtmpdimb)}%
+                \seqtmpdima\dp\expandafter\csname seqbox@#1\endcsname 
+                \message{^^Jdp=\the\seqtmpdima^^J}%
+               }}
+
+
+
+% \seqI{RESULT}{SEQ}{EXP}{RULE}
+%
+%
+%          SEQ  
+%         ----- (RULE)   ==  RESULT
+%          EXP
+%
+%   SEQ et RESULT peuvent etre identiques
+%
+% (SEQ et RESULT doivent etre different de `@/@')
+
+\def\seqI#1#2#3#4{%
+        \setbox\seqscratchboxI=\expandafter\copy\csname seqbox@#2\endcsname
+        \setbox\seqscratchboxII=\hbox{\ifseqmath\ensuremath{#3}\else#3\fi}%
+        \seqtmpdima\wd\seqscratchboxI \seqtmpdimb\wd\seqscratchboxII 
+        \seqleftI\csname seqdimleft@#2\endcsname
+        \seqrightI\csname seqdimright@#2\endcsname
+        %
+        % Le sequent #2 se presente ainsi:
+        %
+        %       \seqtmpdima
+        %    ----------------->
+        %
+        %    XXXXXXXXXXXXXXXXXX
+        %    XXXX  SEQ I XXXXXX
+        %       XXXXXXXXXX
+        %
+        %    -->          ---->
+        % \seqleftI     \seqrightI    (\seqleftI et \seqrightI sont >=0)
+        %
+        %=======================================================
+        % Calcul de la largeur de la derniere ligne de #2:
+        \seqlastlinewidth\seqtmpdima 
+        \advance\seqlastlinewidth-\seqleftI 
+        \advance\seqlastlinewidth-\seqrightI 
+        %
+        % Maintenant:
+        %       \seqtmpdima
+        %    ----------------->
+        %
+        %    XXXXXXXXXXXXXXXXXX
+        %    XXXX  SEQ I XXXXXX
+        %       XXXXXXXXXX
+        %
+        %    -->          ---->
+        % \seqleftI     \seqrightI 
+        %
+        %       --------->
+        %    \seqlastlinewidth (>0)
+        %=======================================================
+        % La taille de la nouvelle barre est 
+        %   MAX(\seqlastlinewidth,\seqtmpdimb)
+        % avec \seqtmpdimb=largeur de l'expression du bas (#3):
+        %
+        \seqbarlength\seqlastlinewidth 
+        \ifdim\seqbarlength<\seqtmpdimb \seqbarlength\seqtmpdimb \fi 
+        %
+        % maintenant, \seqbarlength contient la taille finale de
+        % la nouvelle barre.
+        %
+        %=======================================================
+        %
+        % \seqscratchboxIII contient la regle appliquee.
+        % La boite creee est d'epaisseur nulle et le nom
+        % de la regle est centre' verticalement sur la barre.
+        %
+        \def\@scratch{#4}%
+        \ifx\@scratch\@empty
+           \setbox\seqscratchboxIII=\hbox{}%
+        \else
+           \setbox\seqscratchboxIII   
+             =\hbox{\centeredbox{\hbox{\ruleformat{#4}}}}%
+               \ht\seqscratchboxIII0pt \dp\seqscratchboxIII0pt%
+        \fi
+        %
+        %=======================================================
+        % Les calculs qui suivent adoptent un point de reference
+        % dans le sequent. Il est indique' par le cercle.
+        %
+        %       \seqtmpdima
+        %    ----------------->
+        %
+        %    XXXXXXXXXXXXXXXXXX
+        %    XXXX  SEQ I XXXXXX
+        %       XXXXXXXXXX
+        %       o
+        %
+        %    -->          ---->
+        % \seqleftI     \seqrightI 
+        %
+        %       --------->
+        %    \seqlastlinewidth (>0)
+        %=======================================================
+        % \seqdelta est la distance entre l'extremite' gauche de la barre
+        % et l'extremite' gauche du bas (#3):
+        %
+        \seqdelta\seqtmpdimb 
+        \advance\seqdelta-\seqlastlinewidth \divide\seqdelta2 
+        %
+        % \seqskiptoI indique de combien il faut reculer (=avancer a gauche)
+        % pour aller du point (o) a l'extremite' gauche de la boite contenant
+        % le SEQ I (=#2)
+        %
+        \seqskiptoI-\seqleftI 
+        %
+        % \seqskiptoI indique de combien il faut reculer (=avancer a gauche)
+        % pour aller du point (o) a l'extremite' gauche du bas (#3).
+        % Vu la definition de \seqdelta, c'est -\seqdelta.
+        %
+        \seqskiptoII-\seqdelta 
+        %
+        % La barre commence soit au point de reference (si \seqskiptoII>0pt)
+        % soit a hauteur du bas (#3).
+        % (c'est-a-dire \seqskiptobar=-MAX(-\seqskiptoII,0pt))
+        %
+        \seqskiptobar\seqskiptoII 
+        \ifdim\seqskiptobar>0pt \seqskiptobar=0pt \fi 
+        %
+        % Pour la ``mise en boite'' finale, on prend comme point de reference
+        % l'extremite' gauche englobant le sequent I et le bas. Par rapport
+        % au point de reference actuel (o), il faut appliquer un shift vers
+        % la gauche de MAX(-\seqskiptoI,\seqskiptoII), c'est-a-dire de
+        % \seqskiptoleft=MAX(\seqleftI,\seqdelta).
+        %
+        \seqskiptoleft\seqleftI 
+        \ifdim\seqskiptoleft<\seqdelta \seqskiptoleft\seqdelta \fi 
+        %
+        % On determine maintenant la largeur du sequent final:
+        %
+        %
+        %    XXXXXXXXXXXXXXXXXX         Pour ce faire, on part de
+        %    XXXX  SEQ I XXXXXX         \seqlastlinewidth et on ajoute
+        %       XXXXXXXXXX              l'extension a droite puis a
+        %       o                       gauche.
+        %    -->          ---->          A gauche, elle a deja ete
+        % \seqleftI     \seqrightI      calculee, c'est \seqskiptoleft.
+        %                                
+        %     -------------- (rule)     
+        %     xxxxxxxxxxxxxx             
+        %
+        %  A droite, il faut calculer
+        %    R= -\seqlastlinewidth 
+        %       + MAX(\seqlastlinewidth+\seqrightI,
+        %             \seqskiptobar+\seqbarlength+\wd\seqscratchboxIII)
+        %     = MAX(\seqrightI,
+        %           \seqskiptobar+\seqbarlength+\wd\seqscratchboxIII
+        %           -\seqlastlinewidth)
+        %
+        \seqwidth\seqskiptobar 
+        \advance\seqwidth\seqbarlength 
+        \advance\seqwidth\wd\seqscratchboxIII 
+        \advance\seqwidth-\seqlastlinewidth 
+        \ifdim\seqwidth<\seqrightI \seqwidth\seqrightI \fi 
+        \advance\seqwidth\seqskiptoleft 
+        \advance\seqwidth\seqlastlinewidth 
+        %
+        %
+        %=======================================================
+        % Calcul du nouveau decalage a gauche:
+        %
+        \seqtmpdiml\seqskiptoleft \advance\seqtmpdiml-\seqdelta 
+        %
+        % Calcul du nouveau decalage a droite:
+        %
+        \seqtmpdimr\seqwidth \advance\seqtmpdimr-\seqtmpdimb 
+        \advance\seqtmpdimr-\seqtmpdiml
+        %
+        % Si le sequent n'a pas encore ete cre'e', on fait le ne'cessaire.
+        % (cette commande doit evidemment preceder les trois affectations
+        %  qui suivent...)
+        \checkseq{#1}%
+        %
+        % On peut maintenant marquer les nouveaux decalages horizontaux:
+        %
+        \csname seqdimleft@#1\endcsname\seqtmpdiml 
+        \csname seqdimright@#1\endcsname\seqtmpdimr 
+        %
+        {\def\bskip{\hskip\seqskiptoleft}\def\bbox{\hbox to \seqwidth}%
+        %
+        %
+        \expandafter\global\expandafter\setbox\csname seqbox@#1\endcsname=%
+        \hbox{\vbox{\offinterlineskip
+             \bbox{\bskip\hskip\seqskiptoI\box\seqscratchboxI\hss}%
+             \vskip\seqspacing
+             \bbox{\bskip\hskip\seqskiptobar 
+                                    \hbox{\vbox{\hrule height\seqbarthickness 
+                                                       width\seqbarlength}}%
+                                    \box\seqscratchboxIII 
+                                    \hss}%
+             \vskip\seqspacing
+             \bbox{\bskip\hskip\seqskiptoII
+                   \seqminsep\box\seqscratchboxII\hss}}}}}
+
+%
+%
+% \stickseq{A}{B}{C} colle B et C pour en faire A
+%
+
+\def\stickseq#1#2#3{\checkseq{#1}%
+           \seqtmpdima\dp\csname seqbox@#2\endcsname
+           \ifdim\seqtmpdima<\dp\strutbox \seqtmpdima\dp\strutbox\fi
+           \seqtmpdimb\dp\csname seqbox@#3\endcsname
+           \ifdim\seqtmpdimb<\dp\strutbox \seqtmpdimb\dp\strutbox\fi
+           \expandafter\setbox\csname seqbox@#1\endcsname=\hbox{%
+                \raise\seqtmpdima
+                      \expandafter\copy\csname seqbox@#2\endcsname
+                \hskip1em %
+                \raise\seqtmpdimb
+                      \expandafter\copy\csname seqbox@#3\endcsname}%
+             % ajoute' le 6/3/1995
+           \expandafter\setbox\csname seqbox@#1\endcsname=\hbox{%
+                \lower\dp\strutbox
+                        \expandafter\box\csname seqbox@#1\endcsname}%
+        {\edef\tmp{\csname seqdimleft@#1\endcsname}%
+         \global\tmp\csname seqdimleft@#2\endcsname
+         \edef\tmp{\csname seqdimright@#1\endcsname}%
+         \global\tmp\csname seqdimright@#3\endcsname}}
+
+
+% \seqII{NEWSEQ}{SEQ1}{SEQ2}{RESULT}{RULE}
+%
+%   NEWSEQ, SEQ1 et SEQ2 ne sont pas obligatoirement deux a deux distincts
+%
+%
+%       SEQ1  SEQ2
+%       ---------- (RULE)   ==  NEWSEQ
+%         RESULT
+%
+%  (SEQ1, SEQ2 et RESULT doivent etre different de `@/@')
+
+\def\seqII#1#2#3#4#5{%
+        \stickseq{#1}{#2}{#3}%
+        \seqI{#1}{#1}{#4}{#5}}
+
+% \seqIII{NEWSEQ}{SEQ1}{SEQ2}{SEQ3}{RESULT}{RULE}
+%
+%   NEWSEQ, SEQ1, SEQ2 et SEQ3 ne sont pas obligatoirement 
+%   deux a deux distincts
+%
+%
+%       SEQ1 SEQ2 SEQ3
+%       -------------- (RULE)   ==  NEWSEQ
+%           RESULT
+%
+% (SEQ1, SEQ2, SEQ3 et RESULT doivent etre different de `@/@')
+
+\def\seqIII#1#2#3#4#5#6{%
+        \stickseq{@/@}{#2}{#3}%
+        \stickseq{@/@}{@/@}{#4}%
+        \seqI{#1}{@/@}{#5}{#6}}
+
+% \seqIV{NEWSEQ}{SEQ1}{SEQ2}{SEQ3}{SEQ4}{RESULT}{RULE}
+%
+%   NEWSEQ, SEQ1, SEQ2, SEQ3 et SEQ4 ne sont pas obligatoirement 
+%   deux a deux distincts
+%
+%
+%       SEQ1 SEQ2 SEQ3 SEQ4
+%       ------------------- (RULE)   ==  NEWSEQ
+%              RESULT
+%
+%  (SEQ1, SEQ2, SEQ3, SEQ4 et RESULT doivent etre different de `@/@')
+
+\def\seqIV#1#2#3#4#5#6#7{%
+        \stickseq{@/@}{#2}{#3}%
+        \stickseq{@/@}{@/@}{#4}%
+        \stickseq{@/@}{@/@}{#5}%
+        \seqI{#1}{@/@}{#6}{#7}}
+
+\endinput
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                    Fin des macros de deduc.sty                          %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Exemple d'utilisation de deduc.sty.
+% D. Roegel, 16/8/1994
+%
+% D'apres le DEA de Chrystel Barraband, septembre 1993.
+%
+%
+\documentclass{article}
+
+\usepackage{deduc}
+\usepackage{fullpage}
+\usepackage[dvips]{rotating} % pour pouvoir tourner la preuve
+                             % (parce que l'exemple est tres grand)
+
+\begin{document}
+
+\def\five{\fontsize{5}{10}\selectfont}
+
+\def\fl{\rightarrow}
+
+\def\msp{\mkern18mu }
+\def\mtt#1{{\tt #1}}
+\def\lterm[#1:#2]{$\mtt{#1\msp :\msp }#2$}
+
+\def\pA{\lterm[\lambda  t t_1 f a.t f (t_1 f a):
+              \forall x\msp Nx \fl (\forall x_1\msp Nx_1\fl Nplus(x,x_1))]}
+
+
+\def\pB{\lterm[\lambda t t_1 f a.t f (t_1 f a):
+        Nx \fl (\forall x_1\msp Nx_1\fl Nplus(x,x_1))]}
+
+\def\pC{\lterm[\lambda f a.t f (t_1 f a):Nplus(x,x_1)]}
+
+\def\pD{\lterm[\lambda f a.t f (t_1 f a): 
+        \forall X_2\msp 
+             ((\forall y\msp X_2y\fl X_2s(y))\fl (X_20\fl X_2plus(x,x_1)))]}
+
+\def\pE{\lterm[t f (t_1 f a):X_2plus(x,x_1)]}
+
+\def\pF{\lterm[t f:X_2x_1\fl X_2plus(x,x_1)]}
+
+\def\pG{\lterm[t_1 f a:X_2x_1]}
+
+\def\pH{\lterm[t f:X_2plus(0,x_1)\fl X_2plus(x,x_1)]}
+
+\def\pI{\lterm[t:
+        (\forall y\msp X_2plus(y,x_1)\fl X_2s(plus(y,x_1)))\fl 
+        (X_2plus(0,x_1)\fl X_2plus(x,x_1))]}
+
+\def\pJ{\lterm[f:
+        (\forall y\msp X_2plus(y,x_1)\fl X_2s(plus(y,x_1)))]}
+
+\def\pK{\lterm[t:
+        (\forall y\msp X_2plus(y,x_1)\fl X_2plus(s(y),x_1))\fl 
+        (X_2plus(0,x_1)\fl X_2plus(x,x_1))]}
+
+\def\pL{\lterm[t:
+        \forall X_2\msp ((\forall y_2\msp X_2y_2\fl X_2s(y_2))\fl 
+        (X_20\fl X_2x))]}
+
+\def\pM{\lterm[t:Nx]}
+
+\def\pN{\lterm[f:(\forall y\msp X_2plus(y,x_1)\fl X_2plus(s(y),x_1))]}
+
+\def\pO{\lterm[f:\forall X_2\msp (\forall y\msp X_2y\fl X_2s(y))]}
+
+\def\pP{\lterm[f:\forall y\msp X_2y\fl X_2s(y)]}
+
+\def\pU{\lterm[t_1 f:X_20\fl X_2x_1]}
+
+\def\pQ{\lterm[a:X_20]}
+
+\def\pR{\lterm[t_1:(\forall y\msp X_2y\fl X_2s(y))\fl X_20\fl X_2x_1]}
+
+\def\pS{\lterm[t_1:
+        (\forall X_2\msp (\forall y\msp X_2y\fl X_2s(y))\fl X_20\fl X_2x_1)]}
+
+\def\pT{\lterm[t_1:Nx_1]}
+
+\def\pV{\lterm[f:\forall y\msp X_2y\fl X_2s(y)]}
+
+
+%     La fraction construite est:
+%
+%       \metaF
+%    /-----^-----\       \metaG
+%                    /------^------\
+%      \pM    \pP
+%      \pL    \pO     \pT
+%      \pK    \pN     \pS
+%      \pI    \pJ     \pR  \pV
+%      ----------     --------
+%         \pH            \pU   \pQ
+%                        ---------
+%         \pF               \pG
+%         ----------------------
+%                  \pE
+%                  \pD
+%                  \pC
+%                  \pB
+%                  \pA
+%
+% avec:
+%
+%    \metaI   \metaJ    \metaU
+%
+%    /--^--\  /--^--\  /---^---\
+%
+%      \pM      \pP     \pT
+%      \pL      \pO     \pS
+%      \pK      \pN     \pR  \pV
+%      \pI      \pJ     --------
+%                         \pU
+% 
+
+% Et voici la preuve en utilisant les macros de deduc.sty
+
+
+{\five
+
+%\seqbarthickness4pt
+
+\initseq{metaI}{\pM}
+\seqI{metaI}{metaI}{\pL}{fold\_it}
+\seqI{metaI}{metaI}{\pK}{sp\'e.2}
+\seqI{metaI}{metaI}{\pI}{rew} 
+\initseq{metaJ}{\pP}
+\seqI{metaJ}{metaJ}{\pO}{g\'en.1}
+\seqI{metaJ}{metaJ}{\pN}{sp\'e.2}
+\seqI{metaJ}{metaJ}{\pJ}{rew}
+\seqII{metaF}{metaI}{metaJ}{\pH}{app}
+\seqI{metaF}{metaF}{\pF}{rew}
+\initseq{metaG}{\pT}
+\seqI{metaG}{metaG}{\pS}{fold\_it}
+\seqI{metaG}{metaG}{\pR}{sp\'e.2}
+\initseq{metaV}{\pV}
+\seqII{metaG}{metaG}{metaV}{\pU}{app}
+\initseq{metaQ}{\pQ}
+\seqII{metaG}{metaG}{metaQ}{\pG}{app}
+\seqII{metaF}{metaF}{metaG}{\pE}{app}
+\seqI{metaF}{metaF}{\pD}{abs+abs+g\'en.2}
+\seqI{metaF}{metaF}{\pC}{unfold\_it}
+\seqI{metaF}{metaF}{\pB}{abs+g\'en.1+abs}
+\seqI{metaF}{metaF}{\pA}{g\'en.1}
+
+\begin{turn}{60}
+\showseq{metaF}
+\end{turn}
+
+} % {\five
+
+\end{document}
+
+
+

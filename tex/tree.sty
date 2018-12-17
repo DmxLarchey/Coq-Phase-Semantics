@@ -1,0 +1,137 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% a -+- aa --- aab(l) 
+%    +- ab 
+%    +- ac
+% 
+% \let\n\createnode
+% \let\l\createleaf
+% \l{}   {data}
+% \l{a}  {data}
+% \l{aa} {data}
+% \l{aab}{data}
+% \l{ab} {data}
+% \l{ac} {data}
+%
+% \depthfirstpostfix\scan\a{} donne :
+%
+% \scan=macro:
+%       \a l{aab}{}
+%       \a 1{aa}{{aab}}
+%       \a 0{ab}{}
+%       \a 0{ac}{}
+%       \a 3{a}{{aa}{ab}{ac}}
+%       \a 1{}{}
+%
+% \depthfirstprefix\scan\a{a} donne :
+%
+% \scan=macro:
+%       \a 3{a}{{aa}{ab}{ac}}
+%       \a 1{aa}{{aab}}
+%       \a l{aab}{}
+%       \a 0{ab}{}
+%       \a 0{ac}{}
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\makeatletter
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% \tr@@distribute\x{{a}{b}{c}} ->
+%
+%       \x{a}\x{b}\x{c}
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\def\tr@@distribute#1#2{%
+  \bgroup
+  \def\tr@@list{}%
+  \def\tr@@listscanloop##1{%
+    \ifx##1:%
+      \let\tr@@listscanloop\relax
+    \else
+      \addend\tr@@list{#1{##1}}%
+    \fi\tr@@listscanloop}%
+  \tr@@listscanloop#2:%
+  \expandafter\egroup\tr@@list}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\def\tr@@branch#1{\csname tr@@br@#1\endcsname}
+
+
+\def\tr@@cre@te#1#2#3{%
+  \expandafter\expandafter\expandafter\def\tr@@branch{#1}{#2}%
+  \expandafter\expandafter\expandafter\let\tr@@branch{#1-st@p}#3}
+
+\def\tr@@ifemptynode#1{\expandafter\expandafter\expandafter\ifx\tr@@branch{#1}\@empty}
+\def\tr@@ifnobranch#1{\expandafter\expandafter\expandafter\ifx\tr@@branch{#1}\relax}
+
+\def\tr@@start{\def\tr@@do##1{##1}}
+\def\tr@@stop{\def\tr@@do##1{}}
+
+% \tr@@sons = number of sons 1,2,3 ...
+% \tr@@slist = list of sons {#1a}{#1b}...
+
+\def\tr@@looptestbranch#1{\tr@@ifnobranch{#1}\tr@@stop\else\tr@@start\fi}
+\def\tr@@loopcompsons#1{%
+  \tr@@start
+  \def\tr@@sons{l}\def\tr@@slist{}%
+  \tr@@looptestbranch{#1-st@p}%
+  \tr@@do{\def\tr@@sons{0}\tr@@looptestbranch{#1a}}%
+  \tr@@do{\def\tr@@sons{1}\addend\tr@@slist{{#1a}}\tr@@looptestbranch{#1b}}%
+  \tr@@do{\def\tr@@sons{2}\addend\tr@@slist{{#1b}}\tr@@looptestbranch{#1c}}%
+  \tr@@do{\def\tr@@sons{3}\addend\tr@@slist{{#1c}}\tr@@looptestbranch{#1d}}%
+  \tr@@do{\def\tr@@sons{4}\addend\tr@@slist{{#1d}}}}
+
+
+\def\tr@@loopxcompscan#1#2#3{%
+  \tr@@loopcompsons{#3}%
+  \addend#1{#2}%
+  \exaddend#1{\tr@@sons}%
+  \addend#1{{#3}}%
+  \exaddend#1{\expandafter{\tr@@slist}}%
+}
+
+\def\tr@@loopxreccalls#1{%
+  \tr@@loopcompsons{#1}%
+  \expandafter\tr@@distribute
+    \expandafter\tr@@loopx
+    \expandafter{\tr@@slist}%
+}
+
+\def\tr@@loopprefix#1#2#3{%
+  \bgroup
+    \let#1\@empty
+    \def\tr@@loopx##1{%
+      \tr@@looptestbranch{##1}%
+      \tr@@do{%
+        \tr@@loopxcompscan{#1}{#2}{##1}%
+        \tr@@loopxreccalls{##1}}}%
+    \tr@@loopx{#3}%
+    \exportmacro#1%
+  \egroup}
+
+\def\tr@@looppostfix#1#2#3{%
+  \bgroup
+    \let#1\@empty
+    \def\tr@@loopx##1{%
+      \tr@@looptestbranch{##1}%
+      \tr@@do{%
+        \tr@@loopxreccalls{##1}%
+        \tr@@loopxcompscan{#1}{#2}{##1}}}%
+    \tr@@loopx{#3}%
+    \exportmacro#1%
+  \egroup}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\def\createleaf#1#2{\tr@@cre@te{#1}{#2}\relax}
+\def\createnode#1#2{\tr@@cre@te{#1}{#2}\null}
+\let\nodecontent\tr@@branch
+\let\ifemptynode\tr@@ifemptynode
+\let\depthfirstprefix\tr@@loopprefix
+\let\depthfirstpostfix\tr@@looppostfix
+
+\makeatother

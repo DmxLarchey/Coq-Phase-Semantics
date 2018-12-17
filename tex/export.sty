@@ -1,0 +1,112 @@
+\def\dexpandafter{\expandafter\expandafter\expandafter}
+
+\def\exdef#1#2{\expandafter\def\expandafter#1\expandafter{#2}}    % #1 = expansion de #2
+\def\dxdef#1#2{\expandafter\exdef\expandafter#1\expandafter{#2}}  % #1 = dbl expansion de #2
+\def\lxdef#1#2{\expandafter\let\expandafter#1#2}                  % #1 = dbl expansion de #2
+
+\def\addend#1#2{\exdef#1{#1#2}}
+\def\exaddend#1#2{\dxdef#1{\expandafter#1#2}}
+\def\dxaddend#1#2{\expandafter\exaddend\expandafter#1\expandafter{#2}}
+
+% la macro #1 est exportee a l'exterieur du groupe
+%
+% \bgroup
+%   ....
+%   \def\toto{...}
+%   ....
+%   \exportmacro\toto
+% \egroup
+
+\def\exportmacro#1#2{%
+  \expandafter#2\expandafter\def
+  \expandafter#1\expandafter{#1}}
+
+% plusieures macros sont exportees a l'exterieur du groupe
+%
+% \bgroup
+%   \initexports
+%   ....
+%   \exportdef\toto
+%   ....
+%   \mexportdef{\titi\tata}
+%   ....
+%   \doexports
+% \egroup
+%
+% a l'interieur du groupe, les macros privees 
+% \export@currentexports, \export@multiexportdefloop
+% sont reservees !!!!
+
+\def\showexports{\show\export@currentexports}
+\def\initexports{\def\export@currentexports{}}
+\def\doexports#1{\expandafter#1\export@currentexports}
+\def\exportdef#1{%
+  \addend\export@currentexports{\def#1}%
+  \exaddend\export@currentexports{\expandafter{#1}}}
+\def\mexportdef#1{%
+  \def\export@multiexportdefloop##1{%
+    \ifx##1:%
+      \let\export@multiexportdefloop\relax
+    \else
+      \exportdef{##1}%
+    \fi\export@multiexportdefloop}
+  \export@multiexportdefloop#1:}
+
+% \buildfori{\macro}{3}{0}{-1}{\start}{\step}{\end}
+% fabrique la macro :
+% \macro = \start \step 3\step 2\step 1\end
+
+\def\buildfori#1#2#3#4#5#6#7{%
+  \bgroup
+    \count0=#2%
+    \def#1{#5}%
+    \def\export@loop{%
+      \edef\lev{\the\count0}%
+      \ifnum\lev=#3%
+        \let\export@loop\relax
+      \else
+        \addend#1{#6}%
+        \exaddend#1\lev
+        \advance\count0 by #4%
+      \fi\export@loop}%
+    \export@loop
+    \addend#1{#7}%
+    \exportmacro#1%
+  \egroup}
+
+% \buildforii{\macro}{abc}{\start}{\step}{\end}
+% fabrique la macro :
+% \macro = \start \step a\step b\step c\end
+
+\def\buildforii#1#2#3#4#5{%
+  \bgroup
+    \def#1{#3}%
+    \def\export@loop##1{%
+      \if##1:%
+        \let\export@loop\relax
+      \else
+        \addend#1{#4##1}%
+      \fi\export@loop}%
+    \export@loop#2:%
+    \addend#1{#5}%
+    \exportmacro#1%
+  \egroup}
+
+% \buildforiii{\macro}{abc}{\start}{\step}{\end}
+% fabrique la macro :
+% \macro = \start \step a\step b\step c\end
+% mais ou \step x est expanse ...
+
+\def\buildforiii#1#2#3#4#5{%
+  \bgroup
+    \def#1{#3}%
+    \def\export@loop##1{%
+      \if##1:%
+        \let\export@loop\relax
+      \else
+        \exaddend#1{#4##1}%
+      \fi\export@loop}%
+    \export@loop#2:%
+    \addend#1{#5}%
+    \exportmacro#1%
+  \egroup}

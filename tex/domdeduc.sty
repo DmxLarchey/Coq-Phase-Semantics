@@ -1,0 +1,26 @@
+\makeatletter
+
+\def\d@daction#1{\csname d@daction#1\endcsname}
+\def\d@ddefaction#1{\expandafter\def\csname d@daction#1\endcsname}
+
+\def\d@dactionx#1#2#3{\ifemptynode{#2-x}%
+                       \d@daction{#1}{#2}{#3}{\nodecontent{#2}}{}%
+                      \else
+                       \d@daction{#1}{#2}{#3}{\nodecontent{#2}}{\nodecontent{#2-x}}%
+                      \fi}
+
+\d@ddefaction l#1#2#3#4{\initseq{#1}{#3}}
+\d@ddefaction 0#1#2#3#4{\initseq{#1}{}\seqI{#1}{#1}{#3}{#4}}
+\d@ddefaction 1#1#2#3#4{\seqI{#1}#2{#3}{#4}}
+\d@ddefaction 2#1#2#3#4{\seqII{#1}#2{#3}{#4}}
+\d@ddefaction 3#1#2#3#4{\seqIII{#1}#2{#3}{#4}}
+
+\def\createaxiom#1#2{\createleaf{d@d-#1}{#2}\ignorespaces}
+
+\def\d@dcre@terule#1#2{\createnode{#1}{#2}\createnode{#1-x}{}\ignorespaces}
+\def\d@dcre@terulex#1#2[#3]{\createnode{#1}{#2}\createnode{#1-x}{#3}\ignorespaces}
+\def\createrule#1#2{\@ifnextchar[{\d@dcre@terulex{d@d-#1}{#2}}{\d@dcre@terule{d@d-#1}{#2}}}
+
+\def\buildproof#1{{\depthfirstpostfix\d@dsc@n\d@dactionx{d@d-#1}\d@dsc@n\showseq{d@d-#1}}}
+
+\makeatother

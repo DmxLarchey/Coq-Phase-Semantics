@@ -1,0 +1,149 @@
+\newdimen\DimRegleI	\DimRegleI=3pt
+\newdimen\DimRegleII	\DimRegleII=1.2em
+\newdimen\DimRegleIII	\DimRegleIII=4pt
+\newdimen\DimRegleIV	\DimRegleIV=6pt
+
+\newbox\bpoubI		\newbox\bpoubII
+\newbox\bpoubIII	\newbox\bpoubIV
+\newdimen\dpoubI
+
+\newcommand{\setmaxdim}[3]{\ifdim#1<#2#3=#2\else#3=#1\fi}
+
+\newcommand{\centeredbox}[1]{%
+\setbox\bpoubI=#1%
+\dpoubI=\ht\bpoubI%
+\advance \dpoubI by -\dp\bpoubI%
+\divide \dpoubI by 2%
+\hbox{\raise -\dpoubI\box\bpoubI}}
+
+\newcommand{\grownbox}[2]{%
+\hbox{\hspace{#2}%
+\vtop{\offinterlineskip\vbox{\vspace{#2}\hbox{#1}}\vspace{#2}}%
+\hspace{#2}}}
+
+\newcommand{\regleOi}[1]{%
+\setbox\bpoubI=\hbox{#1}%
+\dpoubI=\wd\bpoubI%
+\advance\dpoubI by 2\DimRegleI%
+%
+\vtop{%
+\offinterlineskip%
+\hbox to \dpoubI{\hrulefill}%
+\vspace{\DimRegleI}%
+\hbox to \dpoubI{\hfill\box\bpoubI\hfill}%
+}}
+
+\newcommand{\regleIi}[2]{%
+\setbox\bpoubI=\hbox{#1}%
+\setbox\bpoubII=\hbox{#2}%
+%
+\dpoubI=\wd\bpoubI%
+\setmaxdim{\dpoubI}{\wd\bpoubII}{\dpoubI}%
+\advance\dpoubI by 2\DimRegleI%
+%
+\vtop{%
+\offinterlineskip%
+\vbox{\offinterlineskip%
+\hbox to \dpoubI{\hfill\box\bpoubI\hfill}%
+\vspace{\DimRegleI}%
+\hbox to \dpoubI{\hrulefill}%
+}%
+\vspace{\DimRegleI}%
+\hbox to \dpoubI{\hfill\box\bpoubII\hfill}%
+}}
+
+\newcommand{\regleIIi}[3]{%
+\setbox\bpoubI=\hbox{#1}%
+\setbox\bpoubII=\hbox{#2}%
+\setbox\bpoubIII=\hbox{#3}%
+%
+\dpoubI=\wd\bpoubI%
+\advance\dpoubI by \DimRegleII%
+\advance\dpoubI by \wd\bpoubII%
+\setmaxdim{\dpoubI}{\wd\bpoubIII}{\dpoubI}%
+\advance\dpoubI by 2\DimRegleI%
+%
+\vtop{\offinterlineskip%
+\vbox{\offinterlineskip%
+\hbox to \dpoubI{\hspace{\DimRegleI}\box\bpoubI\hfill\box\bpoubII\hspace{\DimRegleI}}%
+\vspace{\DimRegleI}%
+\hbox to \dpoubI{\hrulefill}%
+}%
+\vspace{\DimRegleI}%
+\hbox to \dpoubI{\hfill\box\bpoubIII\hfill}%
+}}
+
+\newcommand{\regleIIIi}[4]{%
+\setbox\bpoubI=\hbox{#1}%
+\setbox\bpoubII=\hbox{#2}%
+\setbox\bpoubIII=\hbox{#3}%
+\setbox\bpoubIV=\hbox{#4}%
+%
+\dpoubI=\wd\bpoubI%
+\advance\dpoubI by \wd\bpoubII%
+\advance\dpoubI by \wd\bpoubIII%
+\advance\dpoubI by 2\DimRegleII%
+\setmaxdim{\dpoubI}{\wd\bpoubIV}{\dpoubI}%
+\advance\dpoubI by 2\DimRegleI%
+%
+\vtop{\offinterlineskip%
+\vbox{\offinterlineskip%
+\hbox to \dpoubI{\hspace{\DimRegleI}\box\bpoubI\hfill\box\bpoubII\hfill\box\bpoubIII\hspace{\DimRegleI}}%
+\vspace{\DimRegleI}%
+\hbox to \dpoubI{\hrulefill}%
+}%
+\vspace{\DimRegleI}%
+\hbox to \dpoubI{\hfill\box\bpoubIV\hfill}%
+}}
+
+\newcommand{\regleO}[1]{\grownbox{\regleOi{#1}}{\DimRegleIII}}
+\newcommand{\regleI}[2]{\grownbox{\regleIi{#1}{#2}}{\DimRegleIII}}
+\newcommand{\regleII}[3]{\grownbox{\regleIIi{#1}{#2}{#3}}{\DimRegleIII}}
+\newcommand{\regleIII}[4]{\grownbox{\regleIIIi{#1}{#2}{#3}{#4}}{\DimRegleIII}}
+
+\newcommand{\regleOp}[2]{\grownbox%
+{\hbox{\regleOi{#1}\hspace{\DimRegleIV}\centeredbox{\hbox{#2}}}}%
+{\DimRegleIII}}
+
+\newcommand{\regleIp}[3]{\grownbox%
+{\hbox{\regleIi{#1}{#2}\hspace{\DimRegleIV}\centeredbox{\hbox{#3}}}}%
+{\DimRegleIII}}
+
+\newcommand{\regleIIp}[4]{\grownbox%
+{\hbox{\regleIIi{#1}{#2}{#3}\hspace{\DimRegleIV}\centeredbox{\hbox{#4}}}}%
+{\DimRegleIII}}
+
+\newcommand{\regleIIIp}[5]{\grownbox%
+{\hbox{\regleIIIi{#1}{#2}{#3}{#4}\hspace{\DimRegleIV}\centeredbox{\hbox{#5}}}}%
+{\DimRegleIII}}
+
+\newcommand{\setdimregle}[4]{%
+  \DimRegleI=#1%
+  \DimRegleII=#2%
+  \DimRegleIII=#3%
+  \DimRegleIV=#4}
+
+\def\infer@def#1{\expandafter\def\csname infer@rule@-#1\endcsname}
+\def\infer@i#1{\csname infer@rule@-#1\endcsname}
+
+\infer@def0#1{\regleO{$#1$}}
+\infer@def1#1#2{\regleI{$#1$}{$#2$}}
+\infer@def2#1#2#3{\regleII{$#1$}{$#2$}{$#3$}}
+\infer@def3#1#2#3#4{\regleIII{$#1$}{$#2$}{$#3$}{$#4$}}
+
+\infer@def{0p}[#1]#2{\regleOp{$#2$}{\frule{#1}}}
+\infer@def{1p}[#1]#2#3{\regleIp{$#2$}{$#3$}{\frule{#1}}}
+\infer@def{2p}[#1]#2#3#4{\regleIIp{$#2$}{$#3$}{$#4$}{\frule{#1}}}
+\infer@def{3p}[#1]#2#3#4#5{\regleIIIp{$#2$}{$#3$}{$#4$}{$#5$}{\frule{#1}}}
+
+\newcommand\frule[1]{\ensuremath{[#1]}}
+\newcommand\infer[1]{%
+  \@ifnextchar[%
+    {\infer@i{#1p}}
+    {\infer@i{#1}}}
+
+
+
+
+
+
