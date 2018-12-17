@@ -23,6 +23,8 @@ Section Cut_Admissibility.
 
   Let cl := cl_ctx ill_cf_provable.
 
+  Implicit Type (X Y : list ill_form -> Prop).
+
   Let cl_increase X : X ⊆ cl X.
   Proof. apply cl_ctx_increase. Qed.
  

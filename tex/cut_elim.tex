@@ -215,7 +215,7 @@
 
 \begin{frame}
 
-\frametitle{Overview of the talk}
+\frametitle{Introduction}
 
 \begin{itemize}
 \item Linear logic introduced by Girard
@@ -426,7 +426,7 @@ $$
 
 \end{frame}
 
-\section{Cut-admissibility}
+\section{Cut-elimination}
 
 \newcommand{\ulist}[1]{\lfloor#1\rfloor}
 
@@ -468,8 +468,8 @@ $$
                       {\Gamma, \Delta \pable A \ltime B}$$
 \item $\ulist{A\ltime B}\in\cl\{\ulist{A,B}\}$ iff
 $$
-\infer1[\text{for any $\Gamma,C$}]   {A,B,\Gamma \seq C} 
-                      { A \ltime B, \Gamma\seq C}$$
+\infer1[\text{for any $\Gamma,C$}]   {A,B,\Gamma \pable C} 
+                      { A \ltime B, \Gamma\pable C}$$
 \item $\set K\subseteq\set J$ iff $\pable$ closed under \frule W and \frule C.
 \end{itemize}
 
@@ -485,7 +485,7 @@ $$\fbox{$\forall A,\;\ulist A\in\sem A\subseteq\dc A$}\quad\text{and}\quad \fora
 \item By induction on $A$, then by induction on $\Gamma$
 \item By soundness, from a (cut using) proof of $\Gamma\seq A$
   \begin{itemize}
-  \item we deduce $\sem\Gamma\subseteq\sem A\subseteq\dc A$
+  \item we deduce $\Gamma\in\sem\Gamma\subseteq\sem A\subseteq\dc A$
   \item hence $\Gamma \seq_{\textrm{cf}} A$
   \item hence $\Gamma\seq A$ is cut-free provable
   \end{itemize}
@@ -513,9 +513,14 @@ $$\fbox{$\forall A,\;\ulist A\in\sem A\subseteq\dc A$}\quad\text{and}\quad \fora
   \item $\coq{Prop} \rightsquigarrow \coq{Type}$ gives cut-elimination algo.
   \item can be extracted (you do not want to read it...)
   \end{itemize}
+\item Coq development
+  \begin{itemize}
+  \item \url{@GH/DmxLarchey/Coq-Phase-Semantics}
+  \item Around 1300 loc for specs and 1000 loc for proofs  
+  \item 2/5 of which are libraries (lists, permutations ...)
+  \end{itemize}
 \end{itemize}
 
 \end{frame}
-
 
 \end{document}

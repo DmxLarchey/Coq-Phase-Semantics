@@ -847,5 +847,6 @@ End Relational_phase_semantics.
 Local Infix "∘" := (@Composes _ _) (at level 50, no associativity).
 
 Check ill_Form_sem_sound.
+Print Assumptions ill_Form_sem_sound.
 
 
