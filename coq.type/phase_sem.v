@@ -11,7 +11,7 @@ Require Import Arith Omega List Permutation.
 
 Require Import utils ill_form ill_rules.
 
-Local Infix "~p" := (@Permutation _) (at level 70).
+Local Infix "~p" := (@perm_t _) (at level 70).
 
 Set Implicit Arguments.
 
@@ -63,7 +63,7 @@ Section Relational_phase_semantics.
 
   (* this is a relational/non-deterministic monoid *)
 
-  Variable Compose : M -> M -> M -> Prop.
+  Variable Compose : M -> M -> M -> Type.
 
   (* Composition lifted to predicates *)
 
@@ -721,7 +721,7 @@ Section Relational_phase_semantics.
   Fact list_Form_sem_perm ll mm: ll ~p mm -> ⟬߭ll⟭  ≃ ⟬߭mm⟭ .
   Proof.
     revert ll mm.
-    apply Permutation_rect with (1 := ill_form_eq_dec); auto.
+    induction 1; auto.
     + intros; apply composes_congruent, cl_eq1; auto.
     + intros; simpl; do 2 apply eq1_sym, eq1_trans with (2 := @times_associative _ _ _).
       apply times_congruence; auto.

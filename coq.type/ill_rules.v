@@ -13,7 +13,7 @@ Require Import utils ill_form.
 
 Set Implicit Arguments.
 
-Local Infix "~p" := (@Permutation _) (at level 70).
+Local Infix "~p" := (@perm_t _) (at level 70).
 
 Reserved Notation "l '⊢' x" (at level 70, no associativity).
 
@@ -204,13 +204,13 @@ Proof.
   revert Δ.
   induction Γ as [ | B ga IH ]; simpl; auto; intros de H.
   apply ill_cf_perm with (‼ga++!B::de).
-  { apply Permutation_sym, Permutation_cons_app; auto. }
+  { apply perm_t_sym, perm_t_middle. }
   apply IH.
   apply ill_cf_perm with (!B::‼ga++‼ga++de).
-  { apply Permutation_sym; focus (!B); apply Permutation_sym.
-    apply Permutation_cons_app; rewrite app_assoc; auto. }
+  { apply perm_t_sym; focus (!B); apply perm_t_sym.
+    rewrite app_assoc; apply perm_t_middle. }
   apply ill_cf_cntr.
   revert H; apply ill_cf_perm.
   constructor 2.
-  apply Permutation_sym, Permutation_cons_app; auto.
+  apply perm_t_sym, perm_t_middle.
 Qed.

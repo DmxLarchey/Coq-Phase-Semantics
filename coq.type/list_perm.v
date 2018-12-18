@@ -69,7 +69,7 @@ Section perm_t.
     apply perm_t_trans with (2 := perm_t_swap _ _ _).
     constructor; auto.
   Qed.
-  
+ 
   Fact perm_t_middle x l m : perm_t (x::l++m) (l++x::m).
   Proof.
     induction l as [ | y l IH ]; simpl.
@@ -78,6 +78,15 @@ Section perm_t.
     constructor; auto.
   Qed.
 
+  Fact perm_t_app_comm a b : perm_t (a++b) (b++a).
+  Proof.
+    induction a as [ | x a IHa ].
+    + rewrite <- app_nil_end; apply perm_t_refl.
+    + apply perm_t_trans with (x::b++a).
+      * simpl; apply perm_t_cons; auto.
+      * apply perm_t_middle.
+  Qed.
+ 
   Fact perm_t_Permutation l m : perm_t l m -> l ~p m.
   Proof.
     induction 1; auto; try constructor.
@@ -85,6 +94,35 @@ Section perm_t.
   Qed.
   
 End perm_t.
+
+Section perm_t_map_inv_t.
+
+  Variable (X Y : Type) (f : X -> Y).
+  
+  Let Q m1 m2 := forall l1, m1 = map f l1 -> { l2 | m2 = map f l2 /\ l1 ~p l2}.
+
+  Let pmit : forall m1 m2, @perm_t _ m1 m2 -> Q m1 m2.
+  Proof.
+    apply perm_t_rect; unfold Q; clear Q.
+    * intros [ | ]; exists nil; auto; discriminate.
+    * intros y m1 m2 H1 IH1 [ | x l1 ]; simpl; try discriminate.
+      intros H2; injection H2; clear H2; intros H2 H3; subst y.
+      destruct (IH1 _ H2) as (l2 & ? & ?).
+      exists (x::l2); simpl; subst; auto.
+    * intros y1 y2 m1 [ | x2 [ | x1 l1 ] ]; try discriminate; simpl.
+      intros H2; injection H2; clear H2; intros H1 H2 H3; subst.
+      exists (x1::x2::l1); simpl; split; auto; constructor.
+    * intros m1 m2 m3 H1 IH1 H2 IH2 l1 H3.
+      destruct IH1 with (1 := H3) as (l2 & H4 & H5).
+      destruct IH2 with (1 := H4) as (l3 & H6 & H7).
+      exists l3; split; auto.
+      constructor 4 with l2; auto.
+  Qed.
+
+  Fact perm_t_map_inv_t l m : perm_t (map f l) m -> { l' | m = map f l' /\ l ~p l' }.
+  Proof. intro; apply pmit with (2 := eq_refl); auto. Qed.
+
+End perm_t_map_inv_t.
 
 Section Permutation_rect.
 

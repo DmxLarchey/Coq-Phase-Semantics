@@ -221,11 +221,11 @@
 \item Linear logic introduced by Girard
   \begin{itemize}
   \item both classical and intuitionistic
+  \item separate multiplicatives (${\ltime},{\limp},{\lunit}$)
+  \item from additives (${\lwith},{\lplus},\lbot, \ltop$)
   \end{itemize}
 \item ILL via its sequent calculus
   \begin{itemize}
-  \item separate multiplicatives (${\ltime},{\limp},{\lunit}$)
-  \item from additives (${\lwith},{\lplus},\lbot, \ltop$)
   \item multiplicatives split the context
   \item additives share the context
   \end{itemize}
@@ -259,7 +259,7 @@
 %
   \infer2[\limp_L]    {\Gamma \seq A}{B,\Delta \seq C}
                       {A \limp B,\Gamma, \Delta\seq C}
-& \infer1[\limp_R]    {\Gamma, A \seq B}
+& \infer1[\limp_R]    {A,\Gamma \seq B}
                       {\Gamma \seq A \limp B} \\
 %
   \infer1[\lunit_L]   {\Gamma \seq A}
@@ -444,6 +444,7 @@ $$\Theta\in \Gamma\mmult \Delta \quad\iff\quad\ulist{\Gamma,\Delta}\cperm\Theta$
 $$\Delta\in\cl\set X\quad\iff\quad \fbox{$\forall\,\Gamma\,A,\;\set X,\Gamma\pable A\cfun \Delta,\Gamma\pable A$}$$ 
 \item where ${\pable}:\coq{list}~\mathsf{Form}\cfun\mathsf{Form}\cfun\Prop$
   \begin{itemize}
+  \item $\pable$ is a deduction relation
   \item such as provability or \emph{cut-free provability}
   \item permutations: $\Gamma\cperm\Delta\cfun \Gamma\pable A\cfun \Delta\pable A$
   \end{itemize}
@@ -501,6 +502,7 @@ $$\fbox{$\forall A,\;\ulist A\in\sem A\subseteq\dc A$}\quad\text{and}\quad \fora
 \begin{itemize}
 \item Extensions to other logics:
   \begin{itemize}
+  \item Phase semantics, contextual closure very generic
   \item of course fragments of ILL, but also CLL
   \item ILL with modality, Linear time ILL
   \item Bunched Implications (BI)
@@ -509,7 +511,6 @@ $$\fbox{$\forall A,\;\ulist A\in\sem A\subseteq\dc A$}\quad\text{and}\quad \fora
   \end{itemize}
 \item Computational content
   \begin{itemize}
-  \item Phase semantics, contextual closure very generic
   \item $\coq{Prop} \rightsquigarrow \coq{Type}$ gives cut-elimination algo.
   \item can be extracted (you do not want to read it...)
   \end{itemize}

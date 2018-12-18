@@ -16,7 +16,14 @@ Set Implicit Arguments.
 Section Relational_phase_semantics.
 
   (** We define a sound relational phase sematics for ILL 
-      based on stable closures *)
+      based on stable closures 
+
+      The algebraic developments below follow the sketch
+      in the book "Lectures on Linear Logic"
+
+      http://phil.gu.se/logic/books/Troelstra:Lectures_on_Linear_Logic.pdf
+
+    *)
 
   Variable M : Type.
 

@@ -217,6 +217,7 @@ Section Cut_Admissibility.
           simpl; apply cl_mono.
           intros _ []; constructor 1 with (A::∅) (B::∅); auto.
           red; simpl; auto.
+          apply perm_t_refl.
         * simpl; apply cl_under_closed; auto.
           intros x Hx; apply rule_times_r.
           revert Hx; apply composes_monotone; eauto.
@@ -241,7 +242,7 @@ Section Cut_Admissibility.
       apply cl_increase; auto.
     constructor 1 with (A :: nil) ga; auto.
     + apply Okada_formula; auto.
-    + apply Permutation_refl.
+    + apply perm_t_refl.
   Qed.
 
   (* And now we apply the soundness result of relational phase semantics *)

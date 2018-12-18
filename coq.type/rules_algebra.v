@@ -11,7 +11,7 @@ Require Import Arith Omega List Permutation.
 
 Require Import utils ill_form phase_sem.
 
-Local Infix "~p" := (@Permutation _) (at level 70).
+Local Infix "~p" := (@perm_t _) (at level 70).
 
 Set Implicit Arguments.
 
@@ -60,13 +60,15 @@ Section Rules.
 
   Hypothesis P_perm : forall Γ Δ A, Γ ~p Δ -> Γ ⊨ A -> Δ ⊨ A. 
 
+  Hint Resolve perm_t_refl perm_t_app_comm.
+
   Local Fact cl_comm Γ Δ : sg Γ ∘ sg Δ ⊆ cl (sg Δ ∘ sg Γ).
   Proof.
     intros _ [ ga de th ? ? Hth ]; subst Γ Δ.
     intros rho x H; apply H.
     constructor 1 with de ga; auto.
     revert Hth; unfold comp.
-    apply perm_trans, Permutation_app_comm.
+    apply perm_t_trans; auto. 
   Qed.
   
   Local Fact cl_neutral_1 : forall Γ, cl (sg ∅ ∘ sg Γ) Γ.
@@ -82,7 +84,7 @@ Section Rules.
     intros ga ? [ de th ka ? ? H1 ] rho x G; subst th de.
     cbv in H1.
     generalize (G _ eq_refl).
-    apply P_perm, Permutation_app; auto.
+    apply P_perm, perm_t_app; auto.
   Qed.
 
   Fact cl_ctx_stable_l : forall X Y, cl X ∘ Y ⊆ cl (X ∘ Y).
@@ -90,7 +92,7 @@ Section Rules.
     intros X Y _ [ ga de th H1 H2 H3 ] rho x HXY.
     red in H1; red in H3.
     apply P_perm with (ga++(de++rho)).
-    1: rewrite <- app_ass; apply Permutation_app; auto.
+    1: { rewrite <- app_ass; apply perm_t_app; auto. }
     apply H1.
     intros ka Hka.
     rewrite <- app_ass.
@@ -111,10 +113,10 @@ Section Rules.
     red; auto.
     red; auto.
     revert Hu.
-    apply P_perm, Permutation_app; auto.
+    apply P_perm, perm_t_app; auto.
     rewrite app_ass.
-    apply Permutation_trans with (2 := H4).
-    apply Permutation_app; auto.
+    apply perm_t_trans with (2 := H4).
+    apply perm_t_app; auto.
   Qed.
 
   Local Fact sub_monoid_1 : cl K ∅.
@@ -129,10 +131,9 @@ Section Rules.
     red in H; simpl in H.
     unfold ill_lbang in H.
     rewrite <- map_app in H.
-    apply Permutation_map_inv_t in H.
+    apply perm_t_map_inv_t in H.
     destruct H as (th & H1 & H2); subst c.
     exists th; auto.
-    apply ill_form_eq_dec.
   Qed.
 
   Section sub_J_cs.
@@ -194,7 +195,7 @@ Section Rules.
       intros H; apply cntr.
       intros _ [ x y th [] [] H1 ].
       revert H; apply P_perm.
-      rewrite <- app_ass; apply Permutation_app; auto.
+      rewrite <- app_ass; apply perm_t_app; auto.
     Qed.
 
   End sub_J_cn.
@@ -245,7 +246,7 @@ Section Rules.
         destruct Hth as [ rho ga th H1 H2 H3 ].
         subst rho; red in H3; simpl in H3.
         apply P_perm with (A -o B::ga++de).
-        { apply Permutation_app with (1 := H3); auto. }
+        { apply perm_t_app with (1 := H3); auto. }
         apply H0; auto.
         apply H with (ϴ := _::∅); auto.
     Qed.
@@ -259,11 +260,11 @@ Section Rules.
         intros _ [ ? ? De [] [] H2 ].
         apply P_perm with (1 := H2).
         apply P_perm with (2 := H1).
-        apply Permutation_app_comm with (l := _::nil).
+        apply perm_t_app_comm with (a := _::nil).
       + intros H th Hth.
         apply H, Hth.
         constructor 1 with th (A :: nil); auto.
-        apply Permutation_app_comm.
+        apply perm_t_app_comm.
     Qed.
 
     Fact rule_times_l_eq A B : cl (sg (A::B::nil)) (A⊗B::nil)

@@ -40,15 +40,12 @@ Infix "⊕" := (ill_bin ll_plus) (at level 50).
 
 Infix "-o" := (ill_bin ll_limp) (at level 51, right associativity).
 
-(* Infix "⊸" := (ill_bin ll_limp) (at level 51, right associativity). *)
-
 Notation "'!' x" := (ill_bang x) (at level 52).
 
 Definition ill_lbang := map (fun x => !x).
 
-Notation "'!l' x" := (ill_lbang x) (at level 60, only parsing).
-
-Notation "‼ x" := (ill_lbang x) (at level 52).
+Notation "'!l' Γ" := (ill_lbang Γ) (at level 52, only parsing).
+Notation "‼ Γ" := (ill_lbang Γ) (at level 52).
 
 Notation "£" := ill_var.
 
