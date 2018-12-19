@@ -148,41 +148,47 @@ Proof. exists (in_llp_ax A); simpl; auto. Qed.
 Fact ill_cf_perm Γ Δ A B C : Γ++!A::!B::Δ ⊢cf C -> Γ++!B::!A::Δ ⊢cf C. 
 Proof. intros [p]; exists (in_llp_perm _ _ _ _ p); simpl; auto. Qed.
 
-Fact ill_cf_limp_l Γ Δ A B C : Γ ⊢cf A -> B::Δ ⊢cf C -> A -o B::Γ++Δ ⊢cf C.
-Proof. intros [p] [q]; exists (in_llp_limp_l p q); simpl; auto. Qed.
+Fact ill_cf_limp_l Γ Δ ϴ A B C : Γ ⊢cf A -> ϴ++B::Δ ⊢cf C -> ϴ++Γ++A -o B::Δ ⊢cf C.
+Proof. intros [p] [q]; exists (in_llp_limp_l _ _ _ p q); simpl; auto. Qed.
 
 Fact ill_cf_limp_r Γ A B : A::Γ ⊢cf B -> Γ ⊢cf A -o B.
 Proof. intros [p]; exists (in_llp_limp_r p); simpl; auto. Qed.
 
-Fact ill_cf_with_l1 Γ A B C : A::Γ ⊢cf C -> A﹠B::Γ ⊢cf C.
-Proof. intros [p]; exists (in_llp_with_l1 B p); simpl; auto. Qed.
+Fact ill_cf_rimp_l Γ Δ ϴ A B C : Γ ⊢cf A -> ϴ++B::Δ ⊢cf C -> ϴ++B o- A::Γ++Δ ⊢cf C.
+Proof. intros [p] [q]; exists (in_llp_rimp_l _ _ _ p q); simpl; auto. Qed.
 
-Fact ill_cf_with_l2 Γ A B C : B::Γ ⊢cf C -> A﹠B::Γ ⊢cf C.
-Proof. intros [p]; exists (in_llp_with_l2 A p); simpl; auto. Qed.
+Fact ill_cf_rimp_r Γ A B : Γ++A::nil ⊢cf B -> Γ ⊢cf B o- A.
+Proof. intros [p]; exists (in_llp_rimp_r _ _ p); simpl; auto. Qed.
+
+Fact ill_cf_with_l1 Γ Δ A B C :  Γ++A::Δ ⊢cf C -> Γ++A﹠B::Δ ⊢cf C.
+Proof. intros [p]; exists (in_llp_with_l1 _ _ _ _ p); simpl; auto. Qed.
+
+Fact ill_cf_with_l2 Γ Δ A B C :  Γ++B::Δ ⊢cf C -> Γ++A﹠B::Δ ⊢cf C.
+Proof. intros [p]; exists (in_llp_with_l2 _ _ _ _ p); simpl; auto. Qed.
 
 Fact ill_cf_with_r Γ A B : Γ ⊢cf A -> Γ ⊢cf B -> Γ ⊢cf A﹠B.
 Proof. intros [p] [q]; exists (in_llp_with_r p q); simpl; auto. Qed.
 
-Fact ill_cf_bang_l Γ A B : A::Γ ⊢cf B -> !A::Γ ⊢cf B.
-Proof. intros [p]; exists (in_llp_bang_l p); simpl; auto. Qed.
+Fact ill_cf_bang_l Γ Δ A B : Γ++A::Δ ⊢cf B -> Γ++!A::Δ ⊢cf B.
+Proof. intros [p]; exists (in_llp_bang_l _ _ _ p); simpl; auto. Qed.
 
 Fact ill_cf_bang_r Γ A : ‼Γ ⊢cf A -> ‼Γ ⊢cf !A.
 Proof. intros [p]; exists (in_llp_bang_r _ p); simpl; auto. Qed.
 
-Fact ill_cf_weak Γ A B : Γ ⊢cf B -> !A::Γ ⊢cf B.
-Proof. intros [p]; exists (in_llp_weak A p); simpl; auto. Qed.
-  
-Fact ill_cf_cntr Γ A B : !A::!A::Γ ⊢cf B -> !A::Γ ⊢cf B.
-Proof. intros [p]; exists (in_llp_cntr p); simpl; auto. Qed.
+Fact ill_cf_weak Γ Δ A B : Γ++Δ ⊢cf B -> Γ++!A::Δ ⊢cf B.
+Proof. intros [p]; exists (in_llp_weak _ _ _ p); simpl; auto. Qed.
 
-Fact ill_cf_times_l Γ A B C : A::B::Γ ⊢cf C -> A⊗B::Γ ⊢cf C.
-Proof. intros [p]; exists (in_llp_times_l p); simpl; auto. Qed.
+Fact ill_cf_cntr Γ Δ A B : Γ++!A::!A::Δ ⊢cf B -> Γ++!A::Δ ⊢cf B.
+Proof. intros [p]; exists (in_llp_cntr _ _ _ p); simpl; auto. Qed.
+
+Fact ill_cf_times_l Γ Δ A B C : Γ++A::B::Δ ⊢cf C -> Γ++A⊗B::Δ ⊢cf C.
+Proof. intros [p]; exists (in_llp_times_l _ _ _ _ p); simpl; auto. Qed.
 
 Fact ill_cf_times_r Γ Δ A B : Γ ⊢cf A -> Δ ⊢cf B -> Γ++Δ ⊢cf A⊗B.
 Proof. intros [p] [q]; exists (in_llp_times_r p q); simpl; auto. Qed.
 
-Fact ill_cf_plus_l Γ A B C : A::Γ ⊢cf C -> B::Γ ⊢cf C -> A⊕B::Γ ⊢cf C.
-Proof. intros [p] [q]; exists (in_llp_plus_l p q); simpl; auto. Qed.
+Fact ill_cf_plus_l Γ Δ A B C : Γ++A::Δ ⊢cf C -> Γ++B::Δ ⊢cf C -> Γ++A⊕B::Δ ⊢cf C.
+Proof. intros [p] [q]; exists (in_llp_plus_l _ _ _ _ p q); simpl; auto. Qed.
 
 Fact ill_cf_plus_r1 Γ A B : Γ ⊢cf A -> Γ ⊢cf A⊕B.
 Proof. intros [p]; exists (in_llp_plus_r1 _ p); simpl; auto. Qed.
@@ -190,37 +196,45 @@ Proof. intros [p]; exists (in_llp_plus_r1 _ p); simpl; auto. Qed.
 Fact ill_cf_plus_r2 Γ A B : Γ ⊢cf B -> Γ ⊢cf A⊕B.
 Proof. intros [p]; exists (in_llp_plus_r2 _ p); simpl; auto. Qed.
 
-Fact ill_cf_bot_l Γ A : ⟘::Γ ⊢cf A.
-Proof. exists (in_llp_bot_l _ _); simpl; auto. Qed.
+Fact ill_cf_bot_l Γ Δ A : Γ++⟘::Δ ⊢cf A.
+Proof. exists (in_llp_bot_l _ _ _); simpl; auto. Qed.
 
 Fact ill_cf_top_r Γ : Γ ⊢cf ⟙.
 Proof. exists (in_llp_top_r _); simpl; auto. Qed.
 
-Fact ill_cf_unit_l Γ A : Γ ⊢cf A -> 𝝐 ::Γ ⊢cf A.
-Proof. intros [p]; exists (in_llp_unit_l p); simpl; auto. Qed.
+Fact ill_cf_unit_l Γ Δ A : Γ++Δ ⊢cf A -> Γ++𝝐::Δ ⊢cf A.
+Proof. intros [p]; exists (in_llp_unit_l _ _ p); simpl; auto. Qed.
 
 Fact ill_cf_unit_r : ∅ ⊢cf 𝝐.
 Proof. exists (in_llp_unit_r); simpl; auto. Qed.
 
-Fact ill_cf_weak_ctx Γ Δ A : Δ ⊢cf A -> ‼Γ++Δ ⊢cf A.
+Fact ill_cf_weak_ctx Γ ϴ Δ A : Γ++Δ ⊢cf A -> Γ++‼ϴ++Δ ⊢cf A.
 Proof.
   intros H.
-  induction Γ as [ | B ga IH ]; simpl; auto.
+  induction ϴ as [ | B th IH ]; simpl; auto.
   apply ill_cf_weak; auto.
 Qed.
 
-Fact ill_cf_cntr_ctx Γ Δ A : ‼Γ++‼Γ++Δ ⊢cf A -> ‼Γ++Δ ⊢cf A.
+Fact ill_cf_perm_ctx Γ Ω ϴ Δ C : Ω ~p ϴ -> Γ++‼Ω++Δ ⊢cf C -> Γ++‼ϴ++Δ ⊢cf C.
 Proof.
-  revert Δ.
-  induction Γ as [ | B ga IH ]; simpl; auto; intros de H.
-  apply ill_cf_perm with (‼ga++!B::de).
-  { apply perm_t_sym, perm_t_middle. }
-  apply IH.
-  apply ill_cf_perm with (!B::‼ga++‼ga++de).
-  { apply perm_t_sym; focus (!B); apply perm_t_sym.
-    rewrite app_assoc; apply perm_t_middle. }
-  apply ill_cf_cntr.
-  revert H; apply ill_cf_perm.
-  constructor 2.
-  apply perm_t_sym, perm_t_middle.
+  intros H; revert H Γ; induction 1 as [ | A Om Th H1 IH1 | A B Th | Th1 Th2 Th3 H1 IH1 H2 IH2 ]; simpl; intros Ga H; auto.
+  + replace (Ga++!A::‼Th++Δ) with ((Ga++!A::nil)++‼Th++Δ) by solve list eq.
+    apply IH1.
+    rewrite app_ass; simpl; auto.
+  + apply ill_cf_perm; auto.
 Qed.
+
+Fact ill_cf_cntr_ctx Γ ϴ Δ A : Γ++‼ϴ++‼ϴ++Δ ⊢cf A -> Γ++‼ϴ++Δ ⊢cf A.
+Proof.
+  revert Γ; induction ϴ as [ | B Th IH ]; simpl; auto; intros Ga H.
+  replace (Ga++!B::‼Th++Δ) with ((Ga++!B::nil)++‼Th++Δ) by solve list eq.
+  apply IH; rewrite app_ass; simpl.
+  apply ill_cf_cntr.
+  revert H.
+  replace (Ga++!B::‼Th++!B::‼Th++Δ) with (Ga++‼(B::Th++B::Th)++Δ).
+  2: { unfold ill_lbang; simpl; rewrite map_app; solve list eq. }
+  replace (Ga++!B::!B::‼Th++‼Th++Δ) with (Ga++‼(B::B::Th++Th)++Δ).
+  2: { unfold ill_lbang; simpl; rewrite map_app; solve list eq. }
+  apply ill_cf_perm_ctx, perm_t_cons, perm_t_sym, perm_t_middle.
+Qed.
+

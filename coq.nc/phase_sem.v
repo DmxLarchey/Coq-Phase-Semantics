@@ -115,68 +115,107 @@ Section Relational_phase_semantics.
 
   Notation cl_neutrality_1  := (forall a, cl (sg e ∘ sg a) a).
   Notation cl_neutrality_2  := (forall a, sg e ∘ sg a ⊆ cl (sg a)).
-  Notation cl_commutativity := (forall a b, sg a ∘ sg b ⊆ cl (sg b ∘ sg a)).
-  Notation cl_associativity := (forall a b c, sg a ∘ (sg b ∘ sg c) ⊆ cl ((sg a ∘ sg b) ∘ sg c)).
-
-  Hypothesis cl_commute : cl_commutativity.
-
-  Proposition composes_commute_1 A B : A ∘ B ⊆ cl (B ∘ A).
-  Proof.
-    intros _ [ a b c Ha Hb Hc ].
-    apply cl_monotone with (sg b ∘ sg a).
-    apply composes_monotone; apply sg_inc1; auto.
-    apply cl_commute.
-    constructor 1 with (3 := Hc); auto.
-  Qed.
-
-  Hint Resolve composes_commute_1.
+  Notation cl_neutrality_3  := (forall a, cl (sg a ∘ sg e) a).
+  Notation cl_neutrality_4  := (forall a, sg a ∘ sg e ⊆ cl (sg a)).
+  Notation cl_associativity_1 := (forall a b c, sg a ∘ (sg b ∘ sg c) ⊆ cl ((sg a ∘ sg b) ∘ sg c)).
+  Notation cl_associativity_2 := (forall a b c, (sg a ∘ sg b) ∘ sg c ⊆ cl (sg a ∘ (sg b ∘ sg c))).
 
   (* ⊆ ≃ ∩ ∪ ∘ *)
 
-  Proposition composes_commute A B : cl (A∘B) ≃ cl (B∘A).
-  Proof. 
-    split; intros x Hx; apply cl_idempotent; revert Hx; apply cl_monotone; auto. 
-  Qed. 
-
-  Proposition cl_stable_l_imp_r : cl_stability_l -> cl_stability_r.
-  Proof.
-    intros Hl A B x Hx.
-    apply cl_idempotent.
-    apply cl_monotone with (cl B ∘ A).
-    apply inc1_trans with (2 := fst (composes_commute _ _)); auto.
-    apply composes_commute_1; auto.
-  Qed.
-  
-  Proposition cl_stable_r_imp_l : cl_stability_r -> cl_stability_l.
-  Proof.
-    intros Hl A B.
-    apply inc1_trans with (2 := fst (composes_commute _ _)); auto.
-    apply inc1_trans with (1 := @composes_commute_1 _ _); auto.
-    apply cl_inc, Hl.
-  Qed.
-
-  Hint Resolve cl_stable_l_imp_r cl_stable_r_imp_l.
-  
-  Proposition cl_stable_l_imp_stable : cl_stability_l -> cl_stability.    Proof. auto. Qed. 
-  Proposition cl_stable_r_imp_stable : cl_stability_r -> cl_stability.    Proof. auto. Qed.
-
   Hypothesis cl_stable_l : cl_stability_l.
+  Hypothesis cl_stable_r : cl_stability_r.
   
-  Proposition cl_stable_r : cl_stability_r.                               Proof. auto. Qed.
-  Proposition cl_stable : cl_stability.                                   Proof. auto. Qed.
+  Proposition cl_stable : cl_stability.  Proof. auto. Qed.
 
-  Hint Resolve cl_stable_r cl_stable.
+  Hint Resolve cl_stable.
 
   Hypothesis cl_neutral_1 : cl_neutrality_1.
   Hypothesis cl_neutral_2 : cl_neutrality_2.
-  Hypothesis cl_associative : cl_associativity.
+  Hypothesis cl_neutral_3 : cl_neutrality_3.
+  Hypothesis cl_neutral_4 : cl_neutrality_4.
+
+  Hypothesis cl_associative_1 : cl_associativity_1.
+  Hypothesis cl_associative_2 : cl_associativity_2.
 
   (* ⊆ ≃ ∩ ∪ ∘ ⊸ *)
 
-  Definition Magicwand A B k := sg k ∘ A ⊆ B.
-  Infix "⊸" := Magicwand (at level 51, right associativity).
+  Definition Magicwand_l A B k := A ∘ sg k ⊆ B.
+  Infix "⊸" := Magicwand_l (at level 51, right associativity).
 
-  Proposition magicwand_spec A B C : A ∘ B ⊆ C ≡ A ⊆ B ⊸ C.
+  Proposition magicwand_l_spec A B C : B ∘ A ⊆ C ≡ A ⊆ B ⊸ C.
+  Proof.
+    split; intros H x Hx.
+    intros y Hy; apply H; revert Hy; apply composes_monotone; auto.
+    apply sg_inc1; auto.
+    destruct Hx as [ a b x Ha Hb Hx ].
+    apply (H _ Hb).
+    constructor 1 with a b; auto.
+  Qed.
+
+  Definition magicwand_l_adj_1 A B C := fst (magicwand_l_spec A B C).
+  Definition magicwand_l_adj_2 A B C := snd (magicwand_l_spec A B C).
+
+  Proposition magicwand_l_monotone A A' B B' : A ⊆ A' -> B ⊆ B' -> A' ⊸ B ⊆ A ⊸ B'.
+  Proof.
+    intros ? HB; apply magicwand_l_adj_1, inc1_trans with (2 := HB).
+    intros _ [? ? ? Ha Hb Hc]; apply Hb, In_composes with (3 := Hc); auto.
+  Qed.
+
+  Hint Resolve magicwand_l_monotone.
+
+  Proposition cl_magicwand_l_1 X Y : cl (X ⊸ cl Y) ⊆ X ⊸ cl Y.
+  Proof. 
+    apply magicwand_l_adj_1. 
+    apply inc1_trans with (B := cl (X ∘ (X ⊸ cl Y))); auto.
+    apply cl_inc; apply magicwand_l_spec; auto. 
+  Qed.
+
+  Proposition cl_magicwand_l_2 X Y : cl X ⊸ Y ⊆ X ⊸ Y.
+  Proof. apply magicwand_l_monotone; auto. Qed.
+ 
+  Hint Immediate cl_magicwand_l_1 cl_magicwand_l_2.
+
+  Proposition cl_magicwand_l_3 X Y : X ⊸ cl Y ⊆ cl X ⊸ cl Y.
+  Proof.
+    intros c Hc y.
+    apply inc1_trans with (B := cl (X ∘ sg c)); auto.
+    apply cl_inc.
+    intros ? [ a b d Hb [] ].
+    intros; apply Hc. 
+    constructor 1 with a c; auto.
+  Qed.
+
+  Hint Immediate cl_magicwand_l_3.
+
+  Proposition closed_magicwand_l X Y : closed Y -> closed (X ⊸ Y).
+  Proof. 
+    simpl; intros ?.
+    apply inc1_trans with (B := cl (X ⊸ cl Y)); auto.
+    apply cl_monotone, magicwand_l_monotone; auto.
+    apply inc1_trans with (B := X ⊸ cl Y); auto.
+    apply magicwand_l_monotone; auto.
+  Qed.
+
+  Hint Resolve closed_magicwand_l.
+
+  Proposition magicwand_l_eq_1 X Y : X ⊸ cl Y ≃ cl X ⊸ cl Y.
+  Proof. split; auto. Qed.
+
+  Proposition magicwand_l_eq_2 X Y : cl (X ⊸ cl Y) ≃ X ⊸ cl Y.
+  Proof. split; auto. Qed.
+
+  Proposition magicwand_l_eq_3 X Y : cl (X ⊸ cl Y) ≃ cl X ⊸ cl Y.
+  Proof.
+    split; auto.
+    apply inc1_trans with (B := X ⊸ cl Y); auto.
+  Qed.
+
+  Hint Resolve magicwand_l_eq_1 magicwand_l_eq_2 magicwand_l_eq_3.
+
+  Definition Magicwand_r B A k := sg k ∘ A ⊆ B.
+  Infix "⟜" := Magicwand_r (at level 52, left associativity).
+
+  Proposition magicwand_r_spec A B C : A ∘ B ⊆ C ≡ A ⊆ C ⟜ B.
   Proof.
     split; intros H x Hx.
     intros y Hy; apply H; revert Hy; apply composes_monotone; auto.
@@ -186,32 +225,30 @@ Section Relational_phase_semantics.
     constructor 1 with a b; auto.
   Qed.
 
-  Definition magicwand_adj_1 A B C := fst (magicwand_spec A B C).
-  Definition magicwand_adj_2 A B C := snd (magicwand_spec A B C).
+  Definition magicwand_r_adj_1 A B C := fst (magicwand_r_spec A B C).
+  Definition magicwand_r_adj_2 A B C := snd (magicwand_r_spec A B C).
 
-(*  Hint Resolve magicwand_adj_1 magicwand_adj_2. *)
-
-  Proposition magicwand_monotone A A' B B' : A ⊆ A' -> B ⊆ B' -> A' ⊸ B ⊆ A ⊸ B'.
+  Proposition magicwand_r_monotone A A' B B' : A ⊆ A' -> B ⊆ B' -> B ⟜ A' ⊆ B' ⟜ A.
   Proof.
-    intros ? HB; apply magicwand_adj_1, inc1_trans with (2 := HB).
-    intros _ [? ? ? Ha ? Hc]; apply Ha, In_composes with (3 := Hc); auto.
+    intros ? HB; apply magicwand_r_adj_1, inc1_trans with (2 := HB).
+    intros _ [? ? ? Ha Hb Hc]; apply Ha, In_composes with (3 := Hc); auto.
   Qed.
 
-  Hint Resolve magicwand_monotone.
+  Hint Resolve magicwand_r_monotone.
 
-  Proposition cl_magicwand_1 X Y : cl (X ⊸ cl Y) ⊆ X ⊸ cl Y.
+  Proposition cl_magicwand_r_1 X Y : cl (cl Y ⟜ X) ⊆ cl Y ⟜ cl X.
   Proof. 
-    apply magicwand_adj_1, 
-          inc1_trans with (B := cl ((X ⊸ cl Y) ∘ X)); auto.
-    apply cl_inc; apply magicwand_spec; auto. 
+    apply magicwand_r_adj_1. 
+    apply inc1_trans with (B := cl ((cl Y ⟜ X) ∘ X)); auto.
+    apply cl_inc; apply magicwand_r_spec; auto. 
   Qed.
 
-  Proposition cl_magicwand_2 X Y : cl X ⊸ Y ⊆ X ⊸ Y.
-  Proof. apply magicwand_monotone; auto. Qed.
+  Proposition cl_magicwand_r_2 X Y : Y ⟜ cl X ⊆ Y ⟜ X.
+  Proof. apply magicwand_r_monotone; auto. Qed.
  
-  Hint Immediate cl_magicwand_1 cl_magicwand_2.
+  Hint Immediate cl_magicwand_r_1 cl_magicwand_r_2.
 
-  Proposition cl_magicwand_3 X Y : X ⊸ cl Y ⊆ cl X ⊸ cl Y.
+  Proposition cl_magicwand_r_3 X Y : cl Y ⟜ X ⊆ cl Y ⟜ cl X.
   Proof.
     intros c Hc y.
     apply inc1_trans with (B := cl (sg c ∘ X)); auto.
@@ -221,32 +258,29 @@ Section Relational_phase_semantics.
     constructor 1 with c b; auto.
   Qed.
 
-  Hint Immediate cl_magicwand_3.
+  Hint Immediate cl_magicwand_r_3.
 
-  Proposition closed_magicwand X Y : closed Y -> closed (X ⊸ Y).
+  Proposition closed_magicwand_r X Y : closed Y -> closed (Y ⟜ X).
   Proof. 
     simpl; intros ?.
-    apply inc1_trans with (B := cl (X ⊸ cl Y)); auto.
-    apply cl_monotone, magicwand_monotone; auto.
-    apply inc1_trans with (B := X ⊸ cl Y); auto.
-    apply magicwand_monotone; auto.
+    apply inc1_trans with (B := cl (cl Y ⟜ X)); auto.
+    apply cl_monotone, magicwand_r_monotone; auto.
+    apply inc1_trans with (1 := @cl_magicwand_r_1 _ _); auto.
+    apply magicwand_r_monotone; auto.
   Qed.
 
-  Hint Resolve closed_magicwand.
+  Hint Resolve closed_magicwand_r.
 
-  Proposition magicwand_eq_1 X Y : X ⊸ cl Y ≃ cl X ⊸ cl Y.
+  Proposition magicwand_r_eq_1 X Y : cl Y ⟜ X ≃ cl Y ⟜ cl X.
   Proof. split; auto. Qed.
 
-  Proposition magicwand_eq_2 X Y : cl (X ⊸ cl Y) ≃ X ⊸ cl Y.
+  Proposition magicwand_r_eq_2 X Y : cl (cl Y ⟜ X) ≃ cl Y ⟜ X.
   Proof. split; auto. Qed.
 
-  Proposition magicwand_eq_3 X Y : cl (X ⊸ cl Y) ≃ cl X ⊸ cl Y.
-  Proof.
-    split; auto.
-    apply inc1_trans with (B := X ⊸ cl Y); auto.
-  Qed.
+  Proposition magicwand_r_eq_3 X Y : cl (cl Y ⟜ X) ≃ cl Y ⟜ cl X.
+  Proof. split; auto. Qed.
 
-  Hint Resolve magicwand_eq_1 magicwand_eq_2 magicwand_eq_3.
+  Hint Resolve magicwand_r_eq_1 magicwand_r_eq_2 magicwand_r_eq_3.
 
   (* ⊆ ≃ ∩ ∪ ∘ ⊸ *)
 
@@ -276,7 +310,7 @@ Section Relational_phase_semantics.
   Proposition composes_associative_1 A B C : A ∘ (B ∘ C) ⊆ cl ((A ∘ B) ∘ C).
   Proof.
     intros _ [a _ k Ha [b c y Hb Hc Hy] Hk].
-    generalize (@cl_associative a b c k); intros H.
+    generalize (@cl_associative_1 a b c k); intros H.
     spec all in H.
     apply In_composes with (3 := Hk); auto.
     apply In_composes with (3 := Hy); auto.
@@ -287,36 +321,28 @@ Section Relational_phase_semantics.
 
   Hint Immediate composes_associative_1.
 
-  Proposition composes_associative A B C : cl (A ∘ (B ∘ C)) ≃ cl ((A ∘ B) ∘ C).
+  Proposition composes_associative_2 A B C : (A ∘ B) ∘ C ⊆ cl (A ∘ (B ∘ C)).
   Proof.
-    split; auto.
-    apply cl_inc; auto.
-    apply cl_inc; auto.
-    apply inc1_trans with (1 := @composes_commute_1 _ _).
-    apply cl_inc.
-    apply inc1_trans with (B := C ∘ cl (A ∘ B)); auto.
-    apply composes_monotone; auto.
-    apply inc1_trans with (B := C ∘ cl (B ∘ A)); auto.
-    apply composes_monotone; auto.
-    apply composes_commute.
-    apply inc1_trans with (1 := @cl_stable_r _ _).
-    apply cl_inc.
-    apply inc1_trans with (1 := @composes_associative_1 _ _ _).
-    apply cl_inc.
-    apply inc1_trans with (1 := @composes_commute_1 _ _). 
-    apply cl_inc.
-    apply inc1_trans with (B := A ∘ cl (C ∘ B)); auto.
-    apply composes_monotone; auto.
-    apply inc1_trans with (B := A ∘ cl (B ∘ C)); auto.
-    apply composes_monotone; auto.
-    apply composes_commute.
+    intros _ [_ c k [a b y Ha Hb Hy] Hc Hk].
+    generalize (@cl_associative_2 a b c k); intros H.
+    spec all in H.
+    apply In_composes with (3 := Hk); auto.
+    apply In_composes with (3 := Hy); auto.
+    revert H.
+    apply cl_monotone.
+    repeat apply composes_monotone; apply sg_inc1; auto.
   Qed.
+
+  Hint Immediate composes_associative_2.
+
+  Proposition composes_associative A B C : cl (A ∘ (B ∘ C)) ≃ cl ((A ∘ B) ∘ C).
+  Proof. split; auto; apply cl_inc; auto. Qed.
 
   Hint Immediate composes_associative.
 
   (* ⊆ ≃ ∩ ∪ ∘ ⊸ *)
 
-  Proposition composes_congruent_1 A B C : A ⊆ cl B -> C ∘ A ⊆ cl (C ∘ B).
+  Proposition composes_congruent_l_1 A B C : A ⊆ cl B -> C ∘ A ⊆ cl (C ∘ B).
   Proof.
     intros ?.
     apply inc1_trans with (B := cl (C ∘ cl B)); auto.
@@ -324,15 +350,43 @@ Section Relational_phase_semantics.
     apply cl_equiv_3.
   Qed.
 
-  Hint Resolve composes_congruent_1.
+  Hint Resolve composes_congruent_l_1.
 
-  Proposition composes_congruent A B C : cl A ≃ cl B -> cl (C ∘ A) ≃ cl (C ∘ B).
+  Proposition composes_congruent_l A B C : cl A ≃ cl B -> cl (C ∘ A) ≃ cl (C ∘ B).
   Proof. 
     intros [H1 H2].
     generalize (inc_cl H1) (inc_cl H2); intros H3 H4.
     split; apply cl_inc;
     apply inc1_trans with (2 := @cl_stable_r _ _), composes_monotone; auto.
   Qed.
+
+  Proposition composes_congruent_r_1 A B C : A ⊆ cl B -> A ∘ C ⊆ cl (B ∘ C).
+  Proof.
+    intros ?.
+    apply inc1_trans with (B := cl (cl B ∘ C)); auto.
+    apply inc_cl, cl_monotone, composes_monotone; auto.
+    apply cl_equiv_2.
+  Qed.
+
+  Hint Resolve composes_congruent_r_1.
+
+  Proposition composes_congruent_r A B C : cl A ≃ cl B -> cl (A ∘ C) ≃ cl (B ∘ C).
+  Proof. 
+    intros [H1 H2].
+    generalize (inc_cl H1) (inc_cl H2); intros H3 H4.
+    split; apply cl_inc;
+    apply inc1_trans with (2 := @cl_stable_l _ _), composes_monotone; auto.
+  Qed.
+
+  Hint Resolve composes_congruent_l composes_congruent_r. 
+
+  Proposition composes_congruent A B C D : 
+               cl A ≃ cl B 
+            -> cl C ≃ cl D
+            -> cl (A ∘ C) ≃ cl (B ∘ D).
+  Proof. intros; apply eq1_trans with (cl (B ∘ C)); auto. Qed.
+ 
+(*
 
   Proposition composes_assoc_special A A' B B' : cl((A∘A') ∘ (B∘B')) ≃ cl ((A∘B) ∘ (A'∘B')).
   Proof.
@@ -344,8 +398,10 @@ Section Relational_phase_semantics.
   Qed.
 
   Definition composes_assoc_special_1 A A' B B' := fst (composes_assoc_special A A' B B').
+
+*)
   
-  Proposition composes_neutral_1 A : A ⊆ cl (sg e ∘ A).
+  Proposition composes_neutral_l_1 A : A ⊆ cl (sg e ∘ A).
   Proof.
     intros a Ha.
     generalize (cl_neutral_1 a).
@@ -353,7 +409,7 @@ Section Relational_phase_semantics.
     apply sg_inc1; auto.
   Qed.
 
-  Proposition composes_neutral_2 A : sg e ∘ A ⊆ cl A.
+  Proposition composes_neutral_l_2 A : sg e ∘ A ⊆ cl A.
   Proof.
     intros _ [y a x [] Ha Hx].
     generalize (@cl_neutral_2 a x); intros H.
@@ -362,9 +418,31 @@ Section Relational_phase_semantics.
     revert H; apply cl_monotone, sg_inc1; auto.
   Qed.
   
-  Hint Resolve composes_neutral_1 composes_neutral_2.
+  Hint Resolve composes_neutral_l_1 composes_neutral_l_2.
 
-  Proposition composes_neutral A : cl (sg e ∘ A) ≃ cl A.
+  Proposition composes_neutral_l A : cl (sg e ∘ A) ≃ cl A.
+  Proof. split; apply cl_inc; auto. Qed.
+
+  Proposition composes_neutral_r_1 A : A ⊆ cl (A ∘ sg e).
+  Proof.
+    intros a Ha.
+    generalize (cl_neutral_3 a).
+    apply cl_monotone, composes_monotone; auto.
+    apply sg_inc1; auto.
+  Qed.
+
+  Proposition composes_neutral_r_2 A : A ∘ sg e ⊆ cl A.
+  Proof.
+    intros _ [a y x Ha [] Hx].
+    generalize (@cl_neutral_4 a x); intros H.
+    spec all in H.
+    constructor 1 with a e; auto.
+    revert H; apply cl_monotone, sg_inc1; auto.
+  Qed.
+  
+  Hint Resolve composes_neutral_r_1 composes_neutral_r_2.
+
+  Proposition composes_neutral_r A : cl (A ∘ sg e) ≃ cl A.
   Proof. split; apply cl_inc; auto. Qed.
 
   (* ⊆ ≃ ∩ ∪ ∘ ⊸ ⊛ *)
@@ -395,6 +473,9 @@ Section Relational_phase_semantics.
   Proposition glb_out_r A B  : A glb B ⊆ B.             Proof. simpl; tauto. Qed.
   Proposition lub_in_l A B   : A ⊆ A lub B.             Proof. apply inc1_trans with (2 := cl_increase _); tauto. Qed.
   Proposition lub_in_r A B   : B ⊆ A lub B.             Proof. apply inc1_trans with (2 := cl_increase _); tauto. Qed.
+
+  Proposition glb_comm A B : A glb B ≃ B glb A.
+  Proof. split; apply glb_in; tauto. Qed.
 
   (* ⊆ ≃ ∩ ∪ ∘ ⊸ ⊛ *)
 
@@ -427,43 +508,53 @@ Section Relational_phase_semantics.
   Proposition bot_least A : closed A -> bot ⊆ A.
   Proof. intro H; apply inc1_trans with (2 := H), cl_monotone; tauto. Qed.
 
-  Proposition unit_neutral_1 A : closed A -> unit ⊛ A ⊆ A.
+  Proposition unit_neutral_l_1 A : closed A -> unit ⊛ A ⊆ A.
   Proof. 
     intros H; apply inc1_trans with (2 := H).
     apply cl_inc.
     apply inc1_trans with (1 := @cl_stable_l _ _).
-    apply cl_inc.
-    apply composes_neutral_2.
+    apply cl_inc; auto.
   Qed.
 
-  Proposition unit_neutral_2 A : A ⊆ unit ⊛ A.
+  Proposition unit_neutral_l_2 A : A ⊆ unit ⊛ A.
   Proof. 
     intros a Ha; simpl.
-    generalize (composes_neutral_1 _ _ Ha).
+    generalize (composes_neutral_l_1 _ _ Ha).
     apply cl_monotone, composes_monotone; auto.
   Qed.
-  
-(*  Hint Resolve unit_neutral_1 unit_neutral_2. *)
 
-  Proposition unit_neutral A : closed A -> unit ⊛ A ≃ A.
+  Proposition unit_neutral_l A : closed A -> unit ⊛ A ≃ A.
   Proof. 
     intros H; split. 
-    revert H; apply unit_neutral_1.
-    apply unit_neutral_2.
+    revert H; apply unit_neutral_l_1.
+    apply unit_neutral_l_2.
+  Qed.
+
+  Proposition unit_neutral_r_1 A : closed A -> A ⊛ unit ⊆ A.
+  Proof. 
+    intros H; apply inc1_trans with (2 := H).
+    apply cl_inc.
+    apply inc1_trans with (1 := @cl_stable_r _ _).
+    apply cl_inc; auto.
+  Qed.
+
+  Proposition unit_neutral_r_2 A : A ⊆ A ⊛ unit.
+  Proof. 
+    intros a Ha; simpl.
+    generalize (composes_neutral_r_1 _ _ Ha).
+    apply cl_monotone, composes_monotone; auto.
+  Qed.
+
+  Proposition unit_neutral_r A : closed A -> A ⊛ unit ≃ A.
+  Proof. 
+    intros H; split. 
+    revert H; apply unit_neutral_r_1.
+    apply unit_neutral_r_2.
   Qed.
 
   (* ⊆ ≃ ∩ ∪ ∘ ⊸ ⊛ *)
 
-  Proposition times_commute_1 A B : A⊛B ⊆ B⊛A.
-  Proof. simpl; apply cl_inc, composes_commute_1. Qed.
-
-  Hint Resolve unit_neutral times_commute_1.
- 
-  Proposition times_commute A B : A⊛B ≃ B⊛A.
-  Proof. split; auto. Qed.
-
-  Proposition unit_neutral' A : closed A -> A ⊛ unit ≃ A.
-  Proof. intros ?; apply eq1_trans with (1 := times_commute _ _); auto. Qed.
+  Hint Resolve unit_neutral_l unit_neutral_r. 
 
   Proposition times_associative A B C : (A⊛B)⊛C ≃ A⊛(B⊛C).
   Proof.
@@ -478,203 +569,209 @@ Section Relational_phase_semantics.
   Hint Resolve times_associative_1 times_associative_2.
 
   Proposition times_congruence A A' B B' : A ≃ A' -> B ≃ B' -> A⊛B ≃ A'⊛B'.
-  Proof. 
-    intros H1 H2.
-    apply eq1_trans with (A ⊛ B').
-    apply composes_congruent; auto.
-    do 2 apply eq1_sym, eq1_trans with (1 := times_commute _ _).
-    apply composes_congruent; auto.
-  Qed.
+  Proof. intros; apply composes_congruent; auto. Qed.
 
   (* ⊆ ≃ ∩ ∪ ∘ ⊸ ⊛ *)
  
-  Proposition adjunction_1 A B C : closed C -> A ⊛ B ⊆ C -> A ⊆ B ⊸ C.
-  Proof. intros ? H; apply magicwand_adj_1, inc1_trans with (2 := H); auto. Qed.
+  Proposition adjunction_l_1 A B C : closed C -> B ⊛ A ⊆ C -> A ⊆ B ⊸ C.
+  Proof. intros ? H; apply magicwand_l_adj_1, inc1_trans with (2 := H); auto. Qed.
 
-  Proposition adjunction_2 A B C : closed C -> A ⊆ B ⊸ C -> A ⊛ B ⊆ C.
-  Proof. intros H ?; apply inc1_trans with (2 := H), cl_monotone, magicwand_adj_2; auto. Qed.
+  Proposition adjunction_l_2 A B C : closed C -> A ⊆ B ⊸ C -> B ⊛ A ⊆ C.
+  Proof. intros H ?; apply inc1_trans with (2 := H), cl_monotone, magicwand_l_adj_2; auto. Qed.
 
-  Hint Resolve times_congruence adjunction_1 (* adjunction_2 *).
+  Hint Resolve times_congruence adjunction_l_1 (* adjunction_2 *).
  
-  Proposition adjunction A B C : closed C -> (A ⊛ B ⊆ C ≡ A ⊆ B ⊸ C).
+  Proposition adjunction_l A B C : closed C -> (B ⊛ A ⊆ C ≡ A ⊆ B ⊸ C).
   Proof.
-    split; [ apply adjunction_1 | apply  adjunction_2 ]; auto.
+    split; [ apply adjunction_l_1 | apply adjunction_l_2 ]; auto.
+  Qed.
+
+  Proposition adjunction_r_1 A B C : closed C -> A ⊛ B ⊆ C -> A ⊆ C ⟜ B.
+  Proof. intros ? H; apply magicwand_r_adj_1, inc1_trans with (2 := H); auto. Qed.
+
+  Proposition adjunction_r_2 A B C : closed C -> A ⊆ C ⟜ B -> A ⊛ B ⊆ C.
+  Proof. intros H ?; apply inc1_trans with (2 := H), cl_monotone, magicwand_r_adj_2; auto. Qed.
+
+  Hint Resolve adjunction_r_1 (* adjunction_2 *).
+ 
+  Proposition adjunction_r A B C : closed C -> (A ⊛ B ⊆ C ≡ A ⊆ C ⟜ B).
+  Proof.
+    split; [ apply adjunction_r_1 | apply adjunction_r_2 ]; auto.
   Qed.
 
   Proposition times_bot_distrib_l A : bot ⊛ A ⊆ bot.
   Proof.
-    apply adjunction_2; auto.
+    apply adjunction_r_2; auto.
     apply bot_least; auto.
   Qed.
 
   Proposition times_bot_distrib_r A : A ⊛ bot ⊆ bot.
-  Proof. apply inc1_trans with (1 := @times_commute_1 _ _), times_bot_distrib_l. Qed.
- 
+  Proof.
+    apply adjunction_l_2; auto.
+    apply bot_least; auto.
+  Qed.
+
   Hint Immediate times_bot_distrib_l times_bot_distrib_r.
 
   Proposition times_lub_distrib_l A B C : (A lub B) ⊛ C ⊆ (A ⊛ C) lub (B ⊛ C).
   Proof. 
-    apply adjunction, lub_out; auto;
-    apply adjunction; auto. 
+    apply adjunction_r, lub_out; auto;
+    apply adjunction_r; auto. 
   Qed.
 
   Proposition times_lub_distrib_r A B C : C ⊛ (A lub B) ⊆ (C ⊛ A) lub (C ⊛ B).
-  Proof. 
-    apply inc1_trans with (1 := @times_commute_1 _ _),
-          inc1_trans with (1 := @times_lub_distrib_l _ _ _); auto.
-    apply lub_out; auto.
+  Proof.
+    apply adjunction_l, lub_out; auto;
+    apply adjunction_l; auto. 
   Qed.
 
-(*  Section bang. *)
+  (* J := { x | x ∈ unit /\ x ∈ x ⊛ x } with unit = cl e and x ⊛ x = cl (x∘x) *)
 
-    (* J := { x | x ∈ unit /\ x ∈ x ⊛ x } with unit = cl e and x ⊛ x = cl (x∘x) *)
+  Let J x := (cl (sg e) x * (cl (sg x ∘ sg x)) x)%type.
 
-    Let J x := (cl (sg e) x * (cl (sg x ∘ sg x)) x)%type.
+  Let In_J : forall x, cl (sg e) x -> (cl (sg x ∘ sg x)) x -> J x.
+  Proof. split; auto. Qed.
 
-    Let In_J : forall x, cl (sg e) x -> (cl (sg x ∘ sg x)) x -> J x.
-    Proof. split; auto. Qed.
+  Let J_inv x : J x -> unit x * cl (sg x ∘ sg x) x.
+  Proof. auto. Qed.
 
-    Let J_inv x : J x -> unit x * cl (sg x ∘ sg x) x.
-    Proof. auto. Qed.
+  Proposition J_inc_unit : J ⊆ unit.
+  Proof. induction 1; trivial. Qed.
 
-    Proposition J_inc_unit : J ⊆ unit.
-    Proof. induction 1; trivial. Qed.
+  Variable K : M -> Type.
 
-    Variable K : M -> Type.
+  Notation sub_monoid_hyp_1 := ((cl K) e).
+  Notation sub_monoid_hyp_2 := (K ∘ K ⊆ K).
+  Notation sub_J_hyp := (K ⊆ J).
 
-    Notation sub_monoid_hyp_1 := ((cl K) e).
-    Notation sub_monoid_hyp_2 := (K ∘ K ⊆ K).
-    Notation sub_J_hyp := (K ⊆ J).
+  Hypothesis sub_monoid_1 : sub_monoid_hyp_1.
+  Hypothesis sub_monoid_2 : sub_monoid_hyp_2.
+  Hypothesis sub_J : sub_J_hyp.
 
-    Hypothesis sub_monoid_1 : sub_monoid_hyp_1.
-    Hypothesis sub_monoid_2 : sub_monoid_hyp_2.
-    Hypothesis sub_J : sub_J_hyp.
+  Proposition K_inc_unit : K ⊆ unit.
+  Proof. apply (inc1_trans _ J); trivial; apply J_inc_unit. Qed.
 
-    Proposition K_inc_unit : K ⊆ unit.
-    Proof. apply (inc1_trans _ J); trivial; apply J_inc_unit. Qed.
+  Proposition K_compose A B : (K ∩ A) ∘ (K ∩ B) ⊆ K ∩ (A ∘ B).
+  Proof.
+    intros x Hx.
+    induction Hx as [ a b c [ ] [ ] Hc ]; split.
+    + apply sub_monoid_2; constructor 1 with a b; auto.
+    + constructor 1 with a b; auto.
+  Qed.
 
-   (* ⊆ ≃ ∩ ∪ ∘ ⊸ ⊛ ❗ *)
+  Let bang A := cl (K∩A).
 
-    Proposition K_compose A B : (K ∩ A) ∘ (K ∩ B) ⊆ K ∩ (A ∘ B).
-    Proof.
-      intros x Hx.
-      induction Hx as [ a b c [ ] [ ] Hc ]; split.
-      + apply sub_monoid_2; constructor 1 with a b; auto.
-      + constructor 1 with a b; auto.
-    Qed.
+  Notation "❗ A" := (bang A) (at level 40, no associativity).
 
-    Let bang A := cl (K∩A).
+  Fact store_inc_unit A : ❗ A ⊆ unit.
+  Proof. 
+    apply inc1_trans with (cl K).
+    + apply cl_monotone; tauto.
+    + apply cl_inc, K_inc_unit.
+  Qed.
 
-    Notation "❗ A" := (bang A) (at level 40, no associativity).
+  Hint Resolve store_inc_unit.
 
-    Fact store_inc_unit A : ❗ A ⊆ unit.
-    Proof. 
-      apply inc1_trans with (cl K).
-      + apply cl_monotone; tauto.
-      + apply cl_inc, K_inc_unit.
-    Qed.
+  Proposition closed_store A : closed (❗A).
+  Proof. simpl; apply cl_idempotent. Qed.
 
-    Hint Resolve store_inc_unit.
+  Proposition store_dec A : closed A -> ❗A ⊆ A.
+  Proof.
+    intros HA; simpl.
+    apply inc1_trans with (cl A); trivial.
+    apply cl_monotone.
+    apply glb_out_r.
+  Qed.
 
-    Proposition closed_store A : closed (❗A).
-    Proof. simpl; apply cl_idempotent. Qed.
+  Fact store_monotone A B : A ⊆ B -> ❗A ⊆ ❗B.
+  Proof.
+    intro; apply cl_monotone.
+    intros ? []; split; auto.
+  Qed.
 
-    Proposition store_dec A : closed A -> ❗A ⊆ A.
-    Proof.
-      intros HA; simpl.
-      apply inc1_trans with (cl A); trivial.
-      apply cl_monotone.
-      apply glb_out_r.
-    Qed.
+  Hint Resolve store_monotone.
 
-    Fact store_monotone A B : A ⊆ B -> ❗A ⊆ ❗B.
-    Proof.
-      intro; apply cl_monotone.
-      intros ? []; split; auto.
-    Qed.
+  Fact store_congruence A B : A ≃ B -> ❗A ≃ ❗B.
+  Proof. intros []; split; eauto. Qed.
 
-    Proposition store_der A B : closed B -> ❗A ⊆ B -> ❗A ⊆ ❗B.
-    Proof.
-      unfold bang.
-      intros ? ?; apply cl_monotone; intros x []; split; auto.
-    Qed.
+  Proposition store_der A B : closed B -> ❗A ⊆ B -> ❗A ⊆ ❗B.
+  Proof.
+    unfold bang.
+    intros ? ?; apply cl_monotone; intros x []; split; auto.
+  Qed.
  
-    Proposition store_unit_1 : unit ⊆ ❗top.
-    Proof.
-      apply cl_inc.
-      intros ? []; apply cl_monotone with K; auto.
-    Qed.
+  Proposition store_unit_1 : unit ⊆ ❗top.
+  Proof.
+    apply cl_inc.
+    intros ? []; apply cl_monotone with K; auto.
+  Qed.
 
-    Hint Resolve J_inc_unit.
+  Hint Resolve J_inc_unit.
  
-    Proposition store_unit_2 : ❗top ⊆ unit.
-    Proof.
-      apply cl_inc; trivial.
-      apply inc1_trans with J; auto.
-      intros ? []; auto.
-    Qed.
+  Proposition store_unit_2 : ❗top ⊆ unit.
+  Proof.
+    apply cl_inc; trivial.
+    apply inc1_trans with J; auto.
+    intros ? []; auto.
+  Qed.
 
-    Hint Resolve store_unit_1 store_unit_2.
+  Hint Resolve store_unit_1 store_unit_2.
 
-    Proposition store_unit : unit ≃ ❗top.
-    Proof. split; auto. Qed.
+  Proposition store_unit : unit ≃ ❗top.
+  Proof. split; auto. Qed.
 
-    (* ⊆ ≃ ∩ ∪ ∘ ⊸ ⊛ ❗ *)
+  Proposition store_comp A B : closed A -> closed B -> ❗A ⊛ ❗B ≃ ❗(A∩B).
+  Proof.
+    intros HA HB; split.
+    + apply inc1_trans with (cl ((K glb A) ∘ (K glb B))).
+      * apply cl_inc; trivial; apply cl_stable.
+      * apply cl_monotone.
+        intros x [ a b c [ H1 H2 ] [ H3 H4 ] Hc ].
+        assert (H5 : unit a). { apply K_inc_unit; auto. }
+        assert (H6 : unit b). { apply K_inc_unit; auto. }
+        split; [ | split ].
+        - apply sub_monoid_2; constructor 1 with a b; auto.
+        - apply unit_neutral_r_1; auto; apply cl_increase.
+          constructor 1 with a b; auto.
+        - apply unit_neutral_l_1; auto; apply cl_increase.
+          constructor 1 with a b; auto.
+    + apply cl_inc; trivial.
+      intros x (H1 & H2 & H3).
+      apply cl_monotone with (sg x ∘ sg x).
+      2: { apply sub_J in H1; destruct H1; trivial. }
+      intros d [ a b ? ? Hab ]; subst a b; constructor 1 with x x; auto; 
+        apply cl_increase; auto.
+  Qed.
 
-    Proposition store_comp A B : closed A -> closed B -> ❗A ⊛ ❗B ≃ ❗(A∩B).
-    Proof.
-      intros HA HB; split.
-      + apply inc1_trans with (cl ((K glb A) ∘ (K glb B))).
-        * apply cl_inc; trivial; apply cl_stable.
-        * apply cl_monotone.
-          intros x [ a b c [ H1 H2 ] [ H3 H4 ] Hc ].
-          assert (H5 : unit a). { apply K_inc_unit; auto. }
-          assert (H6 : unit b). { apply K_inc_unit; auto. }
-          split; [ | split ].
-          - apply sub_monoid_2; constructor 1 with a b; auto.
-          - apply unit_neutral_1; auto; apply times_commute_1, cl_increase.
-            constructor 1 with a b; auto.
-          - apply unit_neutral_1; auto; apply cl_increase.
-            constructor 1 with a b; auto.
-      + apply cl_inc; trivial.
-        intros x (H1 & H2 & H3).
-        apply cl_monotone with (sg x ∘ sg x).
-        2: { apply sub_J in H1; destruct H1; trivial. }
-        intros d [ a b ? ? Hab ]; subst a b; constructor 1 with x x; auto; 
-          apply cl_increase; auto.
-    Qed.
+  Let ltimes := fold_right (fun x y => x ⊛ y) unit.
+  Let lcap := fold_right (fun x y => x∩y) top.
 
-    Let ltimes := fold_right (fun x y => x ⊛ y) unit.
-    Let lcap := fold_right (fun x y => x∩y) top.
-
-    Proposition ltimes_store ll : 
+  Proposition ltimes_store ll : 
            (forall x, In_t x ll -> closed x) 
         -> ltimes (map bang  ll)
          ≃ ❗(lcap ll).
-    Proof.
-      unfold ltimes, lcap.
-      revert ll.
-      apply Forall_type_rect; simpl; auto.
-      intros A ll H1 H2 IH2.
-      apply eq1_trans with (❗A ⊛ ❗(fold_right (fun x y => x ∩ y) top ll)).
-      * apply times_congruence; auto.
-      * apply eq1_trans with (❗(A ∩ fold_right (fun x y => x ∩ y) top ll)); auto.
-        apply store_comp; auto.
-    Qed.
+  Proof.
+    unfold ltimes, lcap.
+    revert ll.
+    apply Forall_type_rect; simpl; auto.
+    intros A ll H1 H2 IH2.
+    apply eq1_trans with (❗A ⊛ ❗(fold_right (fun x y => x ∩ y) top ll)).
+    * apply times_congruence; auto.
+    * apply eq1_trans with (❗(A ∩ fold_right (fun x y => x ∩ y) top ll)); auto.
+      apply store_comp; auto.
+  Qed.
 
-    Proposition store_compose_idem A : closed A -> ❗A ⊆ ❗A⊛❗A.
-    Proof.
-      intros HA.
-      apply inc1_trans with (❗(A∩A)).
-      + apply store_der. 
-        * apply closed_glb; trivial.
-        * apply inc1_trans with A.
-          - apply store_dec; trivial.
-          - tauto.
-      + apply (snd (store_comp HA HA)).
-    Qed.
-
-(*  End bang. *)
+  Proposition store_compose_idem A : closed A -> ❗A ⊆ ❗A⊛❗A.
+  Proof.
+    intros HA.
+    apply inc1_trans with (❗(A∩A)).
+    + apply store_der. 
+      * apply closed_glb; trivial.
+      * apply inc1_trans with A.
+        - apply store_dec; trivial.
+        - tauto.
+    + apply (snd (store_comp HA HA)).
+  Qed.
 
   Reserved Notation "'⟦' A '⟧'" (at level 49).
   Reserved Notation "'⟬߭' A '⟭'" (at level 49).
@@ -688,6 +785,7 @@ Section Relational_phase_semantics.
       | 𝝐              => unit
       | £ x    => v x
       | a -o b => ⟦a⟧ ⊸ ⟦b⟧
+      | b o- a => ⟦b⟧ ⟜ ⟦a⟧
       | a ⊗ b  => ⟦a⟧ ⊛ ⟦b⟧
       | a ⊕ b  => ⟦a⟧ lub ⟦b⟧
       | a & b  => ⟦a⟧ glb ⟦b⟧
@@ -702,6 +800,9 @@ Section Relational_phase_semantics.
    
   Notation "⟬߭  ll ⟭" := (list_Form_sem ll).
 
+  Fact list_Form_sem_nil : ⟬߭nil⟭ = unit.
+  Proof. auto. Qed.
+
   Fact list_Form_sem_cons f ll : ⟬߭f::ll⟭  = ⟦f⟧ ⊛ ⟬߭ll⟭.
   Proof. auto. Qed.
 
@@ -713,19 +814,39 @@ Section Relational_phase_semantics.
   Fact list_Form_sem_app ll mm : ⟬߭ll++mm⟭ ≃ ⟬߭ll⟭ ⊛⟬߭mm⟭.
   Proof.
     induction ll as [ | f ll IHll ]; simpl app; auto.
-    + apply eq1_sym, unit_neutral; auto.
+    + apply eq1_sym, unit_neutral_l; auto.
     + apply eq1_sym, eq1_trans with (1 := @times_associative _ _ _), eq1_sym.
       apply times_congruence; auto.
   Qed.
-  
-  Fact list_Form_sem_perm ll mm: ll ~p mm -> ⟬߭ll⟭  ≃ ⟬߭mm⟭ .
+
+  Fact list_Form_sem_congr_l ll mm pp : ⟬߭mm⟭ ≃ ⟬߭pp⟭  -> ⟬߭ll++mm⟭ ≃ ⟬߭ll++pp⟭.
   Proof.
-    revert ll mm.
-    induction 1; auto.
-    + intros; apply composes_congruent, cl_eq1; auto.
-    + intros; simpl; do 2 apply eq1_sym, eq1_trans with (2 := @times_associative _ _ _).
-      apply times_congruence; auto.
-    + intros; apply eq1_trans with (⟬߭m⟭ ); auto.
+    intros H.
+    do 2 apply eq1_trans with (1 := list_Form_sem_app _ _), eq1_sym.
+    apply times_congruence; auto.
+  Qed.
+
+  Fact list_Form_sem_congr_r ll mm pp : ⟬߭mm⟭ ≃ ⟬߭pp⟭  -> ⟬߭mm++ll⟭ ≃ ⟬߭pp++ll⟭.
+  Proof.
+    intros H.
+    do 2 apply eq1_trans with (1 := list_Form_sem_app _ _), eq1_sym.
+    apply times_congruence; auto.
+  Qed.
+
+  Fact list_Form_sem_mono_l ll mm pp : ⟬߭mm⟭ ⊆ ⟬߭pp⟭  -> ⟬߭ll++mm⟭ ⊆ ⟬߭ll++pp⟭.
+  Proof.
+    intros H.
+    apply inc1_trans with (⟬߭ll⟭ ⊛⟬߭mm⟭); [ apply list_Form_sem_app | ].
+    apply inc1_trans with (⟬߭ll⟭ ⊛⟬߭pp⟭); [ | apply list_Form_sem_app ].
+    apply times_monotone; auto.
+  Qed.
+
+  Fact list_Form_sem_mono_r ll mm pp : ⟬߭mm⟭ ⊆ ⟬߭pp⟭  -> ⟬߭mm++ll⟭ ⊆ ⟬߭pp++ll⟭.
+  Proof.
+    intros H.
+    apply inc1_trans with (⟬߭mm⟭ ⊛⟬߭ll⟭); [ apply list_Form_sem_app | ].
+    apply inc1_trans with (⟬߭pp⟭ ⊛⟬߭ll⟭); [ | apply list_Form_sem_app ].
+    apply times_monotone; auto.
   Qed.
 
   Fact list_Form_sem_bang ll : ⟬߭‼ll⟭ ≃ ❗ (lcap (map Form_sem ll)).
@@ -750,98 +871,153 @@ Section Relational_phase_semantics.
   Theorem ill_Form_sem_sound Γ a : Γ ⊢ a -> ⟬߭Γ⟭  ⊆ ⟦a⟧.
   Proof.
     induction 1 as [ a 
-                   | Ga De a H1 H2 IH2
-                   | Ga De a b c H1 IH1 H2 IH2
+                   | Ga De a b c H1 IH1
+                   | Ga De Th a b c H1 IH1 H2 IH2             (* -o left *)
                    | Ga a b H1 IH1
-                   | Ga a b c H1 IH1
-                   | Ga a b c H1 IH1
+                   | Ga De Th a b c H1 IH1 H2 IH2             (* o- left*)
+                   | Ga a b H1 IH1
+                   | Ga De a b c H1 IH1                       (* & left1 *)
+                   | Ga De a b c H1 IH1
                    | Ga a b H1 IH1 H2 IH2
-                   | Ga a b H1 IH1 
-                   | Ga a H1 IH1
-                   | Ga a b H1 IH1
-                   | Ga a b H1 IH1
+                   | Ga De a b H1 IH1                         (* ! left *) 
+                   | Ga a H1 IH1                              (* ! right *)
+                   | Ga De a b H1 IH1                         (* weak *)
+                   | Ga De a b H1 IH1                         (* cntr *)
 
+                   | Ga De Th a b H1 IH1 H2 IH2               (* cut *)
+
+                   | Ga De a b c H1 IH1                       (* times left *)
                    | Ga De a b H1 IH1 H2 IH2
-                   | Ga a b c H1 IH1
-                   | Ga De a b H1 IH1 H2 IH2
-                   | Ga a b c H1 IH1 H2 IH2
+                   | Ga De a b c H1 IH1 H2 IH2                (* plus left *)
                    | Ga a b H1 IH1
                    | Ga a b H1 IH1
-                   | Ga a
-                   | Ga
-                   | Ga a H1 IH1
+                   | Ga De a                                  (* bot *)
+                   | Ga                                       (* top *)
+                   | Ga De a H1 IH1                           (* unit *)
                    |
                    ]; simpl in *; auto.
       (* axiom *)
-    + intro; apply unit_neutral'; auto.
+    + intro; apply unit_neutral_r; auto.
 
       (* permutation *)
-    + intros x Hx; apply IH2; revert Hx; apply list_Form_sem_perm; auto.
+    + intros x Hx; apply IH1; revert x Hx.
+      apply list_Form_sem_congr_l.
+      change (!a::!b::De) with (‼(a::b::nil)++De).
+      change (!b::!a::De) with (‼(b::a::nil)++De).
+      apply list_Form_sem_congr_r.
+      do 2 apply eq1_trans with (1 := list_Form_sem_bang _), eq1_sym.
+      apply store_congruence.
+      simpl; tauto.
 
       (* -o left *)
-    + intros x Hx.
-      apply IH2.
-      revert x Hx.
-      apply inc1_trans with (((⟦ a ⟧ ⊸ ⟦ b ⟧) ⊛ ⟬߭Ga⟭)⊛ ⟬߭De⟭).
-      * apply inc1_trans with (2 := @times_associative_2 _ _ _).
-        apply times_monotone; auto.
-        apply list_Form_sem_app.
-      * apply times_monotone; auto.
-        apply adjunction; auto.
-        apply magicwand_monotone; auto.
-    + apply adjunction; auto.
-      rewrite list_Form_sem_cons in IH1.
-      intros; apply IH1; auto.
+    + intros x Hx; apply IH2; revert x Hx.
+      apply list_Form_sem_mono_l.
+      change (b::De) with ((b::nil)++De).
+      replace (Ga++a -o b::De) with ((Ga++a -o b::nil)++De).
+      2: rewrite app_ass; auto.
+      apply list_Form_sem_mono_r.
+      apply inc1_trans with (1 := fst (list_Form_sem_app _ _)).
+      apply inc1_trans with (⟬߭Ga⟭ ⊛ (⟦ a ⟧ ⊸ ⟦ b ⟧)).
+      * apply times_congruence; auto.
+        rewrite list_Form_sem_cons, list_Form_sem_nil. 
+        apply eq1_sym, unit_neutral_r; auto.
+      * apply inc1_trans with (⟦b⟧).
+        apply adjunction_l; auto.
+        apply magicwand_l_monotone; auto.
+        rewrite list_Form_sem_cons, list_Form_sem_nil. 
+        apply unit_neutral_r; auto.
+
+    + apply adjunction_l; auto.
+ 
+        (* o- left *)
+    + intros x Hx; apply IH2; revert x Hx.
+      apply list_Form_sem_mono_l.
+      change (b::De) with ((b::nil)++De).
+      change (b o- a::Ga++De) with ((b o- a::Ga)++De).
+      apply list_Form_sem_mono_r.
+      do 2 rewrite list_Form_sem_cons.
+      rewrite list_Form_sem_nil.
+      apply inc1_trans with (⟦ b ⟧).
+      2: apply unit_neutral_r; auto.
+      apply adjunction_r; auto.
+      apply magicwand_r_monotone; auto.
+  
+    + apply adjunction_r; auto.
+      apply inc1_trans with (2 := IH1).
+      apply inc1_trans with (2 := snd (list_Form_sem_app _ _)).
+      apply times_monotone; auto.
+      rewrite list_Form_sem_cons, list_Form_sem_nil.
+      apply unit_neutral_r; auto.
 
       (* plus *)
-    + apply inc1_trans with (2 := IH1), times_monotone; simpl; tauto.
-    + apply inc1_trans with (2 := IH1), times_monotone; simpl; tauto.
+    + apply inc1_trans with (2 := IH1).
+      apply list_Form_sem_mono_l, times_monotone; auto.
+      simpl; tauto.
+    + apply inc1_trans with (2 := IH1).
+      apply list_Form_sem_mono_l, times_monotone; auto.
+      simpl; tauto.
 
       (* bang *)
-    + apply inc1_trans with (2 := IH1), times_monotone; auto.
+    + apply inc1_trans with (2 := IH1), list_Form_sem_mono_l, times_monotone; auto.
       apply cl_closed; auto; tauto.
     + intros x Hx.
       apply list_Form_sem_bang in Hx; revert x Hx.
       apply store_der; auto.
       intros x Hx; apply IH1, list_Form_sem_bang; auto.
-    + intros x Hx; apply IH1.
-      apply unit_neutral_1; auto.
-      revert x Hx; apply times_monotone; auto.
-      apply store_inc_unit.
-    + intros x Hx; apply IH1.
-      apply times_associative_1.
-      revert x Hx; apply times_monotone; auto.
-      simpl; intros x Hx; apply store_comp; auto.
-      revert x Hx; apply store_monotone; tauto.
+    + apply inc1_trans with (2 := IH1), list_Form_sem_mono_l.
+      apply inc1_trans with (unit ⊛ ⟬߭ De ⟭).
+      * apply times_monotone; simpl; auto.
+        apply store_inc_unit.
+      * apply unit_neutral_l; auto.
+    + apply inc1_trans with (2 := IH1), list_Form_sem_mono_l.
+      change (!a::De) with (‼(a::nil)++De) at 1.
+      change (!a::!a::De) with (‼(a::a::nil)++De).
+      apply list_Form_sem_mono_r.
+      apply inc1_trans with (1 := fst (list_Form_sem_bang _)).
+      apply inc1_trans with (2 := snd (list_Form_sem_bang _)).
+      apply store_monotone; simpl; tauto.
 
       (* cut rule *)
-    + intros x Hx.
-      apply list_Form_sem_app in Hx.
-      apply IH2.
-      revert x Hx; apply times_monotone; auto.
+    + apply inc1_trans with (2 := IH2).
+      apply list_Form_sem_mono_l.
+      apply inc1_trans with (1 := fst (list_Form_sem_app _ _)).
+      rewrite list_Form_sem_cons; apply times_monotone; auto.
 
       (* times *)
-    + intros x Hx; simpl.
-      apply IH1.
-      revert Hx; do 3 rewrite list_Form_sem_cons; simpl; auto.
-    + intros x Hx; apply list_Form_sem_app in Hx.
-      revert x Hx; apply times_monotone; auto.
+    + apply inc1_trans with (2 := IH1), list_Form_sem_mono_l.
+      do 3 rewrite list_Form_sem_cons.
+      apply times_associative.
+    + apply inc1_trans with (1 := fst (list_Form_sem_app _ _)).
+      apply times_monotone; auto.
 
       (* plus *)
-    + intros x Hx.
-      apply times_lub_distrib_l in Hx.
-      revert Hx; apply cl_closed; auto.
-      intros ? []; auto.
-  
+    + (* distrib ... *)
+      apply inc1_trans with ((⟬߭Ga⟭ ⊛(⟦a⟧⊛⟬߭De⟭))lub (⟬߭Ga⟭ ⊛(⟦b⟧⊛⟬߭De⟭))).
+      2: { apply lub_out; auto.
+           * apply inc1_trans with (2 := IH1).
+             apply inc1_trans with (2 := snd (list_Form_sem_app _ _)).
+             apply times_monotone; auto.
+           * apply inc1_trans with (2 := IH2).
+             apply inc1_trans with (2 := snd (list_Form_sem_app _ _)).
+             apply times_monotone; auto. }
+      apply inc1_trans with (1 := fst (list_Form_sem_app _ _)).
+      rewrite list_Form_sem_cons.
+      apply inc1_trans with (2 := @times_lub_distrib_r _ _ _).
+      apply times_monotone; auto.
+      apply times_lub_distrib_l.
+
     + (* bot *)
       intros x Hx.
-      apply times_bot_distrib_l in Hx.
-      revert x Hx; apply bot_least; auto.
+      apply list_Form_sem_app in Hx.
+      rewrite list_Form_sem_cons in Hx.
+      apply bot_least; auto.
+      apply times_bot_distrib_r with (A := ⟬߭Ga⟭) .
+      revert x Hx; apply times_monotone; auto.
+      apply times_bot_distrib_l.
 
       (* unit *)
-    + intros x Hx.
-      rewrite list_Form_sem_cons in Hx; simpl in Hx.
-      apply unit_neutral_1 in Hx; auto.
+    + apply inc1_trans with (2 := IH1), list_Form_sem_mono_l.
+      apply unit_neutral_l; auto.
   Qed.
    
 End Relational_phase_semantics.
