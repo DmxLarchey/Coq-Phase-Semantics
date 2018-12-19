@@ -17,7 +17,7 @@ Set Implicit Arguments.
 
 Definition ill_vars := nat.
 
-Inductive ill_conn := ll_with | ll_limp | ll_times | ll_plus.
+Inductive ill_conn := ll_with | ll_limp | ll_rimp | ll_times | ll_plus.
 Inductive ill_cst := ll_one | ll_bot | ll_top.
 
 Inductive ill_form : Set :=
@@ -47,8 +47,7 @@ Infix "⊗" := (ill_bin ll_times) (at level 50).
 Infix "⊕" := (ill_bin ll_plus) (at level 50).
 
 Infix "-o" := (ill_bin ll_limp) (at level 51, right associativity).
-
-(* Infix "⊸" := (ill_bin ll_limp) (at level 51, right associativity). *)
+Infix "o-" := (ill_bin ll_rimp) (at level 52, left associativity).
 
 Notation "'!' x" := (ill_bang x) (at level 52).
 

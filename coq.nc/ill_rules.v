@@ -29,59 +29,67 @@ Inductive ill_proof : list ill_form -> ill_form -> Type :=
                                            (*-----------------------------*)
                                       ->           Γ++!B::!A::Δ ⊢ C 
 
-  | in_llp_limp_l : forall Γ Δ ϴ A B C,          Γ ⊢ A      ->  ϴ++B::Δ ⊢ C
+  | in_llp_limp_l : forall Γ Δ ϴ A B C,          Γ ⊢ A    ->  ϴ++B::Δ ⊢ C
                                            (*-----------------------------*)    
-                                      ->           ϴ++A -o B::Γ++Δ ⊢ C
+                                      ->           ϴ++Γ++A -o B::Δ ⊢ C
 
   | in_llp_limp_r : forall Γ A B,                    A::Γ ⊢ B
                                            (*-----------------------------*)
                                       ->            Γ ⊢ A -o B
 
-  | in_llp_with_l1 : forall Γ A B C,                  A::Γ ⊢ C 
-                                           (*-----------------------------*)
-                                      ->           A﹠B::Γ ⊢ C
+  | in_llp_rimp_l : forall Γ Δ ϴ A B C,          Γ ⊢ A      ->  ϴ++B::Δ ⊢ C
+                                           (*-----------------------------*)    
+                                      ->           ϴ++B o- A::Γ++Δ ⊢ C
 
-  | in_llp_with_l2 : forall Γ A B C,                  B::Γ ⊢ C 
+  | in_llp_rimp_r : forall Γ A B,                    Γ++A::nil ⊢ B
                                            (*-----------------------------*)
-                                      ->           A﹠B::Γ ⊢ C
+                                      ->            Γ ⊢ B o- A
+
+  | in_llp_with_l1 : forall Γ Δ A B C,                 Γ++A::Δ ⊢ C 
+                                           (*-----------------------------*)
+                                      ->           Γ++A﹠B::Δ ⊢ C
+
+  | in_llp_with_l2 : forall Γ Δ A B C,                  Γ++B::Δ ⊢ C 
+                                           (*-----------------------------*)
+                                      ->           Γ++A﹠B::Δ ⊢ C
  
   | in_llp_with_r : forall Γ A B,               Γ ⊢ A     ->   Γ ⊢ B
                                            (*-----------------------------*)
                                       ->              Γ ⊢ A﹠B
 
-  | in_llp_bang_l : forall Γ A B,                    A::Γ ⊢ B
+  | in_llp_bang_l : forall Γ Δ A B,                 Γ++A::Δ ⊢ B
                                            (*-----------------------------*)
-                                      ->            !A::Γ ⊢ B
+                                      ->            Γ++!A::Δ ⊢ B
 
   | in_llp_bang_r : forall Γ A,                       ‼Γ ⊢ A
                                            (*-----------------------------*)
                                       ->              ‼Γ ⊢ !A
 
-  | in_llp_weak : forall Γ A B,                        Γ ⊢ B
+  | in_llp_weak : forall Γ Δ A B,                        Γ++Δ ⊢ B
                                            (*-----------------------------*)
-                                      ->           !A::Γ ⊢ B
+                                      ->           Γ++!A::Δ ⊢ B
 
-  | in_llp_cntr : forall Γ A B,                    !A::!A::Γ ⊢ B
+  | in_llp_cntr : forall Γ Δ A B,                    Γ++!A::!A::Δ ⊢ B
                                            (*-----------------------------*)
-                                      ->             !A::Γ ⊢ B
+                                      ->             Γ++!A::Δ ⊢ B
 
   (* These are the other rule for a complete sequent calculus for the whole ILL *)
 
-  | in_llp_cut : forall Γ Δ A B,                 Γ ⊢ A    ->   A::Δ ⊢ B
+  | in_llp_cut : forall Γ Δ ϴ A B,               Γ ⊢ A    ->   Δ++A::ϴ ⊢ B
                                            (*-----------------------------*)    
-                                      ->              Γ++Δ ⊢ B
+                                      ->              Δ++Γ++ϴ ⊢ B
 
-  | in_llp_times_l : forall Γ A B C,               A::B::Γ ⊢ C 
+  | in_llp_times_l : forall Γ Δ A B C,               Γ++A::B::Δ ⊢ C 
                                            (*-----------------------------*)
-                                      ->            A⊗B::Γ ⊢ C
+                                      ->            Γ++A⊗B::Δ ⊢ C
  
   | in_llp_times_r : forall Γ Δ A B,             Γ ⊢ A    ->   Δ ⊢ B
                                            (*-----------------------------*)
                                       ->              Γ++Δ ⊢ A⊗B
 
-  | in_llp_plus_l :  forall Γ A B C,            A::Γ ⊢ C  ->  B::Γ ⊢ C 
+  | in_llp_plus_l :  forall Γ Δ A B C,            Γ++A::Δ ⊢ C  ->  Γ++B::Δ ⊢ C 
                                            (*-----------------------------*)
-                                      ->            A⊕B::Γ ⊢ C
+                                      ->            Γ++A⊕B::Δ ⊢ C
 
   | in_llp_plus_r1 : forall Γ A B,                    Γ ⊢ A  
                                            (*-----------------------------*)
@@ -91,13 +99,13 @@ Inductive ill_proof : list ill_form -> ill_form -> Type :=
                                            (*-----------------------------*)
                                       ->              Γ ⊢ A⊕B
 
-  | in_llp_bot_l : forall Γ A,                     ⟘::Γ ⊢ A
+  | in_llp_bot_l : forall Γ Δ A,                     Γ++⟘::Δ ⊢ A
 
   | in_llp_top_r : forall Γ,                          Γ ⊢ ⟙
 
-  | in_llp_unit_l : forall Γ A,                       Γ ⊢ A  
+  | in_llp_unit_l : forall Γ Δ A,                       Γ++Δ ⊢ A  
                                            (*-----------------------------*)
-                                      ->           𝝐 ::Γ ⊢ A
+                                      ->           Γ++𝝐 ::Δ ⊢ A
 
   | in_llp_unit_r :                                   ∅ ⊢ 𝝐
 
@@ -105,26 +113,28 @@ where "l ⊢ x" := (ill_proof l x).
 
 Fixpoint ill_cut_free Γ A (p : Γ ⊢ A) :=
   match p with
-    | in_llp_ax _             => True
-    | in_llp_perm  _ _ _ _ p  => ill_cut_free p 
-    | in_llp_limp_l p q    => ill_cut_free p /\ ill_cut_free q
-    | in_llp_limp_r p      => ill_cut_free p 
-    | in_llp_with_l1 _ p   => ill_cut_free p
-    | in_llp_with_l2 _ p   => ill_cut_free p  
+    | in_llp_ax _                => True
+    | in_llp_perm  _ _ _ _ p     => ill_cut_free p 
+    | in_llp_limp_l _ _ _ p q    => ill_cut_free p /\ ill_cut_free q
+    | in_llp_limp_r p            => ill_cut_free p 
+    | in_llp_rimp_l _ _ _ p q    => ill_cut_free p /\ ill_cut_free q
+    | in_llp_rimp_r _ _ p        => ill_cut_free p 
+    | in_llp_with_l1 _ _ _ _ p         => ill_cut_free p
+    | in_llp_with_l2 _ _ _ _ p         => ill_cut_free p  
     | in_llp_with_r p q    => ill_cut_free p /\ ill_cut_free q
-    | in_llp_bang_l p      => ill_cut_free p
+    | in_llp_bang_l _ _ _ p      => ill_cut_free p
     | in_llp_bang_r _ p    => ill_cut_free p 
-    | in_llp_weak _ p      => ill_cut_free p 
-    | in_llp_cntr p        => ill_cut_free p 
-    | in_llp_cut _ _       => False
-    | in_llp_times_l p     => ill_cut_free p  
+    | in_llp_weak _ _ _ p      => ill_cut_free p 
+    | in_llp_cntr _ _ _ p        => ill_cut_free p 
+    | in_llp_cut _ _ _ _       => False
+    | in_llp_times_l _ _ _ _ p     => ill_cut_free p  
     | in_llp_times_r p q   => ill_cut_free p /\ ill_cut_free q
-    | in_llp_plus_l p q    => ill_cut_free p /\ ill_cut_free q
+    | in_llp_plus_l _ _ _ _ p q    => ill_cut_free p /\ ill_cut_free q
     | in_llp_plus_r1 _ p   => ill_cut_free p
     | in_llp_plus_r2 _ p   => ill_cut_free p
-    | in_llp_bot_l _ _     => True
+    | in_llp_bot_l _ _ _      => True
     | in_llp_top_r _       => True
-    | in_llp_unit_l p      => ill_cut_free p
+    | in_llp_unit_l _ _ p      => ill_cut_free p
     | in_llp_unit_r        => True
   end. 
 
