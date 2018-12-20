@@ -15,11 +15,12 @@ Set Implicit Arguments.
 
 Section Cut_Admissibility.
 
-  Hint Resolve ill_cf_perm.
+  Hint Resolve ill_cf_perm_bang_t.
 
   Notation sg := (@eq _).
   Infix "∘" := (Composes comp_ctx) (at level 50, no associativity).
-  Infix "⊸" := (Magicwand comp_ctx) (at level 51, right associativity).
+  Infix "⊸" := (Magicwand_l comp_ctx) (at level 51, right associativity).
+  Infix "⟜" := (Magicwand_r comp_ctx) (at level 52, left associativity).
 
   Let cl := cl_ctx ill_cf_provable.
 
@@ -33,8 +34,11 @@ Section Cut_Admissibility.
   Proof. apply cl_ctx_idem. Qed.
 
   Let cl_stable_l : forall X Y, cl X ∘ Y ⊆ cl (X ∘ Y).
-  Proof. apply cl_ctx_stable_l, ill_cf_perm. Qed.
-  
+  Proof. apply cl_ctx_stable_l; eauto. Qed.
+
+  Let cl_stable_r : forall X Y, X ∘ cl Y ⊆ cl (X ∘ Y).
+  Proof. apply cl_ctx_stable_r; eauto. Qed.
+ 
   Notation "↓" := (fun A Γ => Γ ⊢cf A).
   Notation K := (fun Δ => { Γ | Δ = ‼Γ }).
 
@@ -77,7 +81,7 @@ Section Cut_Admissibility.
     Let rule_limp_l A B : (↓A ⊸ cl (sg (B::∅))) (A -o B::∅). 
     Proof. 
       apply rule_limp_l_eq; eauto. 
-      intros ? ?; apply ill_cf_limp_l. 
+      intros ? ? ?; apply ill_cf_limp_l. 
     Qed.
 
     Let rule_limp_r A B : sg (A::∅) ⊸ ↓B ⊆ ↓(A -o B).
@@ -85,7 +89,19 @@ Section Cut_Admissibility.
       apply rule_limp_r_eq; eauto. 
       intros ?; apply ill_cf_limp_r. 
     Qed.
- 
+
+    Let rule_rimp_l A B : (cl (sg (B::∅)) ⟜ ↓A) (B o- A::∅).
+    Proof. 
+      apply rule_rimp_l_eq; eauto. 
+      intros ? ? ?; apply ill_cf_rimp_l. 
+    Qed.
+
+    Let rule_rimp_r A B : ↓B ⟜ sg (A::∅) ⊆ ↓(B o- A).
+    Proof. 
+      apply rule_rimp_r_eq; eauto. 
+      intros ?; apply ill_cf_rimp_r.
+    Qed.
+
     Let rule_times_l A B : cl (sg (A::B::nil)) (A⊗B::nil).
     Proof.
       apply rule_times_l_eq.
@@ -168,8 +184,11 @@ Section Cut_Admissibility.
       apply rule_top_r_eq, ill_cf_top_r. 
     Qed.
 
-    Let mw_mono (X Y X' Y' : _ -> Type) : X ⊆ X' -> Y ⊆ Y' -> X' ⊸ Y ⊆ X ⊸ Y'.
-    Proof. apply magicwand_monotone; auto. Qed.
+    Let mwl_mono (X Y X' Y' : _ -> Type) : X ⊆ X' -> Y ⊆ Y' -> X' ⊸ Y ⊆ X ⊸ Y'.
+    Proof. apply magicwand_l_monotone; auto. Qed.
+
+    Let mwr_mono (X Y X' Y' : _ -> Type) : X ⊆ X' -> Y ⊆ Y' -> Y ⟜ X' ⊆ Y' ⟜ X.
+    Proof. apply magicwand_r_monotone; auto. Qed.
 
     Let inc1_prop (K : Type) (X Y : K -> Type)  x : Y ⊆ X -> Y x -> X x.
     Proof. simpl; auto. Qed.
@@ -192,7 +211,7 @@ Section Cut_Admissibility.
       + split.
         * intros _ [].
           simpl.
-          intros De B H.
+          intros Th De B H.
           apply H with (ϴ := !A::nil); split.
           - exists (A::nil); auto.
           - apply inc1_prop with (2 := @rule_bang_l _).
@@ -208,16 +227,21 @@ Section Cut_Admissibility.
       + split.
         * intros _ []; simpl.
           apply inc1_prop with (2 := @rule_limp_l _ _).
-          apply mw_mono; auto; apply cl_under_closed; auto.
+          apply mwl_mono; auto; apply cl_under_closed; auto.
         * simpl; intros x Hx; apply rule_limp_r.
-          revert Hx; apply mw_mono; auto.
+          revert Hx; apply mwl_mono; auto.
+      + split.
+        * intros _ []; simpl.
+          apply inc1_prop with (2 := @rule_rimp_l _ _).
+          apply mwr_mono; auto; apply cl_under_closed; auto.
+        * simpl; intros x Hx; apply rule_rimp_r.
+          revert Hx; apply mwr_mono; auto.
       + split.
         * intros _ [].
           apply inc1_prop with (2 := @rule_times_l _ _).
           simpl; apply cl_mono.
           intros _ []; constructor 1 with (A::∅) (B::∅); auto.
           red; simpl; auto.
-          apply perm_t_refl.
         * simpl; apply cl_under_closed; auto.
           intros x Hx; apply rule_times_r.
           revert Hx; apply composes_monotone; eauto.
@@ -242,12 +266,12 @@ Section Cut_Admissibility.
       apply cl_increase; auto.
     constructor 1 with (A :: nil) ga; auto.
     + apply Okada_formula; auto.
-    + apply perm_t_refl.
+    + red; auto.
   Qed.
 
   (* And now we apply the soundness result of relational phase semantics *)
 
-  Let ill_cf_sound := rules_sound ill_cf_perm ill_cf_weak_ctx ill_cf_cntr_ctx _ Hv.
+  Let ill_cf_sound := rules_sound ill_cf_perm_bang_t ill_cf_weak_ctx ill_cf_cntr_ctx _ Hv.
 
   Theorem ill_cut_elimination Γ A : Γ ⊢ A -> { p : Γ ⊢ A | ill_cut_free p }.
   Proof.
@@ -258,7 +282,9 @@ Section Cut_Admissibility.
 
 End Cut_Admissibility.
 
+Recursive Extraction ill_cut_elimination.
+
 Check ill_cut_elimination.
 Print Assumptions ill_cut_elimination.
 
-Recursive Extraction ill_cut_elimination.
+

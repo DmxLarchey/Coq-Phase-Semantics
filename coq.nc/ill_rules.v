@@ -13,7 +13,75 @@ Require Import utils ill_form.
 
 Set Implicit Arguments.
 
+Reserved Notation "x '~!' y" (at level 70, no associativity).
+
+Section perm_bang_t.
+
+  Inductive perm_bang_t : list ill_form -> list ill_form -> Type :=
+    | perm_bang_t_nil   :                          nil ~! nil
+    | perm_bang_t_cons  : forall x l m, l ~! m -> x::l ~! x::m
+    | perm_bang_t_swap  : forall x y l, !x::!y::l ~! !y::!x::l
+    | perm_bang_t_trans : forall l m k, l ~! m -> m ~! k -> l ~! k
+  where "x ~! y" := (perm_bang_t x y).
+
+  Fact perm_bang_t_refl l : l ~! l.
+  Proof.
+    induction l; simpl; constructor; auto.
+  Qed.
+  
+  Fact perm_bang_t_sym l m : l ~! m -> m ~! l.
+  Proof.
+    induction 1; try constructor; auto.
+    apply perm_bang_t_trans with m; auto.
+  Qed.
+  
+  Fact perm_bang_t_app a b l m : a ~! b -> l ~! m -> a++l ~! b++m.
+  Proof.
+    intros H1 H2.
+    apply perm_bang_t_trans with (a++m).
+    clear H1.
+    induction a; simpl; auto; constructor; auto.
+    clear H2.
+    induction H1; simpl; auto.
+    apply perm_bang_t_refl.
+    constructor; auto.
+    constructor.
+    apply perm_bang_t_trans with (m0++m); auto.
+  Qed.
+  
+End perm_bang_t.
+
+Local Infix "~!" := perm_bang_t.
 Local Infix "~p" := (@perm_t _) (at level 70).
+
+Hint Resolve perm_bang_t_refl perm_bang_t_cons.
+
+Section perm_t_map_inv_t.
+  
+  Let Q m1 m2 := forall l1, m1 = ‼ l1 
+                             -> { l2 : list ill_form | ((m2 = ‼ l2))%type }.
+
+  Let pmit : forall m1 m2, m1 ~! m2 -> Q m1 m2.
+  Proof.
+    apply perm_bang_t_rect; unfold Q; clear Q.
+    * intros [ | ]; exists nil; simpl; split; auto; discriminate.
+    * intros y m1 m2 H1 IH1 [ | x l1 ]; simpl; try discriminate.
+      intros H2; injection H2; clear H2; intros H2 H3; subst y.
+      destruct (IH1 _ H2) as (l2 & ?).
+      exists (x::l2); simpl; subst; auto.
+    * intros y1 y2 m1 [ | x2 [ | x1 l1 ] ]; try discriminate; simpl.
+      intros H2; injection H2; clear H2; intros H1 H2 H3; subst.
+      exists (x1::x2::l1); simpl; split; auto.
+    * intros m1 m2 m3 H1 IH1 H2 IH2 l1 H3.
+      destruct IH1 with (1 := H3) as (l2 & H4).
+      destruct IH2 with (1 := H4) as (l3 & H6).
+      exists l3; auto.
+  Qed.
+
+  Fact perm_t_map_inv_t l m : ‼ l ~! m -> { l' | m = ‼ l' }.
+  Proof. intro; apply (@pmit _ _ H _ eq_refl). Qed.
+
+End perm_t_map_inv_t.
 
 Reserved Notation "l '⊢' x" (at level 70, no associativity).
 
@@ -223,6 +291,24 @@ Proof.
     rewrite app_ass; simpl; auto.
   + apply ill_cf_perm; auto.
 Qed.
+
+Section ill_cf_perm_bang_t.
+
+  Let gen Γ Δ Ω C : Γ ~! Δ -> Ω++Γ ⊢cf C -> Ω++Δ ⊢cf C.
+  Proof.
+    intros H; revert H Ω C; induction 1 as [ | A Ga De H1 IH1 | A B Ga | Ga De Th ]; intros Om C; auto.
+    + intros H.
+      replace (Om++A::De) with ((Om++A::nil)++De).
+      apply IH1.
+      1, 2: rewrite app_ass; auto.
+    + intros [p]. 
+      exists (in_llp_perm _ _ _ _ p); auto. 
+  Qed.
+
+  Fact ill_cf_perm_bang_t Γ Δ C : Γ ~! Δ -> Γ ⊢cf C -> Δ ⊢cf C.
+  Proof. apply gen with (Ω := nil). Qed.
+
+End ill_cf_perm_bang_t.
 
 Fact ill_cf_cntr_ctx Γ ϴ Δ A : Γ++‼ϴ++‼ϴ++Δ ⊢cf A -> Γ++‼ϴ++Δ ⊢cf A.
 Proof.
