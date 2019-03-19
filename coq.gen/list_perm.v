@@ -345,3 +345,4 @@ Section perm_bang_t.
   Proof. intro H; apply (@pmit _ _ H _ eq_refl). Qed.
   
 End perm_bang_t.
+

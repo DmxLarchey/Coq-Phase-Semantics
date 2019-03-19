@@ -32,13 +32,18 @@ Reserved Notation "l '⊢' x [ a , b ]" (at level 70, no associativity).
                                            (*-----------------------------*)    
                                       ->              Δ++Γ++ϴ ⊢ B [s1,true]
 
-  | in_llp_perm_nc : forall s2 Γ Δ A B C,                Γ++!A::!B::Δ ⊢ C [false,s2]
+  | in_llp_perm : forall s1 s2 Γ Δ A,        Γ ~[s1] Δ ->   Γ ⊢ A [s1,s2]
+                                                       ->   Δ ⊢ A [s1,s2]
+
+ (*          Γ++!A::!B::Δ ⊢ C [false,s2]
                                                (*-----------------------------*)
                                             ->           Γ++!B::!A::Δ ⊢ C [false,s2]
 
   | in_llp_perm_co : forall s2 Γ Δ A B C,                Γ++A::B::Δ ⊢ C [true,s2]
                                                (*-----------------------------*)
                                             ->           Γ++B::A::Δ ⊢ C [true,s2]
+
+ *)
 
   | in_llp_limp_l : forall s1 s2 Γ Δ ϴ A B C,                    Γ ⊢ A [s1,s2]
                                                        ->  ϴ++B::Δ ⊢ C [s1,s2]
@@ -121,6 +126,45 @@ Reserved Notation "l '⊢' x [ a , b ]" (at level 70, no associativity).
 
 where "l ⊢ x [ s1 , s2 ]" := (ill_proof s1 s2 l x).
 
+Notation "l ⊢ x '[comm,cut]'" := (ill_proof true true l x) (at level 70).
+Notation "l ⊢ x '[comm,cutfree]'" := (ill_proof true false l x) (at level 70).
+Notation "l ⊢ x '[nc,cut]'" := (ill_proof false true l x) (at level 70).
+Notation "l ⊢ x '[nc,cutfree]'" := (ill_proof false false l x) (at level 70).
+
+Fact ill_weak_ctx s1 s2 Γ ϴ Δ A : Γ++    Δ ⊢ A [s1,s2]  
+                               -> Γ++‼ϴ++Δ ⊢ A [s1,s2].
+Proof.
+  intros H.
+  induction ϴ as [ | B th IH ]; simpl; auto.
+  apply in_llp_weak; auto.
+Qed.
+
+Fact ill_perm_ctx s1 s2 Γ Ω ϴ Δ C : Ω ~p ϴ 
+                                -> Γ++‼Ω++Δ ⊢ C [s1,s2] 
+                                -> Γ++‼ϴ++Δ ⊢ C [s1,s2].
+Proof.
+  intros H; revert H Γ; induction 1 as [ | A Om Th H1 IH1 | A B Th | Th1 Th2 Th3 H1 IH1 H2 IH2 ]; simpl; intros Ga H; auto.
+  + replace (Ga++!A::‼Th++Δ) with ((Ga++!A::nil)++‼Th++Δ) by solve list eq.
+    apply IH1; rewrite app_ass; simpl; auto.
+  + revert H; apply in_llp_perm.
+    apply ill_perm_t_app; auto.
+    apply ill_perm_t_swap.
+Qed.
+
+Fact ill_cntr_ctx s1 s2 Γ ϴ Δ A : Γ++‼ϴ++‼ϴ++Δ ⊢ A [s1,s2] -> Γ++‼ϴ++Δ ⊢ A [s1,s2].
+Proof.
+  revert Γ; induction ϴ as [ | B Th IH ]; simpl; auto; intros Ga H.
+  replace (Ga++!B::‼Th++Δ) with ((Ga++!B::nil)++‼Th++Δ) by solve list eq.
+  apply IH; rewrite app_ass; simpl.
+  apply in_llp_cntr.
+  revert H.
+  replace (Ga++!B::‼Th++!B::‼Th++Δ) with (Ga++‼(B::Th++B::Th)++Δ).
+  2: { unfold ill_lbang; simpl; rewrite map_app; solve list eq. }
+  replace (Ga++!B::!B::‼Th++‼Th++Δ) with (Ga++‼(B::B::Th++Th)++Δ).
+  2: { unfold ill_lbang; simpl; rewrite map_app; solve list eq. }
+  apply ill_perm_ctx, perm_t_cons, perm_t_sym, perm_t_middle.
+Qed.
+
 (*
 
 Fixpoint ill_cut_free Γ A (p : Γ ⊢ A) :=
@@ -169,11 +213,20 @@ Section cut_free.
 
   Fact illnc_cf_perm Γ Δ A B C : Γ++!A::!B::Δ ⊢ C [nc,wc]
                               -> Γ++!B::!A::Δ ⊢ C [nc,wc].
-  Proof. apply in_llp_perm_nc. Qed.
+  Proof. 
+    apply in_llp_perm; simpl.
+    apply perm_bang_t_app; auto.
+    constructor 3.
+  Qed.
 
   Fact ill_cf_perm Γ Δ A B C : Γ++A::B::Δ ⊢ C [co,wc]
                             -> Γ++B::A::Δ ⊢ C [co,wc].
-  Proof. apply in_llp_perm_co. Qed.
+  Proof. 
+    apply in_llp_perm; simpl.
+    apply perm_t_app.
+    + apply perm_t_refl.
+    + constructor 3.
+  Qed.
 
   Fact ill_cf_limp_l Γ Δ ϴ A B C :           Γ ⊢ A [wc] 
                             ->         ϴ++B::Δ ⊢ C [wc]
@@ -240,14 +293,6 @@ Proof. exists (in_llp_unit_r); simpl; auto. Qed.
 
 *)
 
-  Fact ill_cf_weak_ctx Γ ϴ Δ A : Γ++    Δ ⊢ A [wc]  
-                              -> Γ++‼ϴ++Δ ⊢ A [wc].
-  Proof.
-    intros H.
-    induction ϴ as [ | B th IH ]; simpl; auto.
-    apply in_llp_weak; auto.
-  Qed.
-
   Fact ill_cf_perm_ctx Γ Ω ϴ Δ C : Ω ~p ϴ 
                                 -> Γ++‼Ω++Δ ⊢ C [wc] 
                                 -> Γ++‼ϴ++Δ ⊢ C [wc].
@@ -255,9 +300,9 @@ Proof. exists (in_llp_unit_r); simpl; auto. Qed.
     intros H; revert H Γ; induction 1 as [ | A Om Th H1 IH1 | A B Th | Th1 Th2 Th3 H1 IH1 H2 IH2 ]; simpl; intros Ga H; auto.
     + replace (Ga++!A::‼Th++Δ) with ((Ga++!A::nil)++‼Th++Δ) by solve list eq.
       apply IH1; rewrite app_ass; simpl; auto.
-    + destruct s.
-      * apply in_llp_perm_co; trivial.
-      * apply in_llp_perm_nc; trivial.
+    + revert H; destruct s.
+      * apply ill_cf_perm.
+      * apply illnc_cf_perm.
   Qed.
 
   Section ill_cf_perm_bang_t.
@@ -278,20 +323,7 @@ Proof. exists (in_llp_unit_r); simpl; auto. Qed.
 
   End ill_cf_perm_bang_t.
 
-  Fact ill_cf_cntr_ctx Γ ϴ Δ A : Γ++‼ϴ++‼ϴ++Δ ⊢ A [wc] -> Γ++‼ϴ++Δ ⊢ A [wc].
-  Proof.
-    revert Γ; induction ϴ as [ | B Th IH ]; simpl; auto; intros Ga H.
-    replace (Ga++!B::‼Th++Δ) with ((Ga++!B::nil)++‼Th++Δ) by solve list eq.
-    apply IH; rewrite app_ass; simpl.
-    apply in_llp_cntr.
-    revert H.
-    replace (Ga++!B::‼Th++!B::‼Th++Δ) with (Ga++‼(B::Th++B::Th)++Δ).
-    2: { unfold ill_lbang; simpl; rewrite map_app; solve list eq. }
-    replace (Ga++!B::!B::‼Th++‼Th++Δ) with (Ga++‼(B::B::Th++Th)++Δ).
-    2: { unfold ill_lbang; simpl; rewrite map_app; solve list eq. }
-    apply ill_cf_perm_ctx, perm_t_cons, perm_t_sym, perm_t_middle.
-  Qed.
-
+ 
 End cut_free.
 
 Section ill_commutative.
@@ -303,15 +335,17 @@ Section ill_commutative.
   Fact ill_co_imp1 A B : A -o B :: nil ⊢ B o- A [co].
   Proof.
     apply in_llp_rimp_r; simpl.
-    apply in_llp_perm_co with (Γ := nil).
-    apply in_llp_limp_l with (ϴ := nil) (Γ := _::nil); simpl; constructor.
+    apply in_llp_perm with (Γ := A::A -o B::nil).
+    + constructor 3.
+    + apply in_llp_limp_l with (ϴ := nil) (Γ := _::nil); simpl; constructor.
   Qed.
 
   Fact ill_co_imp2 A B : B o- A :: nil ⊢ A -o B [co].
   Proof.
     apply in_llp_limp_r; simpl.
-    apply in_llp_perm_co with (Γ := nil).
-    apply in_llp_rimp_l with (ϴ := nil) (Γ := _::nil); simpl; constructor.
+    apply in_llp_perm with (Γ := B o- A :: A :: nil).
+    + constructor 3.
+    + apply in_llp_rimp_l with (ϴ := nil) (Γ := _::nil); simpl; constructor.
   Qed.
 
 End ill_commutative.

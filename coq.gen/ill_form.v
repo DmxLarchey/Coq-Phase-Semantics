@@ -66,8 +66,51 @@ Infix "~p" := (@perm_t _) (at level 70).
 
 Hint Resolve perm_bang_t_refl perm_bang_t_cons.
 
+Definition perm_bool b := 
+  match b with
+    | true => @perm_t ill_form
+    | _    => perm_bang_t ill_bang
+  end.
+
+Notation " x '~[' b ']' y " := (perm_bool b x y) (at level 70, format "x  ~[ b ]  y").
+
 Fact illnc_perm_t_map_inv_t l m : ‼ l ~! m -> { l' | m = ‼ l' }.
 Proof. 
   apply perm_bang_t_map_inv_t.
   inversion 1; trivial.
+Qed.
+
+Hint Resolve perm_t_refl.
+
+Fact ill_perm_t_refl b l : l ~[b] l.
+Proof. destruct b; simpl; auto. Qed.
+
+Hint Resolve ill_perm_t_refl.
+
+Fact ill_perm_t_app b l1 l2 m1 m2 : l1 ~[b] m1 -> l2 ~[b] m2 -> l1++l2 ~[b] m1++m2.
+Proof.
+  destruct b; simpl.
+  + apply perm_t_app.
+  + apply perm_bang_t_app.
+Qed.
+
+Fact ill_perm_t_trans b l m p : l ~[b] m -> m ~[b] p -> l ~[b] p.
+Proof.
+  destruct b; simpl.
+  + apply perm_t_trans.
+  + apply perm_bang_t_trans.
+Qed.
+
+Fact ill_perm_t_swap b x y l : !x::!y::l ~[b] !y::!x::l.
+Proof.
+  destruct b; simpl; constructor 3.
+Qed.
+
+Fact ill_perm_t_map_inv_t b l m : ‼ l ~[b] m -> { l' | m = ‼ l' }.
+Proof.
+  destruct b; simpl.
+  + intros H. 
+    destruct perm_t_map_inv_t with (1 := H) as (l' & H1 & _).
+    exists l'; auto.
+  + apply illnc_perm_t_map_inv_t.
 Qed.

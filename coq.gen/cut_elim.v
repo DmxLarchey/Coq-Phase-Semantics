@@ -13,16 +13,20 @@ Require Import utils ill_form ill_rules phase_sem rules_algebra.
 
 Set Implicit Arguments.
 
-Section Cut_Admissibility.
+Section Okada.
 
-  Hint Resolve ill_cf_perm_bang_t.
+(*  Hint Resolve ill_cf_perm_bang_t. *)
+
+  Variables (sc : bool) (* commutativity switch *).
+
+  Notation comp := (comp_ctx sc).
 
   Notation sg := (@eq _).
-  Infix "∘" := (Composes comp_ctx) (at level 50, no associativity).
-  Infix "⊸" := (Magicwand_l comp_ctx) (at level 51, right associativity).
-  Infix "⟜" := (Magicwand_r comp_ctx) (at level 52, left associativity).
+  Infix "∘" := (Composes comp) (at level 50, no associativity).
+  Infix "⊸" := (Magicwand_l comp) (at level 51, right associativity).
+  Infix "⟜" := (Magicwand_r comp) (at level 52, left associativity).
 
-  Let cl := cl_ctx ill_cf_provable.
+  Let cl := cl_ctx sc false.
 
   Let cl_increase X : X ⊆ cl X.
   Proof. apply cl_ctx_increase. Qed.
@@ -39,7 +43,7 @@ Section Cut_Admissibility.
   Let cl_stable_r : forall X Y, X ∘ cl Y ⊆ cl (X ∘ Y).
   Proof. apply cl_ctx_stable_r; eauto. Qed.
  
-  Notation "↓" := (fun A Γ => Γ ⊢cf A).
+  Notation "↓" := (fun A Γ => ill_proof sc false Γ A).
   Notation K := (fun Δ => { Γ | Δ = ‼Γ }).
 
   Let dc_closed A : cl (↓A) ⊆ ↓A.
@@ -50,7 +54,7 @@ Section Cut_Admissibility.
   Let Hv x : cl (v x) ⊆ v x.
   Proof. apply dc_closed. Qed.
 
-  Notation "'⟦' A '⟧'" := (Form_sem cl comp_ctx ∅ K v A) (at level 49).
+  Notation "'⟦' A '⟧'" := (Form_sem cl comp ∅ K v A) (at level 49).
 
   Let cl_sem_closed A : cl (⟦A⟧) ⊆ ⟦A⟧.
   Proof. apply closed_Form_sem; eauto. Qed.
@@ -76,112 +80,112 @@ Section Cut_Admissibility.
          of the rules of the cut-free ILL sequent calculus *)
 
     Let rule_ax A : ↓A (A::∅). 
-    Proof. apply ill_cf_ax. Qed.
+    Proof. apply in_llp_ax. Qed.
 
     Let rule_limp_l A B : (↓A ⊸ cl (sg (B::∅))) (A -o B::∅). 
     Proof. 
       apply rule_limp_l_eq; eauto. 
-      intros ? ? ?; apply ill_cf_limp_l. 
+      intros ? ? ? ?; apply in_llp_limp_l. 
     Qed.
 
     Let rule_limp_r A B : sg (A::∅) ⊸ ↓B ⊆ ↓(A -o B).
     Proof. 
       apply rule_limp_r_eq; eauto. 
-      intros ?; apply ill_cf_limp_r. 
+      intros ?; apply in_llp_limp_r. 
     Qed.
 
     Let rule_rimp_l A B : (cl (sg (B::∅)) ⟜ ↓A) (B o- A::∅).
     Proof. 
       apply rule_rimp_l_eq; eauto. 
-      intros ? ? ?; apply ill_cf_rimp_l. 
+      intros ? ? ? ?; apply in_llp_rimp_l. 
     Qed.
 
     Let rule_rimp_r A B : ↓B ⟜ sg (A::∅) ⊆ ↓(B o- A).
     Proof. 
-      apply rule_rimp_r_eq; eauto. 
-      intros ?; apply ill_cf_rimp_r.
+      apply rule_rimp_r_eq; eauto.
+      intros ?; apply in_llp_rimp_r.
     Qed.
 
     Let rule_times_l A B : cl (sg (A::B::nil)) (A⊗B::nil).
     Proof.
       apply rule_times_l_eq.
-      intros ? ?; apply ill_cf_times_l.
+      intros ? ? ?; apply in_llp_times_l.
     Qed.
 
     Let rule_times_r A B : ↓A ∘ ↓B ⊆ ↓(A⊗B).
     Proof.
       apply rule_times_r_eq; eauto.
-      intros ? ?; apply ill_cf_times_r.
+      intros ? ?; apply in_llp_times_r.
     Qed.
 
     Let rule_with_l1 A B : cl (sg (A::∅)) (A&B::∅).
     Proof.
       apply rule_with_l1_eq.
-      intros ? ?; apply ill_cf_with_l1.
+      intros ? ? ?; apply in_llp_with_l1.
     Qed.
  
     Let rule_with_l2 A B : cl (sg (B::∅)) (A&B::∅).
     Proof.
       apply rule_with_l2_eq.
-      intros ? ?; apply ill_cf_with_l2.
+      intros ? ? ?; apply in_llp_with_l2.
     Qed.
 
     Let rule_with_r A B : ↓A ∩ ↓B ⊆ ↓(A & B).
     Proof.
       apply rule_with_r_eq.
-      intros ?; apply ill_cf_with_r.
+      intros ?; apply in_llp_with_r.
     Qed.
 
     Let rule_plus_l A B : cl (sg (A::∅) ∪ sg (B::∅)) (A⊕B::∅).
     Proof.
       apply rule_plus_l_eq.
-      intros ? ?; apply ill_cf_plus_l.
+      intros ? ?; apply in_llp_plus_l.
     Qed.
 
     Let rule_plus_r1 A B : ↓A ⊆ ↓(A⊕B).
     Proof.
       apply rule_plus_r1_eq.
-      intro; apply ill_cf_plus_r1.
+      intro; apply in_llp_plus_r1.
     Qed.
 
     Let rule_plus_r2 A B : ↓B ⊆ ↓(A⊕B).
     Proof.
       apply rule_plus_r2_eq.
-      intro; apply ill_cf_plus_r2.
+      intro; apply in_llp_plus_r2.
     Qed.
 
     Let rule_bang_l A : cl (sg (A::∅)) (!A::∅).
     Proof.
       apply rule_bang_l_eq.
-      intros ? ?; apply ill_cf_bang_l.
+      intros ? ?; apply in_llp_bang_l.
     Qed.
 
     Let rule_bang_r A : K ∩ ↓A ⊆ ↓(!A).
     Proof.
       apply rule_bang_r_eq.
-      intros ?; apply ill_cf_bang_r.
+      intros ?; apply in_llp_bang_r.
     Qed.
 
     Let rule_unit_l : cl (sg ∅) (𝝐::nil).
     Proof.
       apply rule_unit_l_eq.
-      intros ?; apply ill_cf_unit_l.
+      intros ?; apply in_llp_unit_l.
     Qed.
     
     Let rule_unit_r : sg ∅ ⊆ ↓𝝐.
     Proof.
       apply rule_unit_r_eq.
-      apply ill_cf_unit_r.
+      apply in_llp_unit_r.
     Qed.
 
     Let rule_bot_l : cl (fun _ => False) (⟘::∅).
     Proof. 
-      apply rule_bot_l_eq, ill_cf_bot_l.
+      apply rule_bot_l_eq, in_llp_bot_l.
     Qed.
 
     Let rule_top_r : (fun _ => True) ⊆ ↓⟙ .
     Proof.
-      apply rule_top_r_eq, ill_cf_top_r. 
+      apply rule_top_r_eq, in_llp_top_r. 
     Qed.
 
     Let mwl_mono (X Y X' Y' : _ -> Type) : X ⊆ X' -> Y ⊆ Y' -> X' ⊸ Y ⊆ X ⊸ Y'.
@@ -207,7 +211,7 @@ Section Cut_Admissibility.
       + split.
         * intros _ []; apply rule_bot_l.
         * simpl; apply cl_under_closed; auto; intros _ [].
-      + split; simpl; auto.
+      + split; simpl; red; auto.
       + split.
         * intros _ [].
           simpl.
@@ -252,11 +256,13 @@ Section Cut_Admissibility.
           intros _ [ [] | [] ]; auto.
         * simpl; apply cl_under_closed; auto.
           intros x [ Hx | Hx ]; auto.
+          - apply rule_plus_r1; auto.
+          - apply rule_plus_r2; auto.
     Qed.
 
   End Okada.
 
-  Notation "'⟬߭' Γ '⟭'" := (list_Form_sem cl comp_ctx ∅ K v Γ) (at level 49).
+  Notation "'⟬߭' Γ '⟭'" := (list_Form_sem cl comp ∅ K v Γ) (at level 49).
 
   (* We lift the result to contexts, ie list of formulas *)
 
@@ -269,22 +275,43 @@ Section Cut_Admissibility.
     + red; auto.
   Qed.
 
-  (* And now we apply the soundness result of relational phase semantics *)
+End Okada.
 
-  Let ill_cf_sound := rules_sound ill_cf_perm_bang_t ill_cf_weak_ctx ill_cf_cntr_ctx _ Hv.
+(** The notation Γ ⊢ A [comm,cut] is for the type of proofs of the sequent Γ ⊢ A
+    * in commutative ILL if comm=true; ILLNC if comm=false
+    * with cut if cut=true; cut-free if cut=false
+*)
 
-  Theorem ill_cut_elimination Γ A : Γ ⊢ A -> { p : Γ ⊢ A | ill_cut_free p }.
+Section NC_cut_admissibility.
+
+  Theorem ill_nc_cut_elimination Γ A : Γ ⊢ A [false,true] -> Γ ⊢ A [false,false].
   Proof.
-    intros H; apply ill_cf_sound with (x := Γ) in H; auto.
-    + apply Okada_formula in H; auto.
-    + apply Okada_ctx.
+     intros H.
+     apply rules_nc_sound with (s1 := false) (s2 := false) (v := fun x ga => ill_proof false false ga (£x)) in H.
+     + apply Okada_formula, H, Okada_ctx.
+     + intros x Ga H1; red in H1.
+       replace Ga with (nil++Ga++nil); [ apply H1 | ]; intros; rewrite <- app_nil_end; auto.
   Qed.
 
-End Cut_Admissibility.
+End NC_cut_admissibility.
 
-Recursive Extraction ill_cut_elimination.
+Section COMM_cut_admissibility.
 
-Check ill_cut_elimination.
-Print Assumptions ill_cut_elimination.
+  Theorem ill_comm_cut_elimination Γ A : Γ ⊢ A [true,true] -> Γ ⊢ A [true,false].
+  Proof.
+     intros H.
+     apply rules_comm_sound with (s1 := true) (s2 := false) (v := fun x ga => ill_proof true false ga (£x)) in H; auto.
+     + apply Okada_formula, H, Okada_ctx.
+     + intros x Ga H1; red in H1.
+       replace Ga with (nil++Ga++nil); [ apply H1 | ]; intros; rewrite <- app_nil_end; auto.
+  Qed.
+
+End COMM_cut_admissibility.
+
+Check ill_nc_cut_elimination.
+Print Assumptions ill_nc_cut_elimination.
+
+Check ill_comm_cut_elimination.
+Print Assumptions ill_comm_cut_elimination.
 
 

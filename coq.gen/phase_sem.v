@@ -77,8 +77,6 @@ Section Relational_phase_semantics.
 
   Hint Resolve composes_monotone.
 
-  Variable e : M.
-
   (* Stability is the important axiom in phase semantics *)
 
   Definition cl_stability   := forall A B, cl A ∘ cl B ⊆ cl (A ∘ B).
@@ -108,6 +106,8 @@ Section Relational_phase_semantics.
   Qed.
 
   Hint Resolve cl_stable_imp_stable_l cl_stable_imp_stable_r cl_stable_lr_imp_stable.
+
+  Variable e : M.
   
   Notation sg := (@eq _).
 
@@ -137,19 +137,124 @@ Section Relational_phase_semantics.
     split; intros x Hx; apply cl_idempotent; revert Hx; apply cl_monotone; auto. 
   Qed. 
 
+  Section commute_stability.
+    
+    Proposition cl_stable_l_imp_stable_r : cl_stability_l -> cl_stability_r.
+    Proof.
+      intros Hl A B x Hx.
+      apply cl_idempotent.
+      apply cl_monotone with (cl B ∘ A).
+      apply inc1_trans with (2 := fst (composes_commute _ _)); auto.
+      apply composes_commute_1; auto.
+    Qed.
+  
+    Proposition cl_stable_r_imp_stable_l : cl_stability_r -> cl_stability_l.
+    Proof.
+      intros Hl A B.
+      apply inc1_trans with (2 := fst (composes_commute _ _)); auto.
+      apply inc1_trans with (1 := @composes_commute_1 _ _); auto.
+    Qed.
+
+    Hint Resolve cl_stable_l_imp_stable_r.
+  
+    Proposition cl_stable_l_imp_stable : cl_stability_l -> cl_stability.
+    Proof. auto. Qed.
+
+  End commute_stability. 
+
   (* ⊆ ≃ ∩ ∪ ∘ *)
 
   Hypothesis cl_stable_l : cl_stability_l.
   Hypothesis cl_stable_r : cl_stability_r.
   
-  Proposition cl_stable : cl_stability.  Proof. auto. Qed.
+  Proposition cl_stable : cl_stability.
+  Proof. auto. Qed.
 
   Hint Resolve cl_stable.
+
+  (* ⊆ ≃ ∩ ∪ ∘ ⊸ *)
+
+  Proposition composes_congruent_l_1 A B C : A ⊆ cl B -> C ∘ A ⊆ cl (C ∘ B).
+  Proof.
+    intros ?.
+    apply inc1_trans with (B := cl (C ∘ cl B)); auto.
+    apply inc_cl, cl_monotone, composes_monotone; auto.
+  Qed.
+
+  Hint Resolve composes_congruent_l_1.
+
+  Proposition composes_congruent_l A B C : cl A ≃ cl B -> cl (C ∘ A) ≃ cl (C ∘ B).
+  Proof. 
+    intros [H1 H2].
+    generalize (inc_cl H1) (inc_cl H2); intros H3 H4.
+    split; apply cl_inc;
+    apply inc1_trans with (2 := @cl_stable_r _ _), composes_monotone; auto.
+  Qed.
+
+  Proposition composes_congruent_r_1 A B C : A ⊆ cl B -> A ∘ C ⊆ cl (B ∘ C).
+  Proof.
+    intros ?.
+    apply inc1_trans with (B := cl (cl B ∘ C)); auto.
+    apply inc_cl, cl_monotone, composes_monotone; auto.
+  Qed.
+
+  Hint Resolve composes_congruent_r_1.
+
+  Proposition composes_congruent_r A B C : cl A ≃ cl B -> cl (A ∘ C) ≃ cl (B ∘ C).
+  Proof. 
+    intros [H1 H2].
+    generalize (inc_cl H1) (inc_cl H2); intros H3 H4.
+    split; apply cl_inc;
+    apply inc1_trans with (2 := @cl_stable_l _ _), composes_monotone; auto.
+  Qed.
+
+  Hint Resolve composes_congruent_l composes_congruent_r. 
+
+  Proposition composes_congruent A B C D : 
+               cl A ≃ cl B 
+            -> cl C ≃ cl D
+            -> cl (A ∘ C) ≃ cl (B ∘ D).
+  Proof. intros; apply eq1_trans with (cl (B ∘ C)); auto. Qed.
+
+  Section commute_neutrality.
+
+    Proposition cl_neutrality_1_imp_3 : cl_neutrality_1 -> cl_neutrality_3.
+    Proof.
+      intros H x; generalize (H x).
+      apply composes_commute.
+    Qed.
+
+    Proposition cl_neutrality_2_imp_4 : cl_neutrality_2 -> cl_neutrality_4.
+    Proof.
+      intros H x y Hxy.
+      specialize (H x).
+      apply cl_idempotent.
+      apply cl_monotone in H.
+      apply H.
+      revert Hxy; apply cl_commute.
+    Qed.
+
+  End commute_neutrality.
 
   Hypothesis cl_neutral_1 : cl_neutrality_1.
   Hypothesis cl_neutral_2 : cl_neutrality_2.
   Hypothesis cl_neutral_3 : cl_neutrality_3.
   Hypothesis cl_neutral_4 : cl_neutrality_4.
+
+  Section commute_associativity.
+  
+    Proposition cl_associative_1_imp_2 : cl_associativity_1 -> cl_associativity_2.
+    Proof.
+      intros H1 a b c.
+      apply inc1_trans with (2 := fst (composes_commute _ _)).
+      apply inc1_trans with (cl ((sg c ∘ sg b) ∘ sg a)).
+      + apply inc1_trans with (2 := cl_inc (H1 _ _ _)).
+        apply inc1_trans with (2 := fst (composes_commute _ _)).
+        apply inc_cl, composes_congruent; auto.
+      + apply composes_congruent; auto.
+    Qed.
+
+  End commute_associativity.
 
   Hypothesis cl_associative_1 : cl_associativity_1.
   Hypothesis cl_associative_2 : cl_associativity_2.
@@ -344,49 +449,6 @@ Section Relational_phase_semantics.
 
   Hint Immediate composes_associative.
 
-  (* ⊆ ≃ ∩ ∪ ∘ ⊸ *)
-
-  Proposition composes_congruent_l_1 A B C : A ⊆ cl B -> C ∘ A ⊆ cl (C ∘ B).
-  Proof.
-    intros ?.
-    apply inc1_trans with (B := cl (C ∘ cl B)); auto.
-    apply inc_cl, cl_monotone, composes_monotone; auto.
-  Qed.
-
-  Hint Resolve composes_congruent_l_1.
-
-  Proposition composes_congruent_l A B C : cl A ≃ cl B -> cl (C ∘ A) ≃ cl (C ∘ B).
-  Proof. 
-    intros [H1 H2].
-    generalize (inc_cl H1) (inc_cl H2); intros H3 H4.
-    split; apply cl_inc;
-    apply inc1_trans with (2 := @cl_stable_r _ _), composes_monotone; auto.
-  Qed.
-
-  Proposition composes_congruent_r_1 A B C : A ⊆ cl B -> A ∘ C ⊆ cl (B ∘ C).
-  Proof.
-    intros ?.
-    apply inc1_trans with (B := cl (cl B ∘ C)); auto.
-    apply inc_cl, cl_monotone, composes_monotone; auto.
-  Qed.
-
-  Hint Resolve composes_congruent_r_1.
-
-  Proposition composes_congruent_r A B C : cl A ≃ cl B -> cl (A ∘ C) ≃ cl (B ∘ C).
-  Proof. 
-    intros [H1 H2].
-    generalize (inc_cl H1) (inc_cl H2); intros H3 H4.
-    split; apply cl_inc;
-    apply inc1_trans with (2 := @cl_stable_l _ _), composes_monotone; auto.
-  Qed.
-
-  Hint Resolve composes_congruent_l composes_congruent_r. 
-
-  Proposition composes_congruent A B C D : 
-               cl A ≃ cl B 
-            -> cl C ≃ cl D
-            -> cl (A ∘ C) ≃ cl (B ∘ D).
-  Proof. intros; apply eq1_trans with (cl (B ∘ C)); auto. Qed.
 
   Proposition composes_neutral_l_1 A : A ⊆ cl (sg e ∘ A).
   Proof.
@@ -880,8 +942,11 @@ Section Relational_phase_semantics.
       apply inc1_trans with (1 := fst (list_Form_sem_app _ _)).
       rewrite list_Form_sem_cons; apply times_monotone; auto.
     Qed.
- 
-    Fact ill_ncperm_sound Γ Δ a b c : ⟬߭Γ++!a::!b::Δ⟭ ⊆ ⟦c⟧ -> ⟬߭Γ++!b::!a::Δ⟭ ⊆ ⟦c⟧.
+
+    (* Beware that ill_co_swap_sound assumes commutativity
+        while ill_nc_swap_sound does not *)
+
+    Fact ill_nc_swap_sound Γ Δ a b c : ⟬߭Γ++!a::!b::Δ⟭ ⊆ ⟦c⟧ -> ⟬߭Γ++!b::!a::Δ⟭ ⊆ ⟦c⟧.
     Proof.
       intros H x Hx; apply H; revert x Hx.
       apply list_Form_sem_congr_l.
@@ -893,7 +958,7 @@ Section Relational_phase_semantics.
       simpl; split; red; tauto.
     Qed.
 
-    Fact ill_perm_sound Γ Δ a b c : ⟬߭Γ++a::b::Δ⟭ ⊆ ⟦c⟧ -> ⟬߭Γ++b::a::Δ⟭ ⊆ ⟦c⟧.
+    Fact ill_co_swap_sound Γ Δ a b c : ⟬߭Γ++a::b::Δ⟭ ⊆ ⟦c⟧ -> ⟬߭Γ++b::a::Δ⟭ ⊆ ⟦c⟧.
     Proof.
       intros H x Hx; apply H; revert x Hx.
       apply list_Form_sem_congr_l.
@@ -906,6 +971,28 @@ Section Relational_phase_semantics.
       apply times_congruence.
       + apply unit_neutral_r; auto.
       + apply eq1_sym, unit_neutral_r; auto.
+    Qed.
+
+    Fact ill_nc_perm_sound Γ Δ a : s1 = false -> Γ ~[s1] Δ -> ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭Δ⟭ ⊆ ⟦a⟧.
+    Proof.
+      intros H1 H2; revert H2 a; subst; simpl.
+      induction 1 as [ | a Ga De H1 IH1 | | ] ; intros c; auto.
+      + repeat rewrite list_Form_sem_cons.
+        intros H; apply adjunction_l_2; auto.
+        apply IH1 with (a := a -o c); simpl. 
+        apply adjunction_l_1; auto.
+      + apply ill_nc_swap_sound with (Γ := nil).
+    Qed.
+
+    Fact ill_co_perm_sound Γ Δ a : s1 = true -> Γ ~[s1] Δ -> ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭Δ⟭ ⊆ ⟦a⟧.
+    Proof.
+      intros H1 H2; revert H2 a; subst; simpl.
+      induction 1 as [ | a Ga De H1 IH1 | | ] ; intros c; auto.
+      + repeat rewrite list_Form_sem_cons.
+        intros H; apply adjunction_l_2; auto.
+        apply IH1 with (a := a -o c); simpl. 
+        apply adjunction_l_1; auto.
+      + apply ill_co_swap_sound with (Γ := nil).
     Qed.
 
     Fact ill_limp_l_sound Γ ϴ Δ a b c :  ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭ϴ++b::Δ⟭ ⊆ ⟦c⟧ -> ⟬߭ϴ++Γ++a -o b::Δ⟭ ⊆ ⟦c⟧.
@@ -1089,14 +1176,13 @@ Section Relational_phase_semantics.
 
   Section ill_nc_soundness.
 
-    Hint Resolve ill_ncperm_sound.
-
     (* Don't know with auto fails in the four last cases *)
 
     Let ill_soundness_rec s1 s2 Γ a : Γ ⊢ a [s1,s2] -> s1 = false -> ⟬߭Γ⟭  ⊆ ⟦a⟧.
     Proof.
       induction 1; intros E; auto; try discriminate.
       + apply ill_cut_sound with A; auto.
+      + apply ill_nc_perm_sound with (1 := E) (Γ := Γ); auto.
       + apply ill_limp_r_sound; auto.
       + apply ill_rimp_r_sound; auto.
       + apply ill_bang_r_sound; auto.
@@ -1112,14 +1198,13 @@ Section Relational_phase_semantics.
 
   Section ill_comm_soundness.
 
-    Hint Resolve ill_perm_sound.
-
     (* Don't know with auto fails in the four last cases *)
 
     Let ill_soundness_rec s1 s2 Γ a : Γ ⊢ a [s1,s2] -> s1 = true -> ⟬߭Γ⟭  ⊆ ⟦a⟧.
     Proof.
       induction 1; intros E; auto; try discriminate.
       + apply ill_cut_sound with A; auto.
+      + apply ill_co_perm_sound with (1 := E) (Γ := Γ); auto.
       + apply ill_limp_r_sound; auto.
       + apply ill_rimp_r_sound; auto.
       + apply ill_bang_r_sound; auto.

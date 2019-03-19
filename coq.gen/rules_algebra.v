@@ -13,11 +13,11 @@ Require Import utils ill_form ill_rules phase_sem.
 
 Set Implicit Arguments.
 
-Local Infix "~!" := perm_bang_t.
-
 Section Rules.
 
-  Variable (P : list ill_form -> ill_form -> Type).
+  Variable (s1 s2 : bool).
+
+  Let P := (ill_proof s1 s2).
 
   Notation "Γ ⊨ A" := (P Γ A) (at level 70, no associativity).
 
@@ -26,7 +26,7 @@ Section Rules.
   Definition cl_ctx X Ω := forall Γ Δ A, (forall ϴ, X ϴ -> Γ++ϴ++Δ ⊨ A) 
                                        ->                  Γ++Ω++Δ ⊨ A.
 
-  Definition comp_ctx (Γ Δ ϴ : list ill_form) := Γ++Δ ~! ϴ.
+  Definition comp_ctx (Γ Δ ϴ : list ill_form) := Γ++Δ ~[s1] ϴ.
 
   Notation cl := cl_ctx.
   Notation comp := comp_ctx.
@@ -58,20 +58,23 @@ Section Rules.
 
   Hint Resolve cl_ctx_increase cl_ctx_mono cl_ctx_idem.
 
-  Hypothesis P_perm : forall Γ Δ A, Γ ~! Δ -> Γ ⊨ A -> Δ ⊨ A. 
+  Let P_perm : forall Γ Δ A, Γ ~[s1] Δ -> Γ ⊨ A -> Δ ⊨ A.
+  Proof.
+    intros ? ? ?; apply in_llp_perm.
+  Qed. 
 
   Hint Resolve perm_bang_t_refl.
 
-(*
-  Local Fact cl_comm Γ Δ : sg Γ ∘ sg Δ ⊆ cl (sg Δ ∘ sg Γ).
+  Local Fact cl_comm : s1 = true -> forall Γ Δ, sg Γ ∘ sg Δ ⊆ cl (sg Δ ∘ sg Γ).
   Proof.
-    intros _ [ ga de th ? ? Hth ]; subst Γ Δ.
-    intros rho x H; apply H.
+    intros E ? ? _ [ ga de th ? ? Hth ]; subst Γ Δ.
+    intros rho del x H; subst s1. apply H.
     constructor 1 with de ga; auto.
     revert Hth; unfold comp.
-    apply perm_t_trans; auto. 
+    apply ill_perm_t_trans; auto.
+    subst s1; simpl.
+    apply perm_t_app_comm.
   Qed.
-*)
   
   Local Fact cl_neutral_1 : forall Γ, cl (sg ∅ ∘ sg Γ) Γ.
   Proof.
@@ -95,7 +98,7 @@ Section Rules.
     cbv in H1.
     generalize (G _ eq_refl).
     apply P_perm.
-    do 2 (apply perm_bang_t_app; auto).
+    do 2 (apply ill_perm_t_app; auto).
   Qed.
 
   Local Fact cl_neutral_4 : forall Γ, sg Γ ∘ sg ∅ ⊆ cl (sg Γ).
@@ -104,7 +107,7 @@ Section Rules.
     red in H1; rewrite <- app_nil_end in H1.
     generalize (G _ eq_refl).
     apply P_perm.
-    do 2 (apply perm_bang_t_app; auto).
+    do 2 (apply ill_perm_t_app; auto).
   Qed.
 
   Fact cl_ctx_stable_l : forall X Y, cl X ∘ Y ⊆ cl (X ∘ Y).
@@ -112,9 +115,9 @@ Section Rules.
     intros X Y _ [ ga de th H1 H2 H3 ] rho om x HXY.
     red in H1; red in H3.
     apply P_perm with (rho++ga++de++om).
-    1: { apply perm_bang_t_app; auto.
+    1: { apply ill_perm_t_app; auto.
          rewrite <- app_ass. 
-         apply perm_bang_t_app; auto. }
+         apply ill_perm_t_app; auto. }
     apply H1.
     intros ka Hka.
     replace (rho ++ ka ++ de ++ om)
@@ -130,9 +133,9 @@ Section Rules.
     red in H2; red in H3.
     apply P_perm with ((rho++ga)++de++om).
     1: { rewrite app_ass.
-         apply perm_bang_t_app; auto.
+         apply ill_perm_t_app; auto.
          rewrite <- app_ass. 
-         apply perm_bang_t_app; auto. }
+         apply ill_perm_t_app; auto. }
     apply H2.
     intros ka Hka.
     replace ((rho ++ ga) ++ ka ++ om)
@@ -155,11 +158,11 @@ Section Rules.
     red; auto.
     red; auto.
     revert Hu.
-    apply P_perm, perm_bang_t_app; auto.
-    apply perm_bang_t_app; auto.
+    apply P_perm, ill_perm_t_app; auto.
+    apply ill_perm_t_app; auto.
     rewrite app_ass.
-    apply perm_bang_t_trans with (2 := H4).
-    apply perm_bang_t_app; auto.
+    apply ill_perm_t_trans with (2 := H4).
+    apply ill_perm_t_app; auto.
   Qed.
 
   Local Fact cl_assoc_2 : forall Γ Δ ϴ, (sg Γ ∘ sg Δ) ∘ sg ϴ ⊆ cl (sg Γ ∘ (sg Δ ∘ sg ϴ)).
@@ -175,11 +178,11 @@ Section Rules.
     red; auto.
     red; auto.
     revert Hu.
-    apply P_perm, perm_bang_t_app; auto.
-    apply perm_bang_t_app; auto.
-    apply perm_bang_t_trans with (2 := H4).
+    apply P_perm, ill_perm_t_app; auto.
+    apply ill_perm_t_app; auto.
+    apply ill_perm_t_trans with (2 := H4).
     rewrite <- app_ass.
-    apply perm_bang_t_app; auto.
+    apply ill_perm_t_app; auto.
   Qed.
 
   Local Fact sub_monoid_1 : cl K ∅.
@@ -194,13 +197,20 @@ Section Rules.
     red in H; simpl in H.
     unfold ill_lbang in H.
     rewrite <- map_app in H.
-    revert H; apply perm_t_map_inv_t.
+    revert H; apply ill_perm_t_map_inv_t; auto.
   Qed.
 
   Section sub_J_cs.
 
-    Hypothesis P_weak : ∀ ϴ Γ Δ A, ϴ++Δ ⊨ A -> ϴ++‼Γ++Δ ⊨ A.
-    Hypothesis P_cntr : ∀ ϴ Γ Δ A, ϴ++‼Γ++‼Γ++Δ ⊨ A -> ϴ++‼Γ++Δ ⊨ A.
+    Let P_weak : ∀ ϴ Γ Δ A, ϴ++Δ ⊨ A -> ϴ++‼Γ++Δ ⊨ A.
+    Proof.
+      intros ? ? ?; apply ill_weak_ctx.
+    Qed.
+
+    Let P_cntr : ∀ ϴ Γ Δ A, ϴ++‼Γ++‼Γ++Δ ⊨ A -> ϴ++‼Γ++Δ ⊨ A.
+    Proof.
+      intros ? ? ? ?; apply ill_cntr_ctx.
+    Qed.
 
     Local Fact sub_J_1 : K ⊆ J.
     Proof.
@@ -217,21 +227,6 @@ Section Rules.
         apply P_cntr; auto.
     Qed.
 
-    Definition rules_sound := ill_Form_sem_sound   cl_ctx_increase 
-                                                   cl_ctx_mono 
-                                                   cl_ctx_idem 
-                                                   cl_ctx_stable_l 
-                                                   cl_ctx_stable_r
-                                                   cl_neutral_1 
-                                                   cl_neutral_2 
-                                                   cl_neutral_3 
-                                                   cl_neutral_4 
-                                                   cl_assoc_1
-                                                   cl_assoc_2
-                                                   sub_monoid_1 
-                                                   sub_monoid_2 
-                                                   sub_J_1.
-
   End sub_J_cs.
 
   Section sub_J_cn.
@@ -247,25 +242,27 @@ Section Rules.
     Let cntr Γ : cl (sg (‼Γ) ∘ sg (‼Γ)) (‼Γ).
     Proof. apply J_banged. Qed.
 
-    Local Fact sub_J_2 ϴ Γ Δ A : ϴ++Δ ⊨ A -> ϴ++‼Γ++Δ ⊨ A.
+    Local Fact sub_J_2 Γ Δ A : Δ ⊨ A -> ‼Γ++Δ ⊨ A.
     Proof.
-      intros H; apply weak; intros _ []; apply H.
+      intros H. 
+      apply (weak _ nil).
+      intros _ []; apply H.
     Qed.
 
-    Local Fact sub_J_3 ϴ Γ Δ A : ϴ++‼Γ++‼Γ++Δ ⊨ A -> ϴ++‼Γ++Δ ⊨ A.
+    Local Fact sub_J_3 Γ Δ A : ‼Γ++‼Γ++Δ ⊨ A -> ‼Γ++Δ ⊨ A.
     Proof.
-      intros H; apply cntr.
+      intros H. 
+      apply (cntr _ nil).
       intros _ [ x y th [] [] H1 ].
       revert H; apply P_perm.
-      apply perm_bang_t_app; auto.
-      rewrite <- app_ass.
-      apply perm_bang_t_app; auto.
+      rewrite <- app_ass. 
+      simpl; apply ill_perm_t_app; auto.
     Qed.
 
   End sub_J_cn.
 
-  Fact sub_J_eq : K ⊆ J ≡ (∀ ϴ Γ Δ A, ϴ++Δ ⊨ A -> ϴ++‼Γ++Δ ⊨ A)
-                         * (∀ ϴ Γ Δ A, ϴ++‼Γ++‼Γ++Δ ⊨ A -> ϴ++‼Γ++Δ ⊨ A).
+  Fact sub_J_eq : K ⊆ J ≡ (∀ Γ Δ A, Δ ⊨ A -> ‼Γ++Δ ⊨ A)
+                         * (∀ Γ Δ A, ‼Γ++‼Γ++Δ ⊨ A -> ‼Γ++Δ ⊨ A).
   Proof.
     split.
     + split.
@@ -273,6 +270,43 @@ Section Rules.
       * apply sub_J_3; auto.
     + intros; apply sub_J_1; tauto.
   Qed.
+
+  Definition rules_nc_sound := ill_nc_soundness    cl_ctx_increase cl_ctx_mono 
+                                                   cl_ctx_idem 
+                                                   cl_ctx_stable_l 
+                                                   cl_ctx_stable_r
+                                                   cl_neutral_1
+                                                   cl_neutral_2 
+                                                   cl_neutral_3 
+                                                   cl_neutral_4 
+                                                   cl_assoc_1
+                                                   cl_assoc_2
+                                                   sub_monoid_1 
+                                                   sub_monoid_2
+                                                   sub_J_1.
+
+  Check rules_nc_sound.
+
+  Section Comm.
+
+    Hypothesis Hs1 : s1 = true.
+
+    Definition rules_comm_sound := ill_comm_soundness    cl_ctx_increase cl_ctx_mono 
+                                                   cl_ctx_idem
+                                                   (cl_comm Hs1) 
+                                                   cl_ctx_stable_l 
+                                                   cl_ctx_stable_r
+                                                   cl_neutral_1
+                                                   cl_neutral_2 
+                                                   cl_neutral_3 
+                                                   cl_neutral_4 
+                                                   cl_assoc_1
+                                                   cl_assoc_2
+                                                   sub_monoid_1 
+                                                   sub_monoid_2
+                                                   sub_J_1.
+
+  End Comm.
 
   Notation "↓" := (fun A Γ => Γ ⊨ A).
 
@@ -312,7 +346,7 @@ Section Rules.
         destruct Hth as [ rho ga th H1 H2 H3 ].
         subst ga; red in H3; simpl in H3.
         apply P_perm with (de++(rho++A -o B::nil)++om).
-        { do 2 (apply perm_bang_t_app; auto). }
+        { do 2 (apply ill_perm_t_app; auto). }
         rewrite app_ass; simpl; apply H0; auto.
         apply H with (ϴ := _::∅); auto.
     Qed.
@@ -346,7 +380,7 @@ Section Rules.
         destruct Hth as [ rho ga th H1 H2 H3 ].
         subst rho; red in H3; simpl in H3.
         apply P_perm with (de++(B o- A::ga)++om).
-        { do 2 (apply perm_bang_t_app; auto). }
+        { do 2 (apply ill_perm_t_app; auto). }
         simpl; apply H0; auto.
         apply H with (ϴ := _::∅); auto.
     Qed.
