@@ -950,12 +950,12 @@ Section Relational_phase_semantics.
       | !a     => ❗⟦a⟧
     end
   where "⟦ a ⟧" := (Form_sem a).
-  
+
   Fact closed_Form_sem f : cl (⟦f⟧) ⊆ ⟦f⟧.
   Proof. induction f; simpl; unfold bang; auto; red; auto. Qed.
-  
+
   Definition list_Form_sem ll := fold_right (fun x y => x⊛y) unit (map Form_sem ll).
-   
+
   Notation "⟬߭  ll ⟭" := (list_Form_sem ll).
 
   Fact list_Form_sem_nil : ⟬߭nil⟭ = unit.
@@ -1116,6 +1116,15 @@ Section Relational_phase_semantics.
         apply unit_neutral_r; auto.
     Qed.
 
+    Fact ill_neg_l_sound Γ a :  ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭Γ++ineg a::nil⟭ ⊆ ⟦N⟧.
+    Proof.
+      intros H.
+      replace (⟬߭ Γ ++ ineg a :: nil ⟭) with (⟬߭ nil ++ Γ ++ a -o N :: nil⟭)
+        by (unfold list_Form_sem; rewrite ? map_app; simpl; reflexivity).
+      apply ill_limp_l_sound; auto.
+      unfold list_Form_sem; simpl; apply unit_neutral_r_1; auto.
+    Qed.
+
     Fact ill_rimp_l_sound Γ ϴ Δ a b c :  ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭ϴ++b::Δ⟭ ⊆ ⟦c⟧ -> ⟬߭ϴ++b o- a::Γ++Δ⟭ ⊆ ⟦c⟧.
     Proof.
       intros H1 H2 x Hx; apply H2; revert x Hx.
@@ -1131,6 +1140,15 @@ Section Relational_phase_semantics.
       apply magicwand_r_monotone; auto.
     Qed.
 
+    Fact ill_gen_l_sound Γ a :  ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭igen a::Γ⟭ ⊆ ⟦N⟧.
+    Proof.
+      intros H.
+      replace (⟬߭ igen a :: Γ ⟭) with (⟬߭ nil ++ N o- a :: Γ ++ nil⟭)
+        by (unfold list_Form_sem; simpl; rewrite app_nil_r; reflexivity).
+      apply ill_rimp_l_sound; auto.
+      unfold list_Form_sem; simpl; apply unit_neutral_r_1; auto.
+    Qed.
+
     Fact ill_limp_r_sound Γ a b : ⟬߭a::Γ⟭ ⊆ ⟦b⟧ -> ⟬߭Γ⟭ ⊆ ⟦a⟧ ⊸ ⟦b⟧.
     Proof. intro; apply adjunction_l; auto. Qed.
 
@@ -1143,6 +1161,12 @@ Section Relational_phase_semantics.
       apply times_monotone; auto.
       rewrite list_Form_sem_cons, list_Form_sem_nil.
       apply unit_neutral_r; auto.
+    Qed.
+
+    Fact ill_gen_r_sound Γ a : ⟬߭Γ++a::nil⟭ ⊆ ⟦N⟧ -> ⟬߭Γ⟭ ⊆ ⟦igen a⟧.
+    Proof.
+      simpl; change (v atN) with (⟦ivar atN⟧).
+      apply ill_rimp_r_sound; auto.
     Qed.
 
     Fact ill_with_l1_sound Γ Δ a b c : ⟬߭Γ++a::Δ⟭ ⊆ ⟦c⟧ -> ⟬߭Γ++a ﹠ b::Δ⟭ ⊆ ⟦c⟧.
@@ -1263,6 +1287,16 @@ Section Relational_phase_semantics.
     Fact ill_unit_r_sound : ⟬߭nil⟭ ⊆ ⟦𝝐⟧.
     Proof. simpl; red; auto. Qed.
 
+    Fact ill_co_oc_perm_sound l1 l2 lw lw' a : lw ~p lw' ->
+             ⟬߭ l1 ++ map ioc lw ++ l2 ⟭ ⊆ ⟦ a ⟧ -> ⟬߭ l1 ++ map ioc lw' ++ l2 ⟭ ⊆ ⟦ a ⟧.
+    Proof.
+      intros HP pi.
+      apply ill_nc_perm_sound with (Γ := l1 ++ map ioc lw ++ l2); auto.
+      apply perm_bang_t_app; auto.
+      apply perm_bang_t_app; auto.
+      clear - HP; induction HP; simpl; auto; econstructor ; eassumption.
+    Qed.
+
   End soundness.
 
     Context {P : ipfrag}.
@@ -1272,6 +1306,7 @@ Section Relational_phase_semantics.
 
   Hint Resolve   ill_ax_sound
                  ill_limp_l_sound ill_limp_r_sound ill_rimp_l_sound ill_rimp_r_sound
+                 ill_gen_r_sound ill_gen_l_sound ill_neg_l_sound
                  ill_with_l1_sound ill_with_l2_sound ill_with_r_sound
                  ill_bang_l_sound ill_bang_r_sound ill_weak_sound ill_cntr_sound
                  ill_times_l_sound ill_times_r_sound
@@ -1279,43 +1314,34 @@ Section Relational_phase_semantics.
                  ill_bot_l_sound ill_top_r_sound 
                  ill_unit_l_sound ill_unit_r_sound.
 
-  Section ill_soundness.
 
-    (* Don't know with auto fails in the four last cases *)
+  Section ill_nc_soundness.
 
-    Let ill_soundness_rec Γ a : Γ ⊢ a -> ⟬߭Γ⟭  ⊆ ⟦a⟧.
+    Let ill_soundness_rec Γ a : ipperm P = false -> Γ ⊢ a -> ⟬߭Γ⟭  ⊆ ⟦a⟧.
     Proof.
-      induction 1; auto.
-      + case_eq (ipperm P); intros E; rewrite E in p; simpl in p.
-        * apply ill_co_perm_sound with (1 := p) (Γ := l1); auto.
-        * subst; auto.
-      + apply ill_nc_perm_sound with (Γ := l1 ++ map ioc lw ++ l2); auto.
-        apply perm_bang_t_app; auto.
-        apply perm_bang_t_app; auto.
-        clear - p; induction p; simpl; auto; econstructor ; eassumption.
-      + apply ill_times_r_sound; auto.
-      + apply ill_rimp_r_sound; auto.
-      + simpl; change (v atN) with (⟦ivar atN⟧).
-        apply ill_rimp_r_sound; auto.
-      + replace (⟬߭ igen A :: l ⟭) with (⟬߭ nil ++ N o- A :: l ++ nil⟭)
-          by (unfold list_Form_sem; simpl; rewrite app_nil_r; reflexivity).
-        apply ill_rimp_l_sound; auto.
-        unfold list_Form_sem; simpl; apply unit_neutral_r_1; auto.
-      + apply ill_limp_r_sound; auto.
-      + simpl; change (v atN) with (⟦ivar atN⟧).
-        apply ill_limp_r_sound; auto.
-      + replace (⟬߭ l ++ ineg A :: nil ⟭) with (⟬߭ nil ++ l ++ A -o N :: nil⟭)
-          by (unfold list_Form_sem; rewrite ? map_app; simpl; reflexivity).
-        apply ill_limp_l_sound; auto.
-        unfold list_Form_sem; simpl; apply unit_neutral_r_1; auto.
-      + apply ill_bang_r_sound; auto.
+      intros E; induction 1; try auto; try now (simpl; auto).
+      + rewrite E in p; simpl in p.
+        subst; auto.
+      + apply ill_co_oc_perm_sound with (lw := lw); auto.
       + apply ill_cut_sound with A; auto.
-      + contradiction P_axfree.
     Qed.
 
     Theorem ill_nc_soundness Γ a : ipperm P = false -> Γ ⊢ a -> ⟬߭Γ⟭  ⊆ ⟦a⟧.
     Proof.
       intros; apply ill_soundness_rec; trivial.
+    Qed.
+
+  End ill_nc_soundness.
+
+  Section ill_soundness.
+
+    Fact ill_soundness_rec Γ a : ipperm P = true -> Γ ⊢ a -> ⟬߭Γ⟭  ⊆ ⟦a⟧.
+    Proof.
+      intros E; induction 1; try auto; try now (simpl; auto).
+      + rewrite E in p; simpl in p.
+        apply ill_co_perm_sound with (1 := p) (Γ := l1); auto.
+      + apply ill_co_oc_perm_sound with (lw := lw); auto.
+      + apply ill_cut_sound with A; auto.
     Qed.
 
     Theorem ill_comm_soundness Γ a : ipperm P = true -> Γ ⊢ a -> ⟬߭Γ⟭  ⊆ ⟦a⟧.
