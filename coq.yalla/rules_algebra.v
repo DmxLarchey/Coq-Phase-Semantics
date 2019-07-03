@@ -361,9 +361,47 @@ Section Rules.
         rewrite app_ass; simpl; apply H0; auto.
         apply H with (ϴ := _::∅); auto.
     Qed.
-   
+
+    Fact rule_neg_l_eq A : (↓A ⊸ cl (sg (N::∅))) (ineg A::∅)
+                          ≡ ∀ Γ, Γ ⊨ A -> Γ++ineg A::nil ⊨ N.
+    Proof.
+      split.
+      + intros H Ga H1.
+        specialize (H (Ga++ineg A::nil)).
+        spec all in H.
+        constructor 1 with Ga (ineg A :: nil); auto; red; simpl; auto.
+        replace (Ga++ineg A::nil) with (nil++(Ga++ineg A::nil)++nil) by solve list eq.
+        apply H; intros _ []; auto.
+(* TODO is this what is intended? *)
+apply ax_ir.
+      + intros H0 th Hth de om C H.
+        destruct Hth as [ rho ga th H1 H2 H3 ].
+        subst ga; red in H3; simpl in H3.
+        apply P_perm with (de++(rho++ineg A::nil)++om).
+        { do 2 (apply ill_perm_t_app; auto). }
+        rewrite <- app_assoc; rewrite <- app_comm_cons; simpl.
+        refine (projT1 (@neg_map_rule P _ _ _ _ _ _ _ _)); auto.
+        change (N :: om) with ((N :: nil) ++ om).
+        apply H; auto.
+    Qed.
+
     Fact rule_limp_r_eq A B : sg (A::∅) ⊸ ↓B ⊆ ↓(A -o B)
                           ≡ ∀ Γ, A::Γ ⊨ B -> Γ ⊨ A -o B.
+    Proof.
+      split.
+      + intros H Ga H1.
+        apply H.
+        intros _ [ ? ? De [] [] H2 ].
+        apply P_perm with (1 := H2).
+        apply P_perm with (2 := H1); auto.
+      + intros H th Hth.
+        apply H, Hth.
+        constructor 1 with (A :: nil) th; auto.
+        red; auto.
+    Qed.
+
+    Fact rule_neg_r_eq A : sg (A::∅) ⊸ ↓N ⊆ ↓(ineg A)
+                          ≡ ∀ Γ, A::Γ ⊨ N -> Γ ⊨ ineg A.
     Proof.
       split.
       + intros H Ga H1.
@@ -386,7 +424,7 @@ Section Rules.
         spec all in H.
         constructor 1 with (B o- A::nil) De; auto; red; simpl; auto.
         replace (Ga++B o- A::De++Th) with (Ga++(B o- A::De)++Th) by solve list eq.
-        apply H; intros _ []; auto.
+        apply H ; intros _ []; auto.
       + intros H0 th Hth de om C H.
         destruct Hth as [ rho ga th H1 H2 H3 ].
         subst rho; red in H3; simpl in H3.
@@ -396,8 +434,46 @@ Section Rules.
         apply H with (ϴ := _::∅); auto.
     Qed.
 
+    Fact rule_gen_l_eq A : (cl (sg (N::∅)) ⟜ ↓A) (igen A::∅)
+                          ≡ ∀ Γ, Γ ⊨ A -> igen A::Γ ⊨ N.
+    Proof.
+      split.
+      + intros H Ga H1.
+        specialize (H (igen A::Ga)).
+        spec all in H.
+        constructor 1 with (igen A::nil) Ga; auto; red;simpl; auto.
+        replace (igen A::Ga) with (nil++(igen A::Ga)++nil) by solve list eq.
+        apply H ; intros _ []; simpl; auto.
+(* TODO is this what is intended? *)
+apply ax_ir.
+      + intros H0 th Hth de om C H.
+        destruct Hth as [ rho ga th H1 H2 H3 ].
+        subst rho; red in H3; simpl in H3.
+        apply P_perm with (de ++ (igen A::ga) ++ om).
+        { do 2 (apply ill_perm_t_app; auto). }
+        rewrite <- app_comm_cons.
+        refine (projT1 (@gen_pam_rule P _ _ _ _ _ _ _ _)); auto.
+        change (N :: om) with ((N :: nil) ++ om).
+        apply H; auto.
+    Qed.
+
     Fact rule_rimp_r_eq A B : ↓B ⟜ sg (A::∅) ⊆ ↓(B o- A)
                           ≡ ∀ Γ, Γ++A::nil ⊨ B -> Γ ⊨ B o- A.
+    Proof.
+      split.
+      + intros H Ga H1.
+        apply H.
+        intros _ [ ? ? De [] [] H2 ].
+        apply P_perm with (1 := H2).
+        apply P_perm with (2 := H1); auto.
+      + intros H th Hth.
+        apply H, Hth.
+        constructor 1 with th (A :: nil); auto.
+        red; auto.
+    Qed.
+
+    Fact rule_gen_r_eq A : ↓N ⟜ sg (A::∅) ⊆ ↓(igen A)
+                          ≡ ∀ Γ, Γ++A::nil ⊨ N -> Γ ⊨ igen A.
     Proof.
       split.
       + intros H Ga H1.
