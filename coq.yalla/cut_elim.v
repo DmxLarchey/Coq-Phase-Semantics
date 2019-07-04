@@ -7,27 +7,49 @@
 (*         CeCILL v2 FREE SOFTWARE LICENSE AGREEMENT          *)
 (**************************************************************)
 
-Require Import Arith Omega List Permutation.
+Require Import Arith Omega List.
 
-Require Import rel_utils ill_def phase_sem rules_algebra.
+Require Import Permutation_Type.
+
+Require Import rel_utils list_perm ill_def phase_sem rules_algebra.
 
 Set Implicit Arguments.
 
+  Lemma P_perm : forall P Γ Δ A, Γ ~[ipperm P] Δ -> ill P Γ A -> ill P Δ A.
+  Proof.
+    intros P l1 l2 A HP pi.
+    case_eq (ipperm P); intros perm_P; rewrite_all perm_P; simpl in HP.
+    + eapply ex_ir; try eassumption.
+      rewrite perm_P; auto.
+    + apply perm_bang_t_perm_bang_t_l in HP.
+      revert pi ; clear - HP; induction HP; intros pi; auto.
+      change (!y::!x::l2) with (map ioc (y::x::nil) ++ l2).
+      apply ex_oc_ir with (lw := x::y::nil); auto.
+      apply Permutation_Type_swap.
+  Qed.
+
+  Lemma P_weak : forall P, forall ϴ Γ Δ A, ill P (ϴ++Δ) A -> ill P (ϴ++‼Γ++Δ) A.
+  Proof. intros; apply wk_list_ilr; assumption. Qed.
+
+  Lemma P_cntr : forall P, forall ϴ Γ Δ A, ill P (ϴ++‼Γ++‼Γ++Δ) A -> ill P (ϴ++‼Γ++Δ) A.
+  Proof. intros; apply co_list_ilr; assumption. Qed.
+
+  Hint Resolve P_perm P_weak P_cntr.
+
+
 Section Okada.
 
-(*  Hint Resolve ill_cf_perm_bang_t. *)
+  Variable P : ipfrag.
+  Hypothesis P_axfree : projT1 (ipgax P) -> False.
 
-  Context {P : ipfrag}.
-  Hypothesis P_axfree : (projT1 (ipgax P) -> False).
-
-  Notation comp := (@comp_ctx P).
+  Notation comp := (comp_ctx (ipperm P)).
 
   Notation sg := (@eq _).
   Infix "∘" := (Composes comp) (at level 50, no associativity).
   Infix "⊸" := (Magicwand_l comp) (at level 51, right associativity).
   Infix "⟜" := (Magicwand_r comp) (at level 52, left associativity).
 
-  Let cl := @cl_ctx P.
+  Let cl := cl_ctx (ill P).
 
   Let cl_increase X : X ⊆ cl X.
   Proof. apply cl_ctx_increase. Qed.
@@ -60,7 +82,7 @@ Section Okada.
   Let cl_sem_closed A : cl (⟦A⟧) ⊆ ⟦A⟧.
   Proof. apply closed_Form_sem; eauto. Qed.
  
-  Section Okada.
+  Section Okada_Lemma.
 
     (** This is Okada's lemma which states that the interpretation ⟦A⟧
         of A is nearly identical to ↓A, 
@@ -97,8 +119,8 @@ Section Okada.
 
     Let rule_neg_l A : (↓A ⊸ cl (sg (N::∅))) (ineg A::∅). 
     Proof. 
-      apply rule_neg_l_eq; eauto. 
-      intros ?; apply neg_ilr. 
+      apply rule_neg_l_eq; eauto.
+      intros; apply neg_map_rule; auto.
     Qed.
 
     Let rule_neg_r A : sg (A::∅) ⊸ ↓N ⊆ ↓(ineg A).
@@ -122,7 +144,7 @@ Section Okada.
     Let rule_gen_l A : (cl (sg (N::∅)) ⟜ ↓A) (igen A::∅).
     Proof. 
       apply rule_gen_l_eq; eauto. 
-      intros ?; apply gen_ilr. 
+      intros; apply gen_pam_rule; auto.
     Qed.
 
     Let rule_gen_r A : ↓N ⟜ sg (A::∅) ⊆ ↓(igen A).
@@ -230,7 +252,7 @@ Section Okada.
       induction A; auto.
       + split; simpl; auto.
         intros _ []; apply rule_ax.
-      + split. 
+      + split.
         * intros _ []; apply rule_unit_l.
         * simpl; apply cl_under_closed; auto; apply rule_unit_r.
       + destruct IHA1 as [IHA1 IHA3].
@@ -311,7 +333,7 @@ Section Okada.
           intros x []; apply rule_bang_r; split; auto.
     Qed.
 
-  End Okada.
+  End Okada_Lemma.
 
   Notation "'⟬߭' Γ '⟭'" := (list_Form_sem cl comp ∅ K v Γ) (at level 49).
 
@@ -328,50 +350,53 @@ Section Okada.
 
 End Okada.
 
-(** The notation Γ ⊢ A [comm,cut] is for the type of proofs of the sequent Γ ⊢ A
-    * in commutative ILL if comm=true; ILLNC if comm=false
-    * with cut if cut=true; cut-free if cut=false
+(** The notation Γ ⊢ A [P] is for the type of proofs of the sequent Γ ⊢ A
+    * in commutative ILL if ipperm P=true; ILLNC if ipperm P=false
+    * with cut if ipcut P=true; cut-free if ipcut_P=false
 *)
 
 Notation "l '⊢' x [ Q ]" := (ill Q l x) (at level 70, no associativity).
 
-Section NC_cut_admissibility.
+Section cut_admissibility.
 
-  Context {P : ipfrag}.
-  Hypothesis P_axfree : (projT1 (ipgax P) -> False).
+  Variable P : ipfrag.
+  Hypothesis P_axfree : projT1 (ipgax P) -> False.
 
   Theorem ill_nc_cut_elimination Γ A : ipperm P = false -> Γ ⊢ A [P] -> Γ ⊢ A [cutupd_ipfrag P false].
   Proof.
      intros HP H.
-     eapply rules_nc_sound with (v := fun x ga => ill (cutupd_ipfrag P false) ga (£x)) in H; auto.
-     + apply Okada_formula, H, Okada_ctx; auto.
+     apply rules_nc_sound with (prov_pred := ill (cutupd_ipfrag P false)) (perm_bool0 := false) 
+                               (v := fun x ga => ill (cutupd_ipfrag P false) ga (£x)) in H; auto.
+     + replace (comp_ctx false) with (comp_ctx (ipperm (cutupd_ipfrag P false))) in H
+         by (rewrite <- HP; reflexivity).
+       apply Okada_formula, H, Okada_ctx; auto.
+     + intros; eapply P_perm; simpl; try rewrite HP; eassumption.
      + intros x Ga H1; red in H1.
        replace Ga with (nil++Ga++nil); [ apply H1 | ]; intros; rewrite <- app_nil_end; auto.
   Qed.
-
-End NC_cut_admissibility.
-
-Section COMM_cut_admissibility.
-
-  Context {P : ipfrag}.
-  Hypothesis P_axfree : (projT1 (ipgax P) -> False).
 
   Theorem ill_comm_cut_elimination Γ A : ipperm P = true -> Γ ⊢ A [P] -> Γ ⊢ A [cutupd_ipfrag P false].
   Proof.
      intros HP H.
-     eapply rules_comm_sound with (v := fun x ga => ill (cutupd_ipfrag P false) ga (£x)) in H; auto.
-     + apply Okada_formula, H, Okada_ctx; auto.
-     + auto.
+     apply rules_comm_sound with (prov_pred := ill (cutupd_ipfrag P false)) (perm_bool0 := true)
+                                 (v := fun x ga => ill (cutupd_ipfrag P false) ga (£x)) in H; auto.
+     + replace true with (ipperm (cutupd_ipfrag P false)) in H.
+       apply Okada_formula, H, Okada_ctx with (P := cutupd_ipfrag P false) ; auto.
+     + rewrite <- HP; intros; eapply P_perm; eassumption.
      + intros x Ga H1; red in H1.
        replace Ga with (nil++Ga++nil); [ apply H1 | ]; intros; rewrite <- app_nil_end; auto.
   Qed.
 
-End COMM_cut_admissibility.
+  Theorem ill_cut_elimination Γ A : Γ ⊢ A [P] -> Γ ⊢ A [cutupd_ipfrag P false].
+  Proof.
+    case_eq (ipperm P) ; intros HP.
+    + apply ill_comm_cut_elimination; assumption.
+    + apply ill_nc_cut_elimination; assumption.
+  Qed.
 
-Check ill_nc_cut_elimination.
-Print Assumptions ill_nc_cut_elimination.
+End cut_admissibility.
 
-Check ill_comm_cut_elimination.
-Print Assumptions ill_comm_cut_elimination.
 
+Check ill_cut_elimination.
+Print Assumptions ill_cut_elimination.
 

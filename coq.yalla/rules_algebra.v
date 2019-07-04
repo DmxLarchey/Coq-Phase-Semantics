@@ -17,17 +17,22 @@ Set Implicit Arguments.
 
 Section Rules.
 
-  Context {P : ipfrag}.
-  Hypothesis P_axfree : (projT1 (ipgax P) -> False).
+  Variable prov_pred : list iformula -> iformula -> Type.
+  Variable perm_bool : bool.
 
-  Notation "Γ ⊨ A" := (ill P Γ A) (at level 70, no associativity).
+  Notation "Γ ⊨ A" := (prov_pred Γ A) (at level 70, no associativity).
+
+  Hypothesis P_perm : forall Γ Δ A, Γ ~[perm_bool] Δ -> Γ ⊨ A -> Δ ⊨ A.
+
+
+
 
   Implicit Types (X Y : list iformula -> Type).
 
-  Definition cl_ctx X Ω := forall Γ Δ A, (forall ϴ, X ϴ -> Γ++ϴ++Δ ⊨ A) 
+  Definition cl_ctx X Ω := forall Γ Δ A, (forall ϴ, X ϴ -> Γ++ϴ++Δ ⊨ A)
                                        ->                  Γ++Ω++Δ ⊨ A.
 
-  Definition comp_ctx (Γ Δ ϴ : list iformula) := Γ++Δ ~[ipperm P] ϴ.
+  Definition comp_ctx (Γ Δ ϴ : list iformula) := Γ++Δ ~[perm_bool] ϴ.
 
   Notation cl := cl_ctx.
   Notation comp := comp_ctx.
@@ -38,17 +43,17 @@ Section Rules.
   Notation K := (fun Γ => { Δ | Γ = ‼Δ }).
 
   (* ⊆ ≃ ∩ ∪ ∘ ⊸ ⊛ ⟦ ⟧ ⟬߭ ⟭  ⟙   ⟘   𝝐  ﹠ ⊗  ⊕  ⊸  ❗   ‼  ∅  ⊢ Γ Δ ϴ ⊨ *)
-  
+
   Fact cl_ctx_increase X : X ⊆ cl X.
   Proof. intros ? ? ? ?; auto. Qed.
-  
+
   Fact cl_ctx_mono X Y : X ⊆ Y -> cl X ⊆ cl Y.
   Proof.
     intros H1 om Hom ga de x HY.
     apply Hom.
     intros; apply HY, H1; auto.
   Qed.
-  
+
   Fact cl_ctx_idem X : cl (cl X) ⊆ cl X.
   Proof.
     intros om Hom ga de x HX.
@@ -59,23 +64,7 @@ Section Rules.
 
   Hint Resolve cl_ctx_increase cl_ctx_mono cl_ctx_idem.
 
-
-  Let P_perm : forall Γ Δ A, Γ ~[ipperm P] Δ -> Γ ⊨ A -> Δ ⊨ A.
-  Proof.
-    intros l1 l2 A HP pi.
-    case_eq (ipperm P); intros perm_P; rewrite_all perm_P; simpl in HP.
-    + eapply ex_ir; try eassumption.
-      rewrite perm_P; auto.
-    + apply perm_bang_t_perm_bang_t_l in HP.
-      revert pi ; clear - HP; induction HP; intros pi; auto.
-      change (!y::!x::l2) with (map ioc (y::x::nil) ++ l2).
-      apply ex_oc_ir with (lw := x::y::nil); auto.
-      apply Permutation_Type_swap.
-  Qed.
-
-  Hint Resolve perm_bang_t_refl.
-
-  Local Fact cl_comm : ipperm P = true -> forall Γ Δ, sg Γ ∘ sg Δ ⊆ cl (sg Δ ∘ sg Γ).
+  Local Fact cl_comm : perm_bool = true -> forall Γ Δ, sg Γ ∘ sg Δ ⊆ cl (sg Δ ∘ sg Γ).
   Proof.
     intros E ? ? _ [ ga de th ? ? Hth ]; subst Γ Δ.
     intros rho del x H.
@@ -211,17 +200,8 @@ Section Rules.
     revert H; apply ill_perm_t_map_inv_t; auto.
   Qed.
 
-  Section sub_J_cs.
-
-    Let P_weak : ∀ ϴ Γ Δ A, ϴ++Δ ⊨ A -> ϴ++‼Γ++Δ ⊨ A.
-    Proof.
-      intros ? ? ?; apply wk_list_ilr.
-    Qed.
-
-    Let P_cntr : ∀ ϴ Γ Δ A, ϴ++‼Γ++‼Γ++Δ ⊨ A -> ϴ++‼Γ++Δ ⊨ A.
-    Proof.
-      intros ? ? ? ?; apply co_list_ilr.
-    Qed.
+    Hypothesis P_weak : ∀ ϴ Γ Δ A, ϴ++Δ ⊨ A -> ϴ++‼Γ++Δ ⊨ A.
+    Hypothesis P_cntr : ∀ ϴ Γ Δ A, ϴ++‼Γ++‼Γ++Δ ⊨ A -> ϴ++‼Γ++Δ ⊨ A.
 
     Local Fact sub_J_1 : K ⊆ J.
     Proof.
@@ -237,8 +217,6 @@ Section Rules.
         rewrite app_ass in H.
         apply P_cntr; auto.
     Qed.
-
-  End sub_J_cs.
 
   Section sub_J_cn.
 
@@ -300,11 +278,11 @@ Section Rules.
 
   Section Comm.
 
-    Hypothesis Hs1 : ipperm P = true.
+    Hypothesis Hperm : perm_bool = true.
 
     Definition rules_comm_sound := ill_comm_soundness    cl_ctx_increase cl_ctx_mono 
                                                    cl_ctx_idem
-                                                   (cl_comm Hs1) 
+                                                   (cl_comm Hperm) 
                                                    cl_ctx_stable_l 
                                                    cl_ctx_stable_r
                                                    cl_neutral_1
@@ -363,26 +341,22 @@ Section Rules.
     Qed.
 
     Fact rule_neg_l_eq A : (↓A ⊸ cl (sg (N::∅))) (ineg A::∅)
-                          ≡ ∀ Γ, Γ ⊨ A -> Γ++ineg A::nil ⊨ N.
+                          ≡ ∀ ϴ Γ Δ C, Γ ⊨ A -> ϴ++N::Δ ⊨ C -> ϴ++Γ++ineg A::Δ ⊨ C.
     Proof.
       split.
-      + intros H Ga H1.
-        specialize (H (Ga++ineg A::nil)).
+      + intros H Ga De Th C H1 H2.
+        specialize (H (De++ineg A::nil)).
         spec all in H.
-        constructor 1 with Ga (ineg A :: nil); auto; red; simpl; auto.
-        replace (Ga++ineg A::nil) with (nil++(Ga++ineg A::nil)++nil) by solve list eq.
+        constructor 1 with De (ineg A :: nil); auto; red; simpl; auto.
+        replace (Ga++De++ineg A::Th) with (Ga++(De++ineg A::nil)++Th) by solve list eq.
         apply H; intros _ []; auto.
-(* TODO is this what is intended? *)
-apply ax_ir.
       + intros H0 th Hth de om C H.
         destruct Hth as [ rho ga th H1 H2 H3 ].
         subst ga; red in H3; simpl in H3.
         apply P_perm with (de++(rho++ineg A::nil)++om).
         { do 2 (apply ill_perm_t_app; auto). }
-        rewrite <- app_assoc; rewrite <- app_comm_cons; simpl.
-        refine (projT1 (@neg_map_rule P _ _ _ _ _ _ _ _)); auto.
-        change (N :: om) with ((N :: nil) ++ om).
-        apply H; auto.
+        rewrite app_ass; simpl; apply H0; auto.
+        apply H with (ϴ := _::∅); auto.
     Qed.
 
     Fact rule_limp_r_eq A B : sg (A::∅) ⊸ ↓B ⊆ ↓(A -o B)
@@ -435,26 +409,22 @@ apply ax_ir.
     Qed.
 
     Fact rule_gen_l_eq A : (cl (sg (N::∅)) ⟜ ↓A) (igen A::∅)
-                          ≡ ∀ Γ, Γ ⊨ A -> igen A::Γ ⊨ N.
+                          ≡ ∀ ϴ Γ Δ C, Γ ⊨ A -> ϴ++N::Δ ⊨ C -> ϴ++igen A::Γ++Δ ⊨ C.
     Proof.
       split.
-      + intros H Ga H1.
-        specialize (H (igen A::Ga)).
+      + intros H Ga De Th C H1 H2.
+        specialize (H (igen A::De)).
         spec all in H.
-        constructor 1 with (igen A::nil) Ga; auto; red;simpl; auto.
-        replace (igen A::Ga) with (nil++(igen A::Ga)++nil) by solve list eq.
-        apply H ; intros _ []; simpl; auto.
-(* TODO is this what is intended? *)
-apply ax_ir.
+        constructor 1 with (igen A::nil) De; auto; red; simpl; auto.
+        replace (Ga++igen A::De++Th) with (Ga++(igen A::De)++Th) by solve list eq.
+        apply H ; intros _ []; auto.
       + intros H0 th Hth de om C H.
         destruct Hth as [ rho ga th H1 H2 H3 ].
         subst rho; red in H3; simpl in H3.
-        apply P_perm with (de ++ (igen A::ga) ++ om).
+        apply P_perm with (de++(igen A::ga)++om).
         { do 2 (apply ill_perm_t_app; auto). }
-        rewrite <- app_comm_cons.
-        refine (projT1 (@gen_pam_rule P _ _ _ _ _ _ _ _)); auto.
-        change (N :: om) with ((N :: nil) ++ om).
-        apply H; auto.
+        simpl; apply H0; auto.
+        apply H with (ϴ := _::∅); auto.
     Qed.
 
     Fact rule_rimp_r_eq A B : ↓B ⟜ sg (A::∅) ⊆ ↓(B o- A)
