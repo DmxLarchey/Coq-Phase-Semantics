@@ -9,24 +9,16 @@
 
 Require Import Arith Omega List.
 
-Require Import Permutation_Type.
+Require Import Permutation_Type genperm_Type.
 
-Require Import rel_utils list_perm ill_def phase_sem rules_algebra.
+Require Import rel_utils ill_def phase_sem rules_algebra.
 
 Set Implicit Arguments.
 
+  Notation " x '~[' b ']' y " := (PEperm_Type b x y) (at level 70, format "x  ~[ b ]  y").
+
   Lemma P_perm : forall P Γ Δ A, Γ ~[ipperm P] Δ -> ill P Γ A -> ill P Δ A.
-  Proof.
-    intros P l1 l2 A HP pi.
-    case_eq (ipperm P); intros perm_P; rewrite_all perm_P; simpl in HP.
-    + eapply ex_ir; try eassumption.
-      rewrite perm_P; auto.
-    + apply perm_bang_t_perm_bang_t_l in HP.
-      revert pi ; clear - HP; induction HP; intros pi; auto.
-      change (!y::!x::l2) with (map ioc (y::x::nil) ++ l2).
-      apply ex_oc_ir with (lw := x::y::nil); auto.
-      apply Permutation_Type_swap.
-  Qed.
+  Proof. intros; eapply ex_ir; eassumption. Qed.
 
   Lemma P_weak : forall P, forall ϴ Γ Δ A, ill P (ϴ++Δ) A -> ill P (ϴ++‼Γ++Δ) A.
   Proof. intros; apply wk_list_ilr; assumption. Qed.
@@ -262,7 +254,7 @@ Section Okada.
           apply inc1_prop with (2 := @rule_times_l _ _).
           simpl; apply cl_mono.
           intros _ []; constructor 1 with (A1::∅) (A2::∅); auto.
-          red; simpl; auto.
+          red; reflexivity.
         * simpl; apply cl_under_closed; auto.
           intros x Hx; apply rule_times_r.
           revert Hx; apply composes_monotone; eauto.
@@ -315,7 +307,7 @@ Section Okada.
         split.
         * intros _ [].
           apply inc1_prop with (2 := @rule_plus_l _ _).
-          simpl; apply cl_mono; eauto.
+          simpl; apply cl_mono; auto.
           intros _ [ [] | [] ]; auto.
         * simpl; apply cl_under_closed; auto.
           intros x [ Hx | Hx ]; auto.
@@ -345,14 +337,14 @@ Section Okada.
       apply cl_increase; auto.
     constructor 1 with (A :: nil) ga; auto.
     + apply Okada_formula; auto.
-    + red; auto.
+    + red; reflexivity.
   Qed.
 
 End Okada.
 
 (** The notation Γ ⊢ A [P] is for the type of proofs of the sequent Γ ⊢ A
     * in commutative ILL if ipperm P=true; ILLNC if ipperm P=false
-    * with cut if ipcut P=true; cut-free if ipcut_P=false
+    * with cut if ipcut P=true; cut-free if ipcut P=false
 *)
 
 Notation "l '⊢' x [ Q ]" := (ill Q l x) (at level 70, no associativity).
@@ -365,7 +357,7 @@ Section cut_admissibility.
   Theorem ill_nc_cut_elimination Γ A : ipperm P = false -> Γ ⊢ A [P] -> Γ ⊢ A [cutupd_ipfrag P false].
   Proof.
      intros HP H.
-     apply rules_nc_sound with (prov_pred := ill (cutupd_ipfrag P false)) (perm_bool0 := false) 
+     apply rules_nc_sound with (prov_pred := ill (cutupd_ipfrag P false)) (perm_bool := false) 
                                (v := fun x ga => ill (cutupd_ipfrag P false) ga (£x)) in H; auto.
      + replace (comp_ctx false) with (comp_ctx (ipperm (cutupd_ipfrag P false))) in H
          by (rewrite <- HP; reflexivity).
@@ -378,7 +370,7 @@ Section cut_admissibility.
   Theorem ill_comm_cut_elimination Γ A : ipperm P = true -> Γ ⊢ A [P] -> Γ ⊢ A [cutupd_ipfrag P false].
   Proof.
      intros HP H.
-     apply rules_comm_sound with (prov_pred := ill (cutupd_ipfrag P false)) (perm_bool0 := true)
+     apply rules_comm_sound with (prov_pred := ill (cutupd_ipfrag P false)) (perm_bool := true)
                                  (v := fun x ga => ill (cutupd_ipfrag P false) ga (£x)) in H; auto.
      + replace true with (ipperm (cutupd_ipfrag P false)) in H.
        apply Okada_formula, H, Okada_ctx with (P := cutupd_ipfrag P false) ; auto.
@@ -396,7 +388,8 @@ Section cut_admissibility.
 
 End cut_admissibility.
 
-
+(*
 Check ill_cut_elimination.
 Print Assumptions ill_cut_elimination.
+*)
 

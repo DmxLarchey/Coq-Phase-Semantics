@@ -8,93 +8,29 @@
 (**************************************************************)
 
 Require Import Arith Omega List Permutation.
-Require Import List_Type Permutation_Type_more.
+Require Import List_Type Permutation_Type_more genperm_Type.
 
-Require Import rel_utils utils_tac list_perm.
+Require Import rel_utils utils_tac.
 
 Require Import ill_def.
+
+Notation " x '~[' b ']' y " := (PEperm_Type b x y) (at level 70, format "x  ~[ b ]  y").
 
 Notation "⟙" := (itop).
 Notation "⟘" := (izero).
 Notation 𝝐 := (ione).
-
 Infix "&" := (iwith) (at level 50, only parsing).
 Infix "﹠" := (iwith) (at level 50).
-
 Infix "⊗" := (itens) (at level 50).
 Infix "⊕" := (iplus) (at level 50).
-
 Infix "-o" := (ilmap) (at level 51, right associativity).
 Notation "x o- y" := (ilpam y x) (at level 52, left associativity).
-
 Notation "'!' x" := (ioc x) (at level 52).
-
 Definition ill_lbang := map (fun x => !x).
-
 Notation "'!l' x" := (ill_lbang x) (at level 60, only parsing).
-
 Notation "‼ x" := (ill_lbang x) (at level 52).
-
 Notation "£" := ivar.
-
 Notation "∅" := nil (only parsing).
-
-Infix "~!" := (perm_bang_t ioc) (at level 70).
-Infix "~p" := (@Permutation_Type _) (at level 70).
-
-Hint Resolve perm_bang_t_refl perm_bang_t_cons.
-
-Definition perm_bool b := 
-  match b with
-    | true => @Permutation_Type iformula
-    | _    => perm_bang_t ioc
-  end.
-
-Notation " x '~[' b ']' y " := (perm_bool b x y) (at level 70, format "x  ~[ b ]  y").
-
-Fact illnc_perm_t_map_inv_t l m : map ioc l ~! m -> { l' | m = map ioc l' }.
-Proof. 
-  apply perm_bang_t_map_inv_t.
-  inversion 1; trivial.
-Qed.
-
-Fact ill_perm_t_refl b l : l ~[b] l.
-Proof. destruct b; simpl; auto. Qed.
-
-Hint Resolve ill_perm_t_refl.
-
-Fact ill_perm_t_app b l1 l2 m1 m2 : l1 ~[b] m1 -> l2 ~[b] m2 -> l1++l2 ~[b] m1++m2.
-Proof.
-  destruct b; simpl.
-  + apply Permutation_Type_app.
-  + apply perm_bang_t_app.
-Qed.
-
-Fact ill_perm_t_trans b l m p : l ~[b] m -> m ~[b] p -> l ~[b] p.
-Proof.
-  destruct b; simpl.
-  + apply Permutation_Type_trans.
-  + apply perm_bang_t_trans.
-Qed.
-
-Fact ill_perm_t_swap b x y l : ioc x::ioc y::l ~[b] ioc y::ioc x::l.
-Proof.
-  destruct b; simpl; constructor 3.
-Qed.
-
-Fact ill_perm_t_map_inv_t b l m : map ioc l ~[b] m -> { l' | m = map ioc l' }.
-Proof.
-  destruct b; simpl.
-  + intros H; symmetry in H.
-    apply Permutation_Type_map_inv in H.
-    destruct H as [l' Heq _].
-    exists l'; assumption.
-  + apply illnc_perm_t_map_inv_t.
-Qed.
-
-
-
-
 
 
 
@@ -928,7 +864,6 @@ Section Relational_phase_semantics.
 
 (* Interpretation of Linear Logic *)
 
-
   Reserved Notation "'⟦' A '⟧'" (at level 49).
   Reserved Notation "'⟬߭' A '⟭'" (at level 49).
 
@@ -1075,18 +1010,7 @@ Section Relational_phase_semantics.
       + apply eq1_sym, unit_neutral_r; auto.
     Qed.
 
-    Fact ill_nc_perm_sound Γ Δ a : Γ ~[false] Δ -> ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭Δ⟭ ⊆ ⟦a⟧.
-    Proof.
-      intros H2; revert H2 a; subst; simpl.
-      induction 1 as [ | a Ga De H1 IH1 | | ] ; intros c; auto.
-      + repeat rewrite list_Form_sem_cons.
-        intros H; apply adjunction_l_2; auto.
-        apply IH1 with (a := a -o c); simpl. 
-        apply adjunction_l_1; auto.
-      + apply ill_nc_swap_sound with (Γ := nil).
-    Qed.
-
-    Fact ill_co_perm_sound Γ Δ a : Γ ~[true] Δ -> ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭Δ⟭ ⊆ ⟦a⟧.
+    Fact ill_perm_sound Γ Δ a : Γ ~[true] Δ -> ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭Δ⟭ ⊆ ⟦a⟧.
     Proof.
       intros H2; revert H2 a; subst; simpl.
       induction 1 as [ | a Ga De H1 IH1 | | ] ; intros c; auto.
@@ -1287,14 +1211,16 @@ Section Relational_phase_semantics.
     Fact ill_unit_r_sound : ⟬߭nil⟭ ⊆ ⟦𝝐⟧.
     Proof. simpl; red; auto. Qed.
 
-    Fact ill_co_oc_perm_sound l1 l2 lw lw' a : lw ~p lw' ->
+    Fact ill_co_oc_perm_sound l1 l2 lw lw' a : Permutation_Type lw lw' ->
              ⟬߭ l1 ++ map ioc lw ++ l2 ⟭ ⊆ ⟦ a ⟧ -> ⟬߭ l1 ++ map ioc lw' ++ l2 ⟭ ⊆ ⟦ a ⟧.
     Proof.
-      intros HP pi.
-      apply ill_nc_perm_sound with (Γ := l1 ++ map ioc lw ++ l2); auto.
-      apply perm_bang_t_app; auto.
-      apply perm_bang_t_app; auto.
-      clear - HP; induction HP; simpl; auto; econstructor ; eassumption.
+      intros HP; revert l1 l2; induction HP; intros l1 l2; auto.
+      + replace (l1 ++ map ioc (x :: l) ++ l2) with ((l1 ++ ioc x :: nil) ++ map ioc l ++ l2)
+          by (simpl; rewrite <- ? app_assoc; rewrite <- app_comm_cons; reflexivity).
+        replace (l1 ++ map ioc (x :: l') ++ l2) with ((l1 ++ ioc x :: nil) ++ map ioc l' ++ l2)
+          by (simpl; rewrite <- ? app_assoc; rewrite <- app_comm_cons; reflexivity).
+        auto.
+      + apply ill_nc_swap_sound.
     Qed.
 
   End soundness.
@@ -1339,7 +1265,7 @@ Section Relational_phase_semantics.
     Proof.
       intros E; induction 1; try auto; try now (simpl; auto).
       + rewrite E in p; simpl in p.
-        apply ill_co_perm_sound with (1 := p) (Γ := l1); auto.
+        apply ill_perm_sound with (1 := p) (Γ := l1); auto.
       + apply ill_co_oc_perm_sound with (lw := lw); auto.
       + apply ill_cut_sound with A; auto.
     Qed.
@@ -1353,11 +1279,12 @@ Section Relational_phase_semantics.
 
 End Relational_phase_semantics.
 
+(*
 Local Infix "∘" := (@Composes _ _) (at level 50, no associativity).
 
 Check ill_comm_soundness.
 Check ill_nc_soundness.
-
+*)
 
 
 

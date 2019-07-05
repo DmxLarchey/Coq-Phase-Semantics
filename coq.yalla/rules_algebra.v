@@ -9,9 +9,9 @@
 
 Require Import Arith Omega List Permutation.
 
-Require Import List_more Permutation_Type.
+Require Import List_more Permutation_Type genperm_Type.
 
-Require Import utils_tac rel_utils list_perm ill_def phase_sem.
+Require Import utils_tac rel_utils ill_def phase_sem.
 
 Set Implicit Arguments.
 
@@ -21,9 +21,10 @@ Section Rules.
   Variable perm_bool : bool.
 
   Notation "Γ ⊨ A" := (prov_pred Γ A) (at level 70, no associativity).
+  Notation " x '~~' y " := (PEperm_Type perm_bool x y) (at level 70).
+  Hint Resolve PEperm_Type_refl Permutation_Type_app_comm.
 
-  Hypothesis P_perm : forall Γ Δ A, Γ ~[perm_bool] Δ -> Γ ⊨ A -> Δ ⊨ A.
-
+  Hypothesis P_perm : forall Γ Δ A, Γ ~~ Δ -> Γ ⊨ A -> Δ ⊨ A.
 
 
 
@@ -32,7 +33,7 @@ Section Rules.
   Definition cl_ctx X Ω := forall Γ Δ A, (forall ϴ, X ϴ -> Γ++ϴ++Δ ⊨ A)
                                        ->                  Γ++Ω++Δ ⊨ A.
 
-  Definition comp_ctx (Γ Δ ϴ : list iformula) := Γ++Δ ~[perm_bool] ϴ.
+  Definition comp_ctx (Γ Δ ϴ : list iformula) := Γ++Δ ~~ ϴ.
 
   Notation cl := cl_ctx.
   Notation comp := comp_ctx.
@@ -71,9 +72,8 @@ Section Rules.
     apply H.
     constructor 1 with de ga; auto.
     revert Hth; unfold comp.
-    apply ill_perm_t_trans; auto.
-    rewrite E; simpl.
-    apply Permutation_Type_app_comm.
+    etransitivity; eauto.
+    rewrite E; simpl; auto.
   Qed.
 
   Local Fact cl_neutral_1 : forall Γ, cl (sg ∅ ∘ sg Γ) Γ.
@@ -81,7 +81,7 @@ Section Rules.
     intros ga de th x H.
     apply H.
     constructor 1 with nil ga; auto.
-    red; simpl; auto.
+    red; simpl; reflexivity.
   Qed.
 
   Local Fact cl_neutral_3 : forall Γ, cl (sg Γ ∘ sg ∅) Γ.
@@ -89,16 +89,15 @@ Section Rules.
     intros ga de th x H.
     apply H.
     constructor 1 with ga nil; auto.
-    red; simpl; rewrite <- app_nil_end; auto. 
+    red; simpl; rewrite <- app_nil_end; reflexivity.
   Qed.
 
   Local Fact cl_neutral_2 : forall Γ, sg ∅ ∘ sg Γ ⊆ cl (sg Γ).
   Proof.
     intros ga ? [ de th ka ? ? H1 ] rho om x G; subst th de.
-    cbv in H1.
     generalize (G _ eq_refl).
     apply P_perm.
-    do 2 (apply ill_perm_t_app; auto).
+    do 2 (apply PEperm_Type_app; try reflexivity); auto.
   Qed.
 
   Local Fact cl_neutral_4 : forall Γ, sg Γ ∘ sg ∅ ⊆ cl (sg Γ).
@@ -107,7 +106,7 @@ Section Rules.
     red in H1; rewrite <- app_nil_end in H1.
     generalize (G _ eq_refl).
     apply P_perm.
-    do 2 (apply ill_perm_t_app; auto).
+    do 2 (apply PEperm_Type_app; try reflexivity); auto.
   Qed.
 
   Fact cl_ctx_stable_l : forall X Y, cl X ∘ Y ⊆ cl (X ∘ Y).
@@ -115,16 +114,16 @@ Section Rules.
     intros X Y _ [ ga de th H1 H2 H3 ] rho om x HXY.
     red in H1; red in H3.
     apply P_perm with (rho++ga++de++om).
-    1: { apply ill_perm_t_app; auto.
-         rewrite <- app_ass. 
-         apply ill_perm_t_app; auto. }
+    { apply PEperm_Type_app; try reflexivity.
+      rewrite <- app_ass.
+      apply PEperm_Type_app; try reflexivity; auto. }
     apply H1.
     intros ka Hka.
     replace (rho ++ ka ++ de ++ om)
     with    (rho ++ (ka ++ de) ++ om) by (list_simpl; reflexivity).
     apply HXY.
     constructor 1 with ka de; auto.
-    red; auto.
+    red ; reflexivity.
   Qed.
 
   Fact cl_ctx_stable_r : forall X Y, X ∘ cl Y ⊆ cl (X ∘ Y).
@@ -132,17 +131,17 @@ Section Rules.
     intros X Y _ [ ga de th H1 H2 H3 ] rho om x HXY.
     red in H2; red in H3.
     apply P_perm with ((rho++ga)++de++om).
-    1: { rewrite app_ass.
-         apply ill_perm_t_app; auto.
-         rewrite <- app_ass. 
-         apply ill_perm_t_app; auto. }
+    { rewrite app_ass.
+      apply PEperm_Type_app; try reflexivity.
+      rewrite <- app_ass.
+      apply PEperm_Type_app; try reflexivity; auto. }
     apply H2.
     intros ka Hka.
     replace ((rho ++ ga) ++ ka ++ om)
     with    (rho ++ (ga ++ ka) ++ om) by (list_simpl; reflexivity).
     apply HXY.
     constructor 1 with ga ka; auto.
-    red; auto.
+    red; reflexivity.
   Qed.
 
   Local Fact cl_assoc_1 : forall Γ Δ ϴ, sg Γ ∘ (sg Δ ∘ sg ϴ) ⊆ cl ((sg Γ ∘ sg Δ) ∘ sg ϴ).
@@ -154,15 +153,15 @@ Section Rules.
     specialize (Hu ((ga++de)++th)).
     spec all in Hu.
     constructor 1 with (ga++de) th; auto.
-    constructor 1 with ga de; auto.
-    red; auto.
-    red; auto.
-    revert Hu.
-    apply P_perm, ill_perm_t_app; auto.
-    apply ill_perm_t_app; auto.
-    rewrite app_ass.
-    apply ill_perm_t_trans with (2 := H4).
-    apply ill_perm_t_app; auto.
+    + constructor 1 with ga de; auto.
+      red; reflexivity.
+    + red; reflexivity.
+    + revert Hu.
+      apply P_perm, PEperm_Type_app; try reflexivity.
+      apply PEperm_Type_app; try reflexivity.
+      rewrite app_ass.
+      etransitivity; try eassumption.
+      apply PEperm_Type_app; try reflexivity; auto.
   Qed.
 
   Local Fact cl_assoc_2 : forall Γ Δ ϴ, (sg Γ ∘ sg Δ) ∘ sg ϴ ⊆ cl (sg Γ ∘ (sg Δ ∘ sg ϴ)).
@@ -174,15 +173,15 @@ Section Rules.
     specialize (Hu (ga++de++th)).
     spec all in Hu.
     constructor 1 with (ga) (de++th); auto.
-    constructor 1 with de th; auto.
-    red; auto.
-    red; auto.
-    revert Hu.
-    apply P_perm, ill_perm_t_app; auto.
-    apply ill_perm_t_app; auto.
-    apply ill_perm_t_trans with (2 := H4).
-    rewrite <- app_ass.
-    apply ill_perm_t_app; auto.
+    + constructor 1 with de th; auto.
+      red; reflexivity.
+    + red; reflexivity.
+    + revert Hu.
+      apply P_perm, PEperm_Type_app; try reflexivity.
+      apply PEperm_Type_app; try reflexivity.
+      etransitivity; try eassumption.
+      rewrite <- app_ass.
+      apply PEperm_Type_app; try reflexivity; auto.
   Qed.
 
   Local Fact sub_monoid_1 : cl K ∅.
@@ -197,26 +196,10 @@ Section Rules.
     red in H; simpl in H.
     unfold ill_lbang in H.
     rewrite <- map_app in H.
-    revert H; apply ill_perm_t_map_inv_t; auto.
+    symmetry in H; apply PEperm_Type_map_inv in H.
+    destruct H as [l Heq _].
+    exists l; auto.
   Qed.
-
-    Hypothesis P_weak : ∀ ϴ Γ Δ A, ϴ++Δ ⊨ A -> ϴ++‼Γ++Δ ⊨ A.
-    Hypothesis P_cntr : ∀ ϴ Γ Δ A, ϴ++‼Γ++‼Γ++Δ ⊨ A -> ϴ++‼Γ++Δ ⊨ A.
-
-    Local Fact sub_J_1 : K ⊆ J.
-    Proof.
-      intros x (de & Hde); subst x.
-      constructor; red.
-      + intros ga th A H.
-        specialize (H _ eq_refl); simpl in H.
-        apply P_weak; auto.
-      + intros ga th A H.
-        specialize (H (‼de++‼de)).
-        spec all in H.
-        { constructor 1 with (‼de) (‼de); auto; red; auto. }
-        rewrite app_ass in H.
-        apply P_cntr; auto.
-    Qed.
 
   Section sub_J_cn.
 
@@ -231,36 +214,56 @@ Section Rules.
     Let cntr Γ : cl (sg (‼Γ) ∘ sg (‼Γ)) (‼Γ).
     Proof. apply J_banged. Qed.
 
-    Local Fact sub_J_2 Γ Δ A : Δ ⊨ A -> ‼Γ++Δ ⊨ A.
+    Local Fact sub_J_2 ϴ Γ Δ A : ϴ++Δ ⊨ A -> ϴ++‼Γ++Δ ⊨ A.
     Proof.
-      intros H. 
-      apply (weak _ nil).
+      intros H.
+      apply weak.
       intros _ []; apply H.
     Qed.
 
-    Local Fact sub_J_3 Γ Δ A : ‼Γ++‼Γ++Δ ⊨ A -> ‼Γ++Δ ⊨ A.
+    Local Fact sub_J_3 ϴ Γ Δ A : ϴ++‼Γ++‼Γ++Δ ⊨ A -> ϴ++‼Γ++Δ ⊨ A.
     Proof.
-      intros H. 
-      apply (cntr _ nil).
+      intros H.
+      apply cntr.
       intros _ [ x y th [] [] H1 ].
-      revert H; apply P_perm.
-      rewrite <- app_ass. 
-      simpl; apply ill_perm_t_app; auto.
+      simpl; revert H; apply P_perm.
+      rewrite <- (app_ass _ _ Δ).
+      apply PEperm_Type_app; try reflexivity.
+      apply PEperm_Type_app; try reflexivity; auto.
     Qed.
 
   End sub_J_cn.
 
-  Fact sub_J_eq : K ⊆ J ≡ (∀ Γ Δ A, Δ ⊨ A -> ‼Γ++Δ ⊨ A)
-                         * (∀ Γ Δ A, ‼Γ++‼Γ++Δ ⊨ A -> ‼Γ++Δ ⊨ A).
+  Fact sub_J_eq : K ⊆ J ≡ (∀ ϴ Γ Δ A, ϴ++Δ ⊨ A -> ϴ++‼Γ++Δ ⊨ A)
+                         * (∀ ϴ Γ Δ A, ϴ++‼Γ++‼Γ++Δ ⊨ A -> ϴ++‼Γ++Δ ⊨ A).
   Proof.
     split.
     + split.
       * apply sub_J_2; auto.
       * apply sub_J_3; auto.
-    + intros; apply sub_J_1; tauto.
+    + intros [Hweak Hcntr].
+      intros x (de & Hde); subst x.
+      constructor; red.
+      * intros ga th A H.
+        specialize (H _ eq_refl); simpl in H.
+        apply Hweak; auto.
+      * intros ga th A H.
+        specialize (H (‼de++‼de)).
+        spec all in H.
+        { constructor 1 with (‼de) (‼de); auto; red; reflexivity. }
+        rewrite app_ass in H.
+        apply Hcntr; auto.
   Qed.
 
-  Definition rules_nc_sound := ill_nc_soundness    cl_ctx_increase cl_ctx_mono
+  Section Rules_Soundness.
+
+    Hypothesis P_weak : ∀ ϴ Γ Δ A, ϴ++Δ ⊨ A -> ϴ++‼Γ++Δ ⊨ A.
+    Hypothesis P_cntr : ∀ ϴ Γ Δ A, ϴ++‼Γ++‼Γ++Δ ⊨ A -> ϴ++‼Γ++Δ ⊨ A.
+
+    Local Fact sub_J_1 : K ⊆ J.
+    Proof. apply sub_J_eq; auto. Qed.
+
+    Definition rules_nc_sound := ill_nc_soundness  cl_ctx_increase cl_ctx_mono
                                                    cl_ctx_idem
                                                    cl_ctx_stable_l
                                                    cl_ctx_stable_r
@@ -274,28 +277,32 @@ Section Rules.
                                                    sub_monoid_2
                                                    sub_J_1.
 
-  Check rules_nc_sound.
+(*
+    Check rules_nc_sound.
+*)
 
-  Section Comm.
+    Section Comm.
 
-    Hypothesis Hperm : perm_bool = true.
+      Hypothesis Hperm : perm_bool = true.
 
-    Definition rules_comm_sound := ill_comm_soundness    cl_ctx_increase cl_ctx_mono 
-                                                   cl_ctx_idem
-                                                   (cl_comm Hperm) 
-                                                   cl_ctx_stable_l 
-                                                   cl_ctx_stable_r
-                                                   cl_neutral_1
-                                                   cl_neutral_2 
-                                                   cl_neutral_3 
-                                                   cl_neutral_4 
-                                                   cl_assoc_1
-                                                   cl_assoc_2
-                                                   sub_monoid_1 
-                                                   sub_monoid_2
-                                                   sub_J_1.
+      Definition rules_comm_sound := ill_comm_soundness  cl_ctx_increase cl_ctx_mono
+                                                         cl_ctx_idem
+                                                         (cl_comm Hperm)
+                                                         cl_ctx_stable_l
+                                                         cl_ctx_stable_r
+                                                         cl_neutral_1
+                                                         cl_neutral_2
+                                                         cl_neutral_3
+                                                         cl_neutral_4
+                                                         cl_assoc_1
+                                                         cl_assoc_2
+                                                         sub_monoid_1
+                                                         sub_monoid_2
+                                                         sub_J_1.
 
-  End Comm.
+    End Comm.
+
+  End Rules_Soundness.
 
   Notation "↓" := (fun A Γ => Γ ⊨ A).
 
@@ -319,7 +326,7 @@ Section Rules.
 
     Fact rule_ax_eq A : ↓A (A::∅) 
                     ≡ A::∅ ⊨ A.
-    Proof. split; auto. Qed. 
+    Proof. split; auto. Qed.
 
     Fact rule_limp_l_eq A B : (↓A ⊸ cl (sg (B::∅))) (A -o B::∅)
                           ≡ ∀ ϴ Γ Δ C, Γ ⊨ A -> ϴ++B::Δ ⊨ C -> ϴ++Γ++A -o B::Δ ⊨ C.
@@ -328,14 +335,14 @@ Section Rules.
       + intros H Ga De Th C H1 H2.
         specialize (H (De++A -o B::nil)).
         spec all in H.
-        constructor 1 with De (A -o B :: nil); auto; red; simpl; auto.
+        constructor 1 with De (A -o B :: nil); auto; red; reflexivity.
         replace (Ga++De++A -o B::Th) with (Ga++(De++A -o B::nil)++Th) by solve list eq.
         apply H; intros _ []; auto.
       + intros H0 th Hth de om C H.
         destruct Hth as [ rho ga th H1 H2 H3 ].
         subst ga; red in H3; simpl in H3.
         apply P_perm with (de++(rho++A -o B::nil)++om).
-        { do 2 (apply ill_perm_t_app; auto). }
+        { do 2 (apply PEperm_Type_app; try reflexivity); auto. }
         rewrite app_ass; simpl; apply H0; auto.
         apply H with (ϴ := _::∅); auto.
     Qed.
@@ -347,14 +354,14 @@ Section Rules.
       + intros H Ga De Th C H1 H2.
         specialize (H (De++ineg A::nil)).
         spec all in H.
-        constructor 1 with De (ineg A :: nil); auto; red; simpl; auto.
+        constructor 1 with De (ineg A :: nil); auto; red; reflexivity.
         replace (Ga++De++ineg A::Th) with (Ga++(De++ineg A::nil)++Th) by solve list eq.
         apply H; intros _ []; auto.
       + intros H0 th Hth de om C H.
         destruct Hth as [ rho ga th H1 H2 H3 ].
         subst ga; red in H3; simpl in H3.
         apply P_perm with (de++(rho++ineg A::nil)++om).
-        { do 2 (apply ill_perm_t_app; auto). }
+        { do 2 (apply PEperm_Type_app; try reflexivity); auto. }
         rewrite app_ass; simpl; apply H0; auto.
         apply H with (ϴ := _::∅); auto.
     Qed.
@@ -367,11 +374,11 @@ Section Rules.
         apply H.
         intros _ [ ? ? De [] [] H2 ].
         apply P_perm with (1 := H2).
-        apply P_perm with (2 := H1); auto.
+        apply P_perm with (2 := H1); reflexivity.
       + intros H th Hth.
         apply H, Hth.
         constructor 1 with (A :: nil) th; auto.
-        red; auto.
+        red; reflexivity.
     Qed.
 
     Fact rule_neg_r_eq A : sg (A::∅) ⊸ ↓N ⊆ ↓(ineg A)
@@ -382,11 +389,11 @@ Section Rules.
         apply H.
         intros _ [ ? ? De [] [] H2 ].
         apply P_perm with (1 := H2).
-        apply P_perm with (2 := H1); auto.
+        apply P_perm with (2 := H1); reflexivity.
       + intros H th Hth.
         apply H, Hth.
         constructor 1 with (A :: nil) th; auto.
-        red; auto.
+        red; reflexivity.
     Qed.
 
     Fact rule_rimp_l_eq A B : (cl (sg (B::∅)) ⟜ ↓A) (B o- A::∅)
@@ -396,14 +403,14 @@ Section Rules.
       + intros H Ga De Th C H1 H2.
         specialize (H (B o- A::De)).
         spec all in H.
-        constructor 1 with (B o- A::nil) De; auto; red; simpl; auto.
+        constructor 1 with (B o- A::nil) De; auto; red; reflexivity.
         replace (Ga++B o- A::De++Th) with (Ga++(B o- A::De)++Th) by solve list eq.
         apply H ; intros _ []; auto.
       + intros H0 th Hth de om C H.
         destruct Hth as [ rho ga th H1 H2 H3 ].
         subst rho; red in H3; simpl in H3.
         apply P_perm with (de++(B o- A::ga)++om).
-        { do 2 (apply ill_perm_t_app; auto). }
+        { do 2 (apply PEperm_Type_app; try reflexivity); auto. }
         simpl; apply H0; auto.
         apply H with (ϴ := _::∅); auto.
     Qed.
@@ -415,14 +422,14 @@ Section Rules.
       + intros H Ga De Th C H1 H2.
         specialize (H (igen A::De)).
         spec all in H.
-        constructor 1 with (igen A::nil) De; auto; red; simpl; auto.
+        constructor 1 with (igen A::nil) De; auto; red; reflexivity.
         replace (Ga++igen A::De++Th) with (Ga++(igen A::De)++Th) by solve list eq.
         apply H ; intros _ []; auto.
       + intros H0 th Hth de om C H.
         destruct Hth as [ rho ga th H1 H2 H3 ].
         subst rho; red in H3; simpl in H3.
         apply P_perm with (de++(igen A::ga)++om).
-        { do 2 (apply ill_perm_t_app; auto). }
+        { do 2 (apply PEperm_Type_app; try reflexivity); auto. }
         simpl; apply H0; auto.
         apply H with (ϴ := _::∅); auto.
     Qed.
@@ -435,11 +442,11 @@ Section Rules.
         apply H.
         intros _ [ ? ? De [] [] H2 ].
         apply P_perm with (1 := H2).
-        apply P_perm with (2 := H1); auto.
+        apply P_perm with (2 := H1); reflexivity.
       + intros H th Hth.
         apply H, Hth.
         constructor 1 with th (A :: nil); auto.
-        red; auto.
+        red; reflexivity.
     Qed.
 
     Fact rule_gen_r_eq A : ↓N ⟜ sg (A::∅) ⊆ ↓(igen A)
@@ -450,11 +457,11 @@ Section Rules.
         apply H.
         intros _ [ ? ? De [] [] H2 ].
         apply P_perm with (1 := H2).
-        apply P_perm with (2 := H1); auto.
+        apply P_perm with (2 := H1); reflexivity.
       + intros H th Hth.
         apply H, Hth.
         constructor 1 with th (A :: nil); auto.
-        red; auto.
+        red; reflexivity.
     Qed.
 
     Fact rule_times_l_eq A B : cl (sg (A::B::nil)) (A⊗B::nil)
@@ -472,7 +479,7 @@ Section Rules.
       split.
       + intros H Ga De H1 H2.
         apply H.
-        constructor 1 with Ga De; auto; red; auto.
+        constructor 1 with Ga De; auto; red; reflexivity.
       + intros H _ [ Ga Gb Gc HGa HGb HGc ].
         apply P_perm with (1 := HGc).
         apply H; auto.
@@ -524,7 +531,7 @@ Section Rules.
     Proof.
       split.
       + intros H ? ?; apply H; auto.
-      + intros H0 ?; apply H0. 
+      + intros H0 ?; apply H0.
     Qed.
 
     Fact rule_bang_l_eq A : cl (sg (A::∅)) (!A::∅)
@@ -532,7 +539,7 @@ Section Rules.
     Proof.
       split.
       + intros H Th Ga B H1; apply H; intros _ []; auto.
-      + intros H0 ? ? ? H; apply H0, H with (1 := eq_refl). 
+      + intros H0 ? ? ? H; apply H0, H with (1 := eq_refl).
     Qed.
 
     Fact rule_bang_r_eq A : K ∩ ↓A ⊆ ↓(!A)
@@ -550,15 +557,15 @@ Section Rules.
                       ≡ ∀ ϴ Γ A, ϴ++Γ ⊨ A -> ϴ++𝝐 :: Γ ⊨ A.
     Proof. 
       split.
-      + intros H Th Ga A H1; apply H; intros _ []; auto. 
-      + intros H0 ? ? ? H; apply H0, H with (1 := eq_refl). 
+      + intros H Th Ga A H1; apply H; intros _ []; auto.
+      + intros H0 ? ? ? H; apply H0, H with (1 := eq_refl).
     Qed.
 
     Fact rule_unit_r_eq : sg ∅ ⊆ ↓𝝐  ≡ ∅ ⊨ 𝝐.
     Proof.
       split.
       + intros H; apply H; auto.
-      + intros H x []; apply H. 
+      + intros H x []; apply H.
     Qed.
 
     Fact rule_bot_l_eq : cl (fun _ => False) (⟘::∅)
@@ -579,3 +586,5 @@ Section Rules.
   End equivalences.
 
 End Rules.
+
+
