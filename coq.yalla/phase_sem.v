@@ -7,10 +7,10 @@
 (*         CeCILL v2 FREE SOFTWARE LICENSE AGREEMENT          *)
 (**************************************************************)
 
-Require Import Arith Omega List Permutation.
 Require Import List_Type Permutation_Type_more genperm_Type.
 
-Require Import rel_utils utils_tac.
+Require Import utils_tac.
+Require Export rel_utils.
 
 Require Import ill_def.
 
@@ -105,7 +105,7 @@ Section Relational_phase_semantics.
   (* Stability is the important axiom in phase semantics *)
 
   Definition cl_stability   := forall A B, cl A ∘ cl B ⊆ cl (A ∘ B).
-  Definition cl_stability_l := (forall A B, cl A ∘    B ⊆ cl (A ∘ B)).
+  Definition cl_stability_l := forall A B, cl A ∘    B ⊆ cl (A ∘ B).
   Definition cl_stability_r := forall A B,    A ∘ cl B ⊆ cl (A ∘ B).
 
   Proposition cl_stable_imp_stable_l : cl_stability -> cl_stability_l.

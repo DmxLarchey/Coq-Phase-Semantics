@@ -7,11 +7,10 @@
 (*         CeCILL v2 FREE SOFTWARE LICENSE AGREEMENT          *)
 (**************************************************************)
 
-Require Import Arith Omega List.
+Require Import List genperm_Type.
 
-Require Import Permutation_Type genperm_Type.
-
-Require Import rel_utils ill_def phase_sem rules_algebra.
+Require Import phase_sem rules_algebra.
+Require Import ill_def.
 
 Set Implicit Arguments.
 

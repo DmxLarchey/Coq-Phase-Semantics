@@ -7,11 +7,13 @@
 (*         CeCILL v2 FREE SOFTWARE LICENSE AGREEMENT          *)
 (**************************************************************)
 
-Require Import Arith Omega List Permutation.
+Require Import Utf8_core.
 
 Require Import List_more Permutation_Type genperm_Type.
 
-Require Import utils_tac rel_utils ill_def phase_sem.
+Require Import utils_tac phase_sem.
+
+Require Import iformulas.
 
 Set Implicit Arguments.
 
@@ -309,7 +311,7 @@ Section Rules.
   Fact dc_closed A : cl (↓A) ⊆ ↓A.
   Proof.
     intros ga Hga; red in Hga.
-    replace ga with (nil++ga++nil) by solve list eq.
+    replace ga with (nil++ga++nil) by (list_simpl; reflexivity).
     apply Hga.
     intro; rewrite <- app_nil_end; auto.
   Qed.
@@ -336,7 +338,7 @@ Section Rules.
         specialize (H (De++A -o B::nil)).
         spec all in H.
         constructor 1 with De (A -o B :: nil); auto; red; reflexivity.
-        replace (Ga++De++A -o B::Th) with (Ga++(De++A -o B::nil)++Th) by solve list eq.
+        replace (Ga++De++A -o B::Th) with (Ga++(De++A -o B::nil)++Th) by (list_simpl; reflexivity).
         apply H; intros _ []; auto.
       + intros H0 th Hth de om C H.
         destruct Hth as [ rho ga th H1 H2 H3 ].
@@ -355,7 +357,7 @@ Section Rules.
         specialize (H (De++ineg A::nil)).
         spec all in H.
         constructor 1 with De (ineg A :: nil); auto; red; reflexivity.
-        replace (Ga++De++ineg A::Th) with (Ga++(De++ineg A::nil)++Th) by solve list eq.
+        replace (Ga++De++ineg A::Th) with (Ga++(De++ineg A::nil)++Th) by (list_simpl; reflexivity).
         apply H; intros _ []; auto.
       + intros H0 th Hth de om C H.
         destruct Hth as [ rho ga th H1 H2 H3 ].
@@ -404,7 +406,7 @@ Section Rules.
         specialize (H (B o- A::De)).
         spec all in H.
         constructor 1 with (B o- A::nil) De; auto; red; reflexivity.
-        replace (Ga++B o- A::De++Th) with (Ga++(B o- A::De)++Th) by solve list eq.
+        change (Ga++B o- A::De++Th) with (Ga++(B o- A::De)++Th).
         apply H ; intros _ []; auto.
       + intros H0 th Hth de om C H.
         destruct Hth as [ rho ga th H1 H2 H3 ].
@@ -423,7 +425,7 @@ Section Rules.
         specialize (H (igen A::De)).
         spec all in H.
         constructor 1 with (igen A::nil) De; auto; red; reflexivity.
-        replace (Ga++igen A::De++Th) with (Ga++(igen A::De)++Th) by solve list eq.
+        change (Ga++igen A::De++Th) with (Ga++(igen A::De)++Th).
         apply H ; intros _ []; auto.
       + intros H0 th Hth de om C H.
         destruct Hth as [ rho ga th H1 H2 H3 ].

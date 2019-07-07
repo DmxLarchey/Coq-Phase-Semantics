@@ -7,8 +7,6 @@
 (*         CeCILL v2 FREE SOFTWARE LICENSE AGREEMENT          *)
 (**************************************************************)
 
-Require Import Arith Bool List Relations Wf Eqdep_dec Omega.
-
 Set Implicit Arguments.
 
 (* Notations for subset or subrel set theoretic operators *)
