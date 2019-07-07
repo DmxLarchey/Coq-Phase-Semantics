@@ -17,6 +17,13 @@ Require Import iformulas.
 
 Set Implicit Arguments.
 
+  Notation "X '≡' Y" := ((X->Y)*(Y->X))%type (at level 80, format "X  ≡  Y", no associativity).
+  Notation "X '⊆' Y" := (subset X Y) (at level 75, format "X  ⊆  Y", no associativity).
+  Notation "A '∩' B" := (fun z => A z * B z : Type)%type (at level 50, format "A  ∩  B", left associativity).
+  Notation "A '∪' B" := (fun z => A z + B z : Type)%type (at level 50, format "A  ∪  B", left associativity).
+  Notation sg := (@eq _).
+
+
 Section Rules.
 
   Variable prov_pred : list iformula -> iformula -> Type.
@@ -67,7 +74,13 @@ Section Rules.
 
   Hint Resolve cl_ctx_increase cl_ctx_mono cl_ctx_idem.
 
-  Local Fact cl_comm : perm_bool = true -> forall Γ Δ, sg Γ ∘ sg Δ ⊆ cl (sg Δ ∘ sg Γ).
+  Instance CL_ctx : @ClosureOp (list iformula) :=
+    { cl := cl_ctx;
+      cl_increase := cl_ctx_increase;
+      cl_monotone := cl_ctx_mono;
+      cl_idempotent := cl_ctx_idem }.
+
+  Fact cl_comm : perm_bool = true -> forall Γ Δ, sg Γ ∘ sg Δ ⊆ cl (sg Δ ∘ sg Γ).
   Proof.
     intros E ? ? _ [ ga de th ? ? Hth ]; subst Γ Δ.
     intros rho del x H.
@@ -186,6 +199,20 @@ Section Rules.
       apply PEperm_Type_app; try reflexivity; auto.
   Qed.
 
+  Local Fact cl_commut : perm_bool = true -> forall Γ Δ, sg Γ ∘ sg Δ ⊆ cl (sg Δ ∘ sg Γ).
+  Proof.
+    intros Hperm ga de th HC.
+    destruct HC as [ga' de' th' HC1 HC2 HC] ; subst.
+    unfold cl; intros Ga De A H.
+    unfold comp in HC; rewrite Hperm in HC; simpl in HC.
+    apply P_perm with (Ga ++ (ga'++de') ++ De); simpl.
+    { apply Permutation_Type_app; auto.
+      apply Permutation_Type_app; auto. }
+    apply H.
+    unfold comp; econstructor; try reflexivity.
+    rewrite Hperm; apply Permutation_Type_app_comm.
+  Qed.
+
   Local Fact sub_monoid_1 : cl K ∅.
   Proof.
     intros ga de A H.
@@ -265,44 +292,25 @@ Section Rules.
     Local Fact sub_J_1 : K ⊆ J.
     Proof. apply sub_J_eq; auto. Qed.
 
-    Definition rules_nc_sound := ill_nc_soundness  cl_ctx_increase cl_ctx_mono
-                                                   cl_ctx_idem
-                                                   cl_ctx_stable_l
-                                                   cl_ctx_stable_r
-                                                   cl_neutral_1
-                                                   cl_neutral_2 
-                                                   cl_neutral_3 
-                                                   cl_neutral_4 
-                                                   cl_assoc_1
-                                                   cl_assoc_2
-                                                   sub_monoid_1 
-                                                   sub_monoid_2
-                                                   sub_J_1.
-
-(*
-    Check rules_nc_sound.
-*)
-
-    Section Comm.
-
-      Hypothesis Hperm : perm_bool = true.
-
-      Definition rules_comm_sound := ill_comm_soundness  cl_ctx_increase cl_ctx_mono
-                                                         cl_ctx_idem
-                                                         (cl_comm Hperm)
-                                                         cl_ctx_stable_l
-                                                         cl_ctx_stable_r
-                                                         cl_neutral_1
-                                                         cl_neutral_2
-                                                         cl_neutral_3
-                                                         cl_neutral_4
-                                                         cl_assoc_1
-                                                         cl_assoc_2
-                                                         sub_monoid_1
-                                                         sub_monoid_2
-                                                         sub_J_1.
-
-    End Comm.
+    Instance PM_ctx : PhaseSpace perm_bool :=
+    { Web := list iformula;
+      PSCL := CL_ctx;
+      PSCompose := comp_ctx;
+      PSunit := nil;
+      PSExp := K;
+      PScl_stable_l := cl_ctx_stable_l;
+      PScl_stable_r := cl_ctx_stable_r;
+      PScl_associative_1 := cl_assoc_1;
+      PScl_associative_2 := cl_assoc_2;
+      PScl_neutral_1 := cl_neutral_1;
+      PScl_neutral_2 := cl_neutral_2;
+      PScl_neutral_3 := cl_neutral_3;
+      PScl_neutral_4 := cl_neutral_4;
+      PSsub_monoid_1 := sub_monoid_1;
+      PSsub_monoid_2 := sub_monoid_2;
+      PSsub_J := sub_J_1;
+      PScl_commute := cl_commut
+    }.
 
   End Rules_Soundness.
 
@@ -316,7 +324,6 @@ Section Rules.
     intro; rewrite <- app_nil_end; auto.
   Qed.
 
-  Notation sg := (@eq _).
   Infix "⊸" := (Magicwand_l comp) (at level 51, right associativity).
   Infix "⟜" := (Magicwand_r comp) (at level 52, left associativity).
 
@@ -570,7 +577,7 @@ Section Rules.
       + intros H x []; apply H.
     Qed.
 
-    Fact rule_bot_l_eq : cl (fun _ => False) (⟘::∅)
+    Fact rule_zero_l_eq : cl (fun _ => False) (⟘::∅)
                      ≡ ∀ ϴ Γ A, ϴ++⟘ :: Γ ⊨ A.
     Proof. 
       split.

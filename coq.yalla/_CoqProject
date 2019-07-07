@@ -20,7 +20,8 @@ iformulas.v
 ill_def.v
 
 utils_tac.v
-rel_utils.v
+closure_operators.v
 phase_sem.v
 rules_algebra.v
 cut_elim.v
+

@@ -7,7 +7,7 @@
 (*         CeCILL v2 FREE SOFTWARE LICENSE AGREEMENT          *)
 (**************************************************************)
 
-Require Import List genperm_Type.
+Require Import List Permutation_Type genperm_Type.
 
 Require Import phase_sem rules_algebra.
 Require Import ill_def.
@@ -33,32 +33,14 @@ Section Okada.
   Variable P : ipfrag.
   Hypothesis P_axfree : projT1 (ipgax P) -> False.
 
-  Notation comp := (comp_ctx (ipperm P)).
+  Instance PMILL : PhaseSpace (ipperm P) :=
+    PM_ctx (ill P) (ipperm P) (@P_perm P) (@P_weak P) (@P_cntr P).
+  Instance CLILL : ClosureOp := PSCL.
 
-  Notation sg := (@eq _).
-  Infix "∘" := (Composes comp) (at level 50, no associativity).
-  Infix "⊸" := (Magicwand_l comp) (at level 51, right associativity).
-  Infix "⟜" := (Magicwand_r comp) (at level 52, left associativity).
-
-  Let cl := cl_ctx (ill P).
-
-  Let cl_increase X : X ⊆ cl X.
-  Proof. apply cl_ctx_increase. Qed.
- 
-  Let cl_mono X Y : X ⊆ Y -> cl X ⊆ cl Y.
-  Proof. apply cl_ctx_mono. Qed.
-  
-  Let cl_idem X : cl (cl X) ⊆  cl X.
-  Proof. apply cl_ctx_idem. Qed.
-
-  Let cl_stable_l : forall X Y, cl X ∘ Y ⊆ cl (X ∘ Y).
-  Proof. apply cl_ctx_stable_l; eauto. Qed.
-
-  Let cl_stable_r : forall X Y, X ∘ cl Y ⊆ cl (X ∘ Y).
-  Proof. apply cl_ctx_stable_r; eauto. Qed.
- 
+  Infix "∘" := (Composes PSCompose) (at level 50, no associativity).
+  Infix "⊸" := (Magicwand_l PSCompose) (at level 51, right associativity).
+  Infix "⟜" := (Magicwand_r PSCompose) (at level 52, left associativity).
   Notation "↓" := (fun A Γ => ill P Γ A).
-  Notation K := (fun Δ => { Γ | Δ = ‼Γ }).
 
   Let dc_closed A : cl (↓A) ⊆ ↓A.
   Proof. apply dc_closed. Qed.
@@ -68,11 +50,11 @@ Section Okada.
   Let Hv x : cl (v x) ⊆ v x.
   Proof. apply dc_closed. Qed.
 
-  Notation "'⟦' A '⟧'" := (Form_sem cl comp ∅ K v A) (at level 49).
+  Notation "'⟦' A '⟧'" := (Form_sem PMILL v A) (at level 49).
 
   Let cl_sem_closed A : cl (⟦A⟧) ⊆ ⟦A⟧.
-  Proof. apply closed_Form_sem; eauto. Qed.
- 
+  Proof. apply closed_Form_sem; auto. Qed.
+
   Section Okada_Lemma.
 
     (** This is Okada's lemma which states that the interpretation ⟦A⟧
@@ -161,7 +143,7 @@ Section Okada.
       apply rule_with_l1_eq.
       intros ? ? ?; apply with_ilr1.
     Qed.
- 
+
     Let rule_with_l2 A B : cl (sg (B::∅)) (A&B::∅).
     Proof.
       apply rule_with_l2_eq.
@@ -198,7 +180,7 @@ Section Okada.
       intros ? ?; apply de_ilr.
     Qed.
 
-    Let rule_bang_r A : K ∩ ↓A ⊆ ↓(!A).
+    Let rule_bang_r A : PSExp ∩ ↓A ⊆ ↓(!A).
     Proof.
       apply rule_bang_r_eq.
       intros ?; apply oc_irr.
@@ -209,16 +191,16 @@ Section Okada.
       apply rule_unit_l_eq.
       intros ?; apply one_ilr.
     Qed.
-    
+
     Let rule_unit_r : sg ∅ ⊆ ↓𝝐.
     Proof.
       apply rule_unit_r_eq.
       apply one_irr.
     Qed.
 
-    Let rule_bot_l : cl (fun _ => False) (⟘::∅).
+    Let rule_zero_l : cl (fun _ => False) (⟘::∅).
     Proof. 
-      apply rule_bot_l_eq, zero_ilr.
+      apply rule_zero_l_eq, zero_ilr.
     Qed.
 
     Let rule_top_r : (fun _ => True) ⊆ ↓⟙ .
@@ -227,21 +209,21 @@ Section Okada.
     Qed.
 
     Let mwl_mono (X Y X' Y' : _ -> Type) : X ⊆ X' -> Y ⊆ Y' -> X' ⊸ Y ⊆ X ⊸ Y'.
-    Proof. apply magicwand_l_monotone; auto. Qed.
+    Proof. intros; apply magicwand_l_monotone; auto. Qed.
 
     Let mwr_mono (X Y X' Y' : _ -> Type) : X ⊆ X' -> Y ⊆ Y' -> Y ⟜ X' ⊆ Y' ⟜ X.
-    Proof. apply magicwand_r_monotone; auto. Qed.
+    Proof. intros; apply magicwand_r_monotone; auto. Qed.
 
-    Let inc1_prop (K : Type) (X Y : K -> Type)  x : Y ⊆ X -> Y x -> X x.
+    Let subset_prop (K : Type) (X Y : K -> Type)  x : Y ⊆ X -> Y x -> X x.
     Proof. simpl; auto. Qed.
 
     Let cl_under_closed X Y : cl Y ⊆ Y -> X ⊆ Y -> cl X ⊆ Y.
-    Proof. apply cl_closed; eauto. Qed.
- 
+    Proof. apply cl_closed. Qed.
+
     Lemma Okada_formula A : ((sg (A::nil) ⊆ ⟦A⟧) * (⟦A⟧ ⊆ ↓A))%type.
     Proof.
       induction A; auto.
-      + split; simpl; auto.
+      + split; simpl; auto; try reflexivity.
         intros _ []; apply rule_ax.
       + split.
         * intros _ []; apply rule_unit_l.
@@ -250,8 +232,8 @@ Section Okada.
         destruct IHA2 as [IHA2 IHA4].
         split.
         * intros _ [].
-          apply inc1_prop with (2 := @rule_times_l _ _).
-          simpl; apply cl_mono.
+          apply subset_prop with (2 := @rule_times_l _ _).
+          simpl; apply cl_ctx_mono.
           intros _ []; constructor 1 with (A1::∅) (A2::∅); auto.
           red; reflexivity.
         * simpl; apply cl_under_closed; auto.
@@ -261,35 +243,35 @@ Section Okada.
         destruct IHA2 as [IHA2 IHA4].
         split.
         * intros _ []; simpl.
-          apply inc1_prop with (2 := @rule_rimp_l _ _).
+          apply subset_prop with (2 := @rule_rimp_l _ _).
           apply mwr_mono; auto; apply cl_under_closed; auto.
         * simpl; intros x Hx; apply rule_rimp_r.
           revert Hx; apply mwr_mono; auto.
       + destruct IHA as [IHA1 IHA2].
         split.
         * intros _ []; simpl.
-          eapply inc1_prop ; [ | apply rule_gen_l ].
+          eapply subset_prop ; [ | apply rule_gen_l ].
           apply mwr_mono; auto; apply cl_under_closed; auto.
           unfold N; intros _ []; apply rule_ax.
         * simpl; intros x Hx; apply rule_gen_r.
-          revert Hx; apply mwr_mono; auto.
+          revert Hx; apply mwr_mono; auto; reflexivity.
       + destruct IHA1 as [IHA1 IHA3].
         destruct IHA2 as [IHA2 IHA4].
         split.
         * intros _ []; simpl.
-          apply inc1_prop with (2 := @rule_limp_l _ _).
+          apply subset_prop with (2 := @rule_limp_l _ _).
           apply mwl_mono; auto; apply cl_under_closed; auto.
         * simpl; intros x Hx; apply rule_limp_r.
           revert Hx; apply mwl_mono; auto.
       + destruct IHA as [IHA1 IHA2].
         split.
         * intros _ []; simpl.
-          eapply inc1_prop ; [ | apply rule_neg_l ].
+          eapply subset_prop ; [ | apply rule_neg_l ].
           apply mwl_mono; auto; apply cl_under_closed; auto.
           unfold N; intros _ []; apply rule_ax.
         * simpl; intros x Hx; apply rule_neg_r.
-          revert Hx; apply mwl_mono; auto.
-      + split; simpl; red; auto.
+          revert Hx; apply mwl_mono; auto; reflexivity.
+      + split; simpl; red; unfold top; auto.
       + destruct IHA1 as [IHA1 IHA3].
         destruct IHA2 as [IHA2 IHA4].
         split.
@@ -299,14 +281,14 @@ Section Okada.
           - apply cl_under_closed with (2 := IHA2); auto.
         * intros Ga (? & ?); apply rule_with_r; auto.
       + split.
-        * intros _ []; apply rule_bot_l.
+        * intros _ []; apply rule_zero_l.
         * simpl; apply cl_under_closed; auto; intros _ [].
       + destruct IHA1 as [IHA1 IHA3].
         destruct IHA2 as [IHA2 IHA4].
         split.
         * intros _ [].
-          apply inc1_prop with (2 := @rule_plus_l _ _).
-          simpl; apply cl_mono; auto.
+          apply subset_prop with (2 := @rule_plus_l _ _).
+          simpl; apply cl_ctx_mono; auto.
           intros _ [ [] | [] ]; auto.
         * simpl; apply cl_under_closed; auto.
           intros x [ Hx | Hx ]; auto.
@@ -318,7 +300,7 @@ Section Okada.
           intros Th De B H.
           apply H with (ϴ := !A::nil); split.
           - exists (A::nil); auto.
-          - apply inc1_prop with (2 := @rule_bang_l _).
+          - apply subset_prop with (2 := @rule_bang_l _).
             apply cl_under_closed; auto.
         * simpl; apply cl_under_closed; auto.
           intros x []; apply rule_bang_r; split; auto.
@@ -326,7 +308,7 @@ Section Okada.
 
   End Okada_Lemma.
 
-  Notation "'⟬߭' Γ '⟭'" := (list_Form_sem cl comp ∅ K v Γ) (at level 49).
+  Notation "'⟬߭' Γ '⟭'" := (list_Form_sem PMILL v Γ) (at level 49).
 
   (* We lift the result to contexts, ie list of formulas *)
 
@@ -336,7 +318,7 @@ Section Okada.
       apply cl_increase; auto.
     constructor 1 with (A :: nil) ga; auto.
     + apply Okada_formula; auto.
-    + red; reflexivity.
+    + apply PEperm_Type_refl.
   Qed.
 
 End Okada.
@@ -353,36 +335,15 @@ Section cut_admissibility.
   Variable P : ipfrag.
   Hypothesis P_axfree : projT1 (ipgax P) -> False.
 
-  Theorem ill_nc_cut_elimination Γ A : ipperm P = false -> Γ ⊢ A [P] -> Γ ⊢ A [cutupd_ipfrag P false].
-  Proof.
-     intros HP H.
-     apply rules_nc_sound with (prov_pred := ill (cutupd_ipfrag P false)) (perm_bool := false) 
-                               (v := fun x ga => ill (cutupd_ipfrag P false) ga (£x)) in H; auto.
-     + replace (comp_ctx false) with (comp_ctx (ipperm (cutupd_ipfrag P false))) in H
-         by (rewrite <- HP; reflexivity).
-       apply Okada_formula, H, Okada_ctx; auto.
-     + intros; eapply P_perm; simpl; try rewrite HP; eassumption.
-     + intros x Ga H1; red in H1.
-       replace Ga with (nil++Ga++nil); [ apply H1 | ]; intros; rewrite <- app_nil_end; auto.
-  Qed.
-
-  Theorem ill_comm_cut_elimination Γ A : ipperm P = true -> Γ ⊢ A [P] -> Γ ⊢ A [cutupd_ipfrag P false].
-  Proof.
-     intros HP H.
-     apply rules_comm_sound with (prov_pred := ill (cutupd_ipfrag P false)) (perm_bool := true)
-                                 (v := fun x ga => ill (cutupd_ipfrag P false) ga (£x)) in H; auto.
-     + replace true with (ipperm (cutupd_ipfrag P false)) in H.
-       apply Okada_formula, H, Okada_ctx with (P := cutupd_ipfrag P false) ; auto.
-     + rewrite <- HP; intros; eapply P_perm; eassumption.
-     + intros x Ga H1; red in H1.
-       replace Ga with (nil++Ga++nil); [ apply H1 | ]; intros; rewrite <- app_nil_end; auto.
-  Qed.
+  Instance PMILL_cf : PhaseSpace (ipperm P) := PMILL (cutupd_ipfrag P false).
 
   Theorem ill_cut_elimination Γ A : Γ ⊢ A [P] -> Γ ⊢ A [cutupd_ipfrag P false].
   Proof.
-    case_eq (ipperm P) ; intros HP.
-    + apply ill_comm_cut_elimination; assumption.
-    + apply ill_nc_cut_elimination; assumption.
+    intros pi.
+    apply (ill_soundness PMILL_cf (fun x ga => ill (cutupd_ipfrag P false) ga (£x))) in pi; auto.
+    + apply Okada_formula, pi, Okada_ctx; auto.
+    + intros x Ga H1; red in H1.
+      replace Ga with (nil++Ga++nil); [ apply H1 | ]; intros; rewrite <- app_nil_end; auto.
   Qed.
 
 End cut_admissibility.
