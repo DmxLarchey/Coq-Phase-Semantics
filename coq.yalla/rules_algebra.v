@@ -49,9 +49,6 @@ Section Rules.
 
   Infix "∘" := (Composes comp_ctx) (at level 50, no associativity).
 
-  Notation J := (fun Γ => cl (sg ∅) Γ * cl (sg Γ ∘ sg Γ) Γ)%type.
-  Notation K := (fun Γ => { Δ | Γ = ‼Δ }).
-
   (* ⊆ ≃ ∩ ∪ ∘ ⊸ ⊛ ⟦ ⟧ ⟬߭ ⟭  ⟙   ⟘   𝝐  ﹠ ⊗  ⊕  ⊸  ❗   ‼  ∅  ⊢ Γ Δ ϴ ⊨ *)
 
   Fact cl_ctx_increase X : X ⊆ cl X.
@@ -213,6 +210,9 @@ Section Rules.
     rewrite Hperm; apply Permutation_Type_app_comm.
   Qed.
 
+  Notation J := (fun Γ => cl (sg ∅) Γ * cl (sg Γ ∘ sg Γ) Γ)%type.
+  Notation K := (fun Γ => { Δ | Γ = ‼Δ }).
+
   Local Fact sub_monoid_1 : cl K ∅.
   Proof.
     intros ga de A H.
@@ -292,7 +292,7 @@ Section Rules.
     Local Fact sub_J_1 : K ⊆ J.
     Proof. apply sub_J_eq; auto. Qed.
 
-    Instance PM_ctx : PhaseSpace perm_bool :=
+    Instance PS_ctx : PhaseSpace perm_bool :=
     { Web := list iformula;
       PSCL := CL_ctx;
       PSCompose := comp_ctx;

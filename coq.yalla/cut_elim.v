@@ -33,24 +33,32 @@ Section Okada.
   Variable P : ipfrag.
   Hypothesis P_axfree : projT1 (ipgax P) -> False.
 
-  Instance PMILL : PhaseSpace (ipperm P) :=
-    PM_ctx (ill P) (ipperm P) (@P_perm P) (@P_weak P) (@P_cntr P).
+  Instance PSILL : PhaseSpace (ipperm P) :=
+    PS_ctx (ill P) (ipperm P) (@P_perm P) (@P_weak P) (@P_cntr P).
   Instance CLILL : ClosureOp := PSCL.
+
+  Notation "↓" := (fun A Γ => ill P Γ A).
+
+  Fact ILLdc_closed: forall A, cl (↓A) ⊆ ↓A.
+  Proof. apply dc_closed. Qed.
+
+  Hint Resolve ILLdc_closed.
+
+  Fact ILLvdc_closed: forall x, cl (↓(£x)) ⊆ ↓(£x).
+  Proof. intros; apply ILLdc_closed. Qed.
+
+  Instance PMILL : PhaseModel P := {
+    PMPS := PSILL;
+    PMval := fun x => ↓(£x);
+    PMval_closed := ILLvdc_closed
+  }.
 
   Infix "∘" := (Composes PSCompose) (at level 50, no associativity).
   Infix "⊸" := (Magicwand_l PSCompose) (at level 51, right associativity).
   Infix "⟜" := (Magicwand_r PSCompose) (at level 52, left associativity).
-  Notation "↓" := (fun A Γ => ill P Γ A).
-
-  Let dc_closed A : cl (↓A) ⊆ ↓A.
-  Proof. apply dc_closed. Qed.
-
-  Let v x := ↓ (£x).
-
-  Let Hv x : cl (v x) ⊆ v x.
-  Proof. apply dc_closed. Qed.
-
-  Notation "'⟦' A '⟧'" := (Form_sem PMILL v A) (at level 49).
+  Notation v := PMval.
+  Notation Hv := PMval_closed.
+  Notation "'⟦' A '⟧'" := (Form_sem PMILL A) (at level 49).
 
   Let cl_sem_closed A : cl (⟦A⟧) ⊆ ⟦A⟧.
   Proof. apply closed_Form_sem; auto. Qed.
@@ -75,53 +83,53 @@ Section Okada.
          But first, let us give the algebraic interpretation
          of the rules of the cut-free ILL sequent calculus *)
 
-    Let rule_ax A : ↓A (A::∅). 
+    Let rule_ax A : ↓A (A::∅).
     Proof. apply ax_exp_ill. Qed.
 
     Let rule_limp_l A B : (↓A ⊸ cl (sg (B::∅))) (A -o B::∅). 
-    Proof. 
+    Proof.
       apply rule_limp_l_eq; eauto. 
       intros ? ? ? ?; apply lmap_ilr. 
     Qed.
 
     Let rule_limp_r A B : sg (A::∅) ⊸ ↓B ⊆ ↓(A -o B).
-    Proof. 
+    Proof.
       apply rule_limp_r_eq; eauto. 
       intros ?; apply lmap_irr. 
     Qed.
 
     Let rule_neg_l A : (↓A ⊸ cl (sg (N::∅))) (ineg A::∅). 
-    Proof. 
+    Proof.
       apply rule_neg_l_eq; eauto.
       intros; apply neg_map_rule; auto.
     Qed.
 
     Let rule_neg_r A : sg (A::∅) ⊸ ↓N ⊆ ↓(ineg A).
-    Proof. 
+    Proof.
       apply rule_neg_r_eq; eauto. 
       intros ?; apply neg_irr. 
     Qed.
 
     Let rule_rimp_l A B : (cl (sg (B::∅)) ⟜ ↓A) (B o- A::∅).
-    Proof. 
+    Proof.
       apply rule_rimp_l_eq; eauto. 
       intros ? ? ? ?; apply lpam_ilr. 
     Qed.
 
     Let rule_rimp_r A B : ↓B ⟜ sg (A::∅) ⊆ ↓(B o- A).
-    Proof. 
+    Proof.
       apply rule_rimp_r_eq; eauto.
       intros ?; apply lpam_irr.
     Qed.
 
     Let rule_gen_l A : (cl (sg (N::∅)) ⟜ ↓A) (igen A::∅).
-    Proof. 
+    Proof.
       apply rule_gen_l_eq; eauto. 
       intros; apply gen_pam_rule; auto.
     Qed.
 
     Let rule_gen_r A : ↓N ⟜ sg (A::∅) ⊆ ↓(igen A).
-    Proof. 
+    Proof.
       apply rule_gen_r_eq; eauto.
       intros ?; apply gen_irr.
     Qed.
@@ -199,7 +207,7 @@ Section Okada.
     Qed.
 
     Let rule_zero_l : cl (fun _ => False) (⟘::∅).
-    Proof. 
+    Proof.
       apply rule_zero_l_eq, zero_ilr.
     Qed.
 
@@ -227,7 +235,7 @@ Section Okada.
         intros _ []; apply rule_ax.
       + split.
         * intros _ []; apply rule_unit_l.
-        * simpl; apply cl_under_closed; auto; apply rule_unit_r.
+        * simpl; apply cl_under_closed ; auto.
       + destruct IHA1 as [IHA1 IHA3].
         destruct IHA2 as [IHA2 IHA4].
         split.
@@ -236,7 +244,7 @@ Section Okada.
           simpl; apply cl_ctx_mono.
           intros _ []; constructor 1 with (A1::∅) (A2::∅); auto.
           red; reflexivity.
-        * simpl; apply cl_under_closed; auto.
+        * simpl ; apply cl_under_closed; auto.
           intros x Hx; apply rule_times_r.
           revert Hx; apply composes_monotone; eauto.
       + destruct IHA1 as [IHA1 IHA3].
@@ -282,7 +290,8 @@ Section Okada.
         * intros Ga (? & ?); apply rule_with_r; auto.
       + split.
         * intros _ []; apply rule_zero_l.
-        * simpl; apply cl_under_closed; auto; intros _ [].
+        * simpl; apply cl_under_closed; auto.
+          intros _ [].
       + destruct IHA1 as [IHA1 IHA3].
         destruct IHA2 as [IHA2 IHA4].
         split.
@@ -308,7 +317,7 @@ Section Okada.
 
   End Okada_Lemma.
 
-  Notation "'⟬߭' Γ '⟭'" := (list_Form_sem PMILL v Γ) (at level 49).
+  Notation "'⟬߭' Γ '⟭'" := (list_Form_sem PMILL Γ) (at level 49).
 
   (* We lift the result to contexts, ie list of formulas *)
 
@@ -335,15 +344,27 @@ Section cut_admissibility.
   Variable P : ipfrag.
   Hypothesis P_axfree : projT1 (ipgax P) -> False.
 
-  Instance PMILL_cf : PhaseSpace (ipperm P) := PMILL (cutupd_ipfrag P false).
+  Instance PSILL_cfat : PhaseSpace (ipperm P) := PSILL (cutupd_ipfrag P false).
+  Instance CL_cfat : ClosureOp := PSCL.
+
+  Lemma ILLdc_closed_cfat : forall x,
+    cl (fun ga => ill (cutupd_ipfrag P false) ga (£x)) ⊆ fun ga => ill (cutupd_ipfrag P false) ga (£x).
+  Proof.
+    intros x Ga H1; red in H1.
+    replace Ga with (nil++Ga++nil); [ apply H1 | ]; intros; rewrite <- app_nil_end; auto.
+  Qed.
+
+  Instance PMILL_cfat : PhaseModel P := {
+    PMPS := PSILL_cfat;
+    PMval := fun x ga => ill (cutupd_ipfrag P false) ga (£x);
+    PMval_closed := ILLdc_closed_cfat
+  }.
 
   Theorem ill_cut_elimination Γ A : Γ ⊢ A [P] -> Γ ⊢ A [cutupd_ipfrag P false].
   Proof.
     intros pi.
-    apply (ill_soundness PMILL_cf (fun x ga => ill (cutupd_ipfrag P false) ga (£x))) in pi; auto.
-    + apply Okada_formula, pi, Okada_ctx; auto.
-    + intros x Ga H1; red in H1.
-      replace Ga with (nil++Ga++nil); [ apply H1 | ]; intros; rewrite <- app_nil_end; auto.
+    apply (ill_soundness PMILL_cfat) in pi; auto.
+    apply Okada_formula, pi, Okada_ctx; auto.
   Qed.
 
 End cut_admissibility.

@@ -85,7 +85,8 @@ Section Subset.
       cl          : (M -> Type) -> (M -> Type);
       cl_increase : forall A, A ⊆ cl A;
       cl_monotone : forall A B, A ⊆ B -> cl A ⊆ cl B;
-      cl_idempotent : forall A, cl (cl A) ⊆ cl A }.
+      cl_idempotent : forall A, cl (cl A) ⊆ cl A
+    }.
 
     Context { CL : ClosureOp }.
 
@@ -556,7 +557,7 @@ Section Subset.
     Proposition composes_neutral_r A : cl (A ∘ sg e) ≃ cl A.
     Proof. split; apply cl_subset; auto. Qed.
 
-    Definition unit := (cl (sg e)). 
+    Definition unit := (cl (sg e)).
 
     Proposition closed_unit : closed unit.
     Proof. simpl; apply cl_idempotent. Qed.

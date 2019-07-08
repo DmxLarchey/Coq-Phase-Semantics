@@ -39,6 +39,11 @@ Set Implicit Arguments.
 
 Section Phase_Spaces.
 
+  Notation "X '⊆' Y" := (subset X Y) (at level 75, format "X  ⊆  Y", no associativity).
+  Notation "X '≃' Y" := (eqset X Y) (at level 75, format "X  ≃  Y", no associativity).
+  Notation "A '∩' B" := (fun z => A z * B z : Type)%type (at level 50, format "A  ∩  B", left associativity).
+  Notation "A '∪' B" := (fun z => A z + B z : Type)%type (at level 50, format "A  ∪  B", left associativity).
+
   Class PhaseSpace (b : bool) := {
     Web : Type;
     PSCL : @ClosureOp Web;
@@ -57,22 +62,24 @@ Section Phase_Spaces.
     PSsub_monoid_2 : sub_monoid_hyp_2 PSCompose PSExp;
     PSsub_J : sub_J_hyp PSCompose PSunit PSExp;
     PScl_commute : b = true -> cl_commutativity PSCompose
- }.
+  }.
 
-  Variable perm_bool : bool.
-  Variable PS : PhaseSpace perm_bool.
+  Class PhaseModel (P : ipfrag) := {
+    PMPS : PhaseSpace (ipperm P);
+    PMval : IAtom -> Web -> Type;
+    PMval_closed : forall x, (@cl _ PSCL) (PMval x) ⊆ PMval x
+  }.
+
+  Context { P : ipfrag }.
+  Variable PM : PhaseModel P.
+  Instance PS : PhaseSpace (ipperm P) := PMPS.
   Instance CL : ClosureOp := PSCL.
 
-  Hint Resolve (@PScl_stable_l perm_bool PS) (@PScl_stable_r perm_bool PS)
-               (@PScl_associative_1 perm_bool PS) (@PScl_associative_2 perm_bool PS)
-               (@PScl_neutral_1 perm_bool PS) (@PScl_neutral_2 perm_bool PS)
-               (@PScl_neutral_3 perm_bool PS) (@PScl_neutral_4 perm_bool PS)
-               (@PSsub_monoid_1 perm_bool PS) (@PSsub_monoid_2 perm_bool PS) (@PSsub_J perm_bool PS).
-
-  Notation "X '⊆' Y" := (subset X Y) (at level 75, format "X  ⊆  Y", no associativity).
-  Notation "X '≃' Y" := (eqset X Y) (at level 75, format "X  ≃  Y", no associativity).
-  Notation "A '∩' B" := (fun z => A z * B z : Type)%type (at level 50, format "A  ∩  B", left associativity).
-  Notation "A '∪' B" := (fun z => A z + B z : Type)%type (at level 50, format "A  ∪  B", left associativity).
+  Hint Resolve (@PScl_stable_l (ipperm P) PS) (@PScl_stable_r (ipperm P) PS)
+               (@PScl_associative_1 (ipperm P) PS) (@PScl_associative_2 (ipperm P) PS)
+               (@PScl_neutral_1 (ipperm P) PS) (@PScl_neutral_2 (ipperm P) PS)
+               (@PScl_neutral_3 (ipperm P) PS) (@PScl_neutral_4 (ipperm P) PS)
+               (@PSsub_monoid_1 (ipperm P) PS) (@PSsub_monoid_2 (ipperm P) PS) (@PSsub_J (ipperm P) PS).
 
   Notation closed := (fun x => cl x ⊆ x).
   Infix "⊸" := (Magicwand_l PSCompose) (at level 51, right associativity).
@@ -84,13 +91,12 @@ Section Phase_Spaces.
   Notation "❗ A" := (bang PSExp A) (at level 40, no associativity).
 
 
-
   (* Interpretation of Linear Logic *)
 
   Reserved Notation "'⟦' A '⟧'" (at level 49).
   Reserved Notation "'⟬߭' A '⟭'" (at level 49).
-
-  Variable (v : IAtom -> Web -> Type) (Hv : forall x, cl (v x) ⊆ v x).
+  Notation v := PMval.
+  Notation Hv := PMval_closed.
 
   Fixpoint Form_sem f :=
     match f with
@@ -111,15 +117,18 @@ Section Phase_Spaces.
 
   Fact closed_Form_sem f : cl (⟦f⟧) ⊆ ⟦f⟧.
   Proof.
-    induction f; simpl; auto.
+    induction f; simpl.
+    + apply Hv.
     + apply closed_unit.
     + apply closed_times.
     + apply closed_magicwand_r; auto.
     + apply closed_magicwand_r; auto.
+      apply Hv.
     + apply closed_magicwand_l; auto.
     + apply closed_magicwand_l; auto.
+      apply Hv.
     + apply closed_top.
-    + apply @closed_glb; auto.
+    + apply closed_glb; auto.
     + apply closed_zero.
     + apply closed_lub; auto.
     + apply closed_store.
@@ -208,7 +217,6 @@ Section Phase_Spaces.
 
   Section soundness.
 
-    Context {P : ipfrag}.
     Hypothesis P_axfree : (projT1 (ipgax P) -> False).
 
     Notation "l '⊢' x" := (ill P l x) (at level 70, no associativity).
@@ -235,6 +243,50 @@ Section Phase_Spaces.
       do 2 apply eqset_trans with (1 := list_Form_sem_bang _), eqset_sym.
       apply store_congruence.
       simpl; split; red; tauto.
+    Qed.
+
+    Fact ill_co_oc_perm_sound l1 l2 lw lw' a : Permutation_Type lw lw' ->
+             ⟬߭ l1 ++ map ioc lw ++ l2 ⟭ ⊆ ⟦ a ⟧ -> ⟬߭ l1 ++ map ioc lw' ++ l2 ⟭ ⊆ ⟦ a ⟧.
+    Proof.
+      intros HP; revert l1 l2; induction HP; intros l1 l2; auto.
+      + replace (l1 ++ map ioc (x :: l) ++ l2) with ((l1 ++ ioc x :: nil) ++ map ioc l ++ l2)
+          by (simpl; rewrite <- ? app_assoc; rewrite <- app_comm_cons; reflexivity).
+        replace (l1 ++ map ioc (x :: l') ++ l2) with ((l1 ++ ioc x :: nil) ++ map ioc l' ++ l2)
+          by (simpl; rewrite <- ? app_assoc; rewrite <- app_comm_cons; reflexivity).
+        auto.
+      + apply ill_nc_swap_sound.
+    Qed.
+
+    Fact ill_co_swap_sound (HPerm: ipperm P = true) Γ Δ a b c : ⟬߭Γ++a::b::Δ⟭ ⊆ ⟦c⟧ -> ⟬߭Γ++b::a::Δ⟭ ⊆ ⟦c⟧.
+    Proof.
+      intros H x Hx; apply H; revert x Hx.
+      apply list_Form_sem_congr_l.
+      change (a::b::Δ) with ((a::b::nil)++Δ).
+      change (b::a::Δ) with ((b::a::nil)++Δ).
+      apply list_Form_sem_congr_r.
+      repeat rewrite list_Form_sem_cons.
+      repeat rewrite list_Form_sem_nil.
+      eapply eqset_trans.
+      apply times_commute ; apply PScl_commute; auto.
+      apply times_congruence; auto.
+      + apply unit_neutral_r; auto.
+      + apply eqset_sym, unit_neutral_r; auto.
+    Qed.
+
+    Fact ill_perm_sound Γ Δ a : Γ ~[ipperm P] Δ -> ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭Δ⟭ ⊆ ⟦a⟧.
+    Proof.
+      assert ({ipperm P = true} + {ipperm P = false}) as Hbool
+        by (clear; destruct (ipperm P); [ left | right ]; reflexivity).
+      destruct Hbool as [Hbool | Hbool]; intros.
+      * rewrite Hbool in X.
+        revert X a X0.
+        induction 1 as [ | a Ga De H1 IH1 | | ] ; intros c; auto.
+        + repeat rewrite list_Form_sem_cons.
+          intros H; apply adjunction_l_2; auto.
+          apply IH1 with (a := a -o c); simpl. 
+          apply adjunction_l_1; auto.
+        + apply ill_co_swap_sound with (Γ := nil) ; assumption.
+      * rewrite Hbool in X; simpl in X; subst; assumption.
     Qed.
 
     Fact ill_limp_l_sound Γ ϴ Δ a b c :  ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭ϴ++b::Δ⟭ ⊆ ⟦c⟧ -> ⟬߭ϴ++Γ++a -o b::Δ⟭ ⊆ ⟦c⟧.
@@ -265,6 +317,7 @@ Section Phase_Spaces.
         by (unfold list_Form_sem; rewrite ? map_app; simpl; reflexivity).
       apply ill_limp_l_sound; auto.
       unfold list_Form_sem; simpl; apply unit_neutral_r_1; auto.
+      apply Hv.
     Qed.
 
     Fact ill_rimp_l_sound Γ ϴ Δ a b c :  ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭ϴ++b::Δ⟭ ⊆ ⟦c⟧ -> ⟬߭ϴ++b o- a::Γ++Δ⟭ ⊆ ⟦c⟧.
@@ -289,6 +342,7 @@ Section Phase_Spaces.
         by (unfold list_Form_sem; simpl; rewrite app_nil_r; reflexivity).
       apply ill_rimp_l_sound; auto.
       unfold list_Form_sem; simpl; apply unit_neutral_r_1; auto.
+      apply Hv.
     Qed.
 
     Fact ill_limp_r_sound Γ a b : ⟬߭a::Γ⟭ ⊆ ⟦b⟧ -> ⟬߭Γ⟭ ⊆ ⟦a⟧ ⊸ ⟦b⟧.
@@ -437,53 +491,9 @@ Section Phase_Spaces.
     Fact ill_unit_r_sound : ⟬߭nil⟭ ⊆ ⟦𝝐⟧.
     Proof. simpl; red; auto. Qed.
 
-    Fact ill_co_oc_perm_sound l1 l2 lw lw' a : Permutation_Type lw lw' ->
-             ⟬߭ l1 ++ map ioc lw ++ l2 ⟭ ⊆ ⟦ a ⟧ -> ⟬߭ l1 ++ map ioc lw' ++ l2 ⟭ ⊆ ⟦ a ⟧.
-    Proof.
-      intros HP; revert l1 l2; induction HP; intros l1 l2; auto.
-      + replace (l1 ++ map ioc (x :: l) ++ l2) with ((l1 ++ ioc x :: nil) ++ map ioc l ++ l2)
-          by (simpl; rewrite <- ? app_assoc; rewrite <- app_comm_cons; reflexivity).
-        replace (l1 ++ map ioc (x :: l') ++ l2) with ((l1 ++ ioc x :: nil) ++ map ioc l' ++ l2)
-          by (simpl; rewrite <- ? app_assoc; rewrite <- app_comm_cons; reflexivity).
-        auto.
-      + apply ill_nc_swap_sound.
-    Qed.
+    Notation "l '⊢' x" := (ill P l x) (at level 70, no associativity).
 
-    Fact ill_co_swap_sound (HPerm: perm_bool = true) Γ Δ a b c : ⟬߭Γ++a::b::Δ⟭ ⊆ ⟦c⟧ -> ⟬߭Γ++b::a::Δ⟭ ⊆ ⟦c⟧.
-    Proof.
-      intros H x Hx; apply H; revert x Hx.
-      apply list_Form_sem_congr_l.
-      change (a::b::Δ) with ((a::b::nil)++Δ).
-      change (b::a::Δ) with ((b::a::nil)++Δ).
-      apply list_Form_sem_congr_r.
-      repeat rewrite list_Form_sem_cons.
-      repeat rewrite list_Form_sem_nil.
-      eapply eqset_trans.
-      apply times_commute ; apply PScl_commute; auto.
-      apply times_congruence; auto.
-      + apply unit_neutral_r; auto.
-      + apply eqset_sym, unit_neutral_r; auto.
-    Qed.
-
-    Fact ill_perm_sound (HPerm: perm_bool = true) Γ Δ a : Γ ~[true] Δ -> ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭Δ⟭ ⊆ ⟦a⟧.
-    Proof.
-      intros H2; revert H2 a; simpl.
-      induction 1 as [ | a Ga De H1 IH1 | | ] ; intros c; auto.
-      + repeat rewrite list_Form_sem_cons.
-        intros H; apply adjunction_l_2; auto.
-        apply IH1 with (a := a -o c); simpl. 
-        apply adjunction_l_1; auto.
-      + apply ill_co_swap_sound with (Γ := nil); assumption.
-    Qed.
-
-  End soundness.
-
-  Context {P : ipfrag}.
-  Hypothesis P_axfree : (projT1 (ipgax P) -> False).
-
-  Notation "l '⊢' x" := (ill P l x) (at level 70, no associativity).
-
-  Hint Resolve   ill_ax_sound
+    Hint Resolve ill_ax_sound
                  ill_limp_l_sound ill_limp_r_sound ill_rimp_l_sound ill_rimp_r_sound
                  ill_gen_r_sound ill_gen_l_sound ill_neg_r_sound ill_neg_l_sound
                  ill_with_l1_sound ill_with_l2_sound ill_with_r_sound
@@ -493,15 +503,15 @@ Section Phase_Spaces.
                  ill_zero_l_sound ill_top_r_sound 
                  ill_unit_l_sound ill_unit_r_sound.
 
-  Theorem ill_soundness Γ a : ipperm P = perm_bool -> Γ ⊢ a -> ⟬߭Γ⟭  ⊆ ⟦a⟧.
-  Proof.
-    intros E; induction 1; try auto ; try now (simpl; auto).
-    + destruct (ipperm P); simpl in p.
-      * eapply ill_perm_sound; eauto.
-      * subst l2; auto.
-    + apply ill_co_oc_perm_sound with (lw := lw); auto.
-    + apply ill_cut_sound with A; auto.
-  Qed.
+    Theorem ill_soundness Γ a : Γ ⊢ a -> ⟬߭Γ⟭  ⊆ ⟦a⟧.
+    Proof.
+      induction 1; try auto ; try now (simpl; auto).
+      + revert p IHX; apply ill_perm_sound.
+      + apply ill_co_oc_perm_sound with (lw := lw); auto.
+      + apply ill_cut_sound with A; auto.
+    Qed.
+
+  End soundness.
 
 End Phase_Spaces.
 
