@@ -17,7 +17,7 @@ Require Import ill_def.
 Notation " x '~[' b ']' y " := (PEperm_Type b x y) (at level 70, format "x  ~[ b ]  y").
 
 Notation "⟙" := (itop).
-Notation "⟘" := (izero).
+Notation "0" := (izero).
 Notation 𝝐 := (ione).
 Infix "&" := (iwith) (at level 50, only parsing).
 Infix "﹠" := (iwith) (at level 50).
@@ -64,10 +64,51 @@ Section Phase_Spaces.
     PScl_commute : b = true -> cl_commutativity PSCompose
   }.
 
+  (* Interpretation of Linear Logic *)
+
+
+  Infix "⊸" := (Magicwand_l PSCompose) (at level 51, right associativity).
+  Infix "⟜" := (Magicwand_r PSCompose) (at level 52, left associativity).
+  Infix "⊛" := (tensor PSCompose) (at level 59).
+  Notation "x ⊓ y" := (glb x y) (at level 50, no associativity).
+  Notation "x ⊔ y" := (lub x y) (at level 50, no associativity).
+  Notation "❗ A" := (bang PSExp A) (at level 40, no associativity).
+
+  Section Formula_Interpretation.
+
+    Reserved Notation "'⟦' A '⟧'" (at level 49).
+    Variable perm_bool : bool.
+    Variable PS : PhaseSpace perm_bool.
+    Variable v : IAtom -> Web -> Type.
+    Instance CL0 : ClosureOp := PSCL.
+
+    Fixpoint Form_sem f :=
+      match f with
+      | 0     => zero
+      | ⟙             => top
+      | 𝝐              => unit PSunit
+      | £ x    => v x
+      | a -o b => ⟦a⟧ ⊸ ⟦b⟧
+      | ineg a => ⟦a⟧ ⊸ v atN
+      | b o- a => ⟦b⟧ ⟜ ⟦a⟧
+      | igen a => v atN ⟜ ⟦a⟧
+      | a ⊗ b  => ⟦a⟧ ⊛ ⟦b⟧
+      | a ⊕ b  => ⟦a⟧ ⊔ ⟦b⟧
+      | a & b  => ⟦a⟧ ⊓ ⟦b⟧
+      | !a     => ❗⟦a⟧
+      end
+    where "⟦ a ⟧" := (Form_sem a).
+
+    Definition list_Form_sem ll := fold_right (fun x y => x⊛y) (unit PSunit) (map Form_sem ll).
+
+  End Formula_Interpretation.
+
   Class PhaseModel (P : ipfrag) := {
     PMPS : PhaseSpace (ipperm P);
     PMval : IAtom -> Web -> Type;
-    PMval_closed : forall x, (@cl _ PSCL) (PMval x) ⊆ PMval x
+    PMval_closed : forall x, (@cl _ PSCL) (PMval x) ⊆ PMval x;
+    PMgax : forall a, list_Form_sem PMPS PMval (fst (projT2 (ipgax P) a))
+                    ⊆ Form_sem PMPS PMval (snd (projT2 (ipgax P) a))
   }.
 
   Context { P : ipfrag }.
@@ -82,38 +123,12 @@ Section Phase_Spaces.
                (@PSsub_monoid_1 (ipperm P) PS) (@PSsub_monoid_2 (ipperm P) PS) (@PSsub_J (ipperm P) PS).
 
   Notation closed := (fun x => cl x ⊆ x).
-  Infix "⊸" := (Magicwand_l PSCompose) (at level 51, right associativity).
-  Infix "⟜" := (Magicwand_r PSCompose) (at level 52, left associativity).
-  Infix "⊛" := (tensor PSCompose) (at level 59).
-  Notation "x ⊓ y" := (glb x y) (at level 50, no associativity).
-  Notation "x ⊔ y" := (lub x y) (at level 50, no associativity).
-
-  Notation "❗ A" := (bang PSExp A) (at level 40, no associativity).
-
-
-  (* Interpretation of Linear Logic *)
-
-  Reserved Notation "'⟦' A '⟧'" (at level 49).
-  Reserved Notation "'⟬߭' A '⟭'" (at level 49).
   Notation v := PMval.
   Notation Hv := PMval_closed.
-
-  Fixpoint Form_sem f :=
-    match f with
-      | ⟘             => zero
-      | ⟙             => top
-      | 𝝐              => unit PSunit
-      | £ x    => v x
-      | a -o b => ⟦a⟧ ⊸ ⟦b⟧
-      | ineg a => ⟦a⟧ ⊸ v atN
-      | b o- a => ⟦b⟧ ⟜ ⟦a⟧
-      | igen a => v atN ⟜ ⟦a⟧
-      | a ⊗ b  => ⟦a⟧ ⊛ ⟦b⟧
-      | a ⊕ b  => ⟦a⟧ ⊔ ⟦b⟧
-      | a & b  => ⟦a⟧ ⊓ ⟦b⟧
-      | !a     => ❗⟦a⟧
-    end
-  where "⟦ a ⟧" := (Form_sem a).
+  Notation PMForm_sem := (Form_sem PMPS PMval).
+  Notation PMlist_Form_sem := (list_Form_sem PMPS PMval).
+  Notation "'⟦' A '⟧'" := (PMForm_sem A) (at level 49).
+  Notation "⟬߭  ll ⟭" := (PMlist_Form_sem ll) (at level 49).
 
   Fact closed_Form_sem f : cl (⟦f⟧) ⊆ ⟦f⟧.
   Proof.
@@ -133,10 +148,6 @@ Section Phase_Spaces.
     + apply closed_lub; auto.
     + apply closed_store.
   Qed.
-
-  Definition list_Form_sem ll := fold_right (fun x y => x⊛y) (unit PSunit) (map Form_sem ll).
-
-  Notation "⟬߭  ll ⟭" := (list_Form_sem ll).
 
   Fact list_Form_sem_nil : ⟬߭nil⟭ = (unit PSunit).
   Proof. auto. Qed.
@@ -196,10 +207,10 @@ Section Phase_Spaces.
     apply times_monotone; auto; reflexivity.
   Qed.
 
-  Fact list_Form_sem_bang ll : ⟬߭‼ll⟭ ≃ ❗ (lcap (map Form_sem ll)).
+  Fact list_Form_sem_bang ll : ⟬߭‼ll⟭ ≃ ❗ (lcap (map PMForm_sem ll)).
   Proof.
     unfold list_Form_sem.
-    assert (Forall_Type closed (map Form_sem ll)) as Hll.
+    assert (Forall_Type closed (map PMForm_sem ll)) as Hll.
     { induction ll as [ | y ll IHll ].
       + constructor.
       + constructor; auto. }
@@ -216,8 +227,6 @@ Section Phase_Spaces.
      soundness theorem *)
 
   Section soundness.
-
-    Hypothesis P_axfree : (projT1 (ipgax P) -> False).
 
     Notation "l '⊢' x" := (ill P l x) (at level 70, no associativity).
 
@@ -467,7 +476,7 @@ Section Phase_Spaces.
     Fact ill_plus_r2_sound Γ a b : ⟬߭Γ⟭ ⊆ ⟦b⟧ -> ⟬߭Γ⟭ ⊆ ⟦a⊕b⟧.
     Proof. intros ? ? ?; simpl; apply cl_increase; auto. Qed.
 
-    Fact ill_zero_l_sound Γ Δ a : ⟬߭Γ++⟘::Δ⟭ ⊆ ⟦a⟧.
+    Fact ill_zero_l_sound Γ Δ a : ⟬߭Γ++0::Δ⟭ ⊆ ⟦a⟧.
     Proof.
       intros x Hx.
       apply list_Form_sem_app in Hx.
@@ -509,6 +518,7 @@ Section Phase_Spaces.
       + revert p IHX; apply ill_perm_sound.
       + apply ill_co_oc_perm_sound with (lw := lw); auto.
       + apply ill_cut_sound with A; auto.
+      + apply PMgax.
     Qed.
 
   End soundness.

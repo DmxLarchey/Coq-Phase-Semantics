@@ -7,7 +7,8 @@
 (*         CeCILL v2 FREE SOFTWARE LICENSE AGREEMENT          *)
 (**************************************************************)
 
-Require Import List Permutation_Type genperm_Type.
+Import EqNotations.
+Require Import List_more List_Type_more Permutation_Type_more genperm_Type.
 
 Require Import phase_sem rules_algebra.
 Require Import ill_def.
@@ -27,17 +28,155 @@ Set Implicit Arguments.
 
   Hint Resolve P_perm P_weak P_cntr.
 
+  Definition gax_noN_l P := forall a, List_Type.In_Type N (fst (projT2 (ipgax P) a)) -> False.
+  Definition gax_at_l P := forall a, Forall iatomic (fst (projT2 (ipgax P) a)).
+  Definition gax_at_r P := forall a, iatomic (snd (projT2 (ipgax P) a)).
+  Definition gax_cut P := forall a b l1 l2,
+                            fst (projT2 (ipgax P) b) = l1 ++ snd (projT2 (ipgax P) a) :: l2 -> 
+                          { c | l1 ++ fst (projT2 (ipgax P) a) ++ l2 = fst (projT2 (ipgax P) c)
+                                /\ snd (projT2 (ipgax P) b) = snd (projT2 (ipgax P) c) }.
+
+Section CutElim_At.
+
+  Variable P : ipfrag.
+  Hypothesis P_gax_noN_l : gax_noN_l P.
+  Hypothesis P_gax_cut : gax_cut P.
+
+  Theorem cut_at : forall X l0 l1 l2 A,
+    ill P l0 (ivar X) -> ill P (l1 ++ ivar X :: l2) A -> ill P (l1 ++ l0 ++ l2) A.
+  Proof.
+  intros X l0 l1 l2 Y pi1.
+  remember (ivar X) as A.
+  revert HeqA l1 l2; induction pi1; intros HeqA l1' l2' pi2; inversion HeqA; subst;
+    list_simpl; try rewrite app_assoc;
+    try (constructor; auto; list_simpl ; rewrite ? app_comm_cons ; rewrite (app_assoc l1); auto; fail).
+  + assumption.
+  + rewrite <- app_assoc; apply (ex_ir _ (l1' ++ l1 ++ l2')); auto.
+    apply PEperm_Type_app_head ; apply PEperm_Type_app_tail; assumption.
+  + apply ex_oc_ir with lw; auto.
+    list_simpl ; rewrite (app_assoc l1) ; rewrite (app_assoc _ l2) ; rewrite <- (app_assoc l1); auto.
+  + apply gen_pam_rule; auto.
+  + rewrite <- app_assoc; apply neg_map_rule; auto.
+  + apply cut_ir with A; auto.
+    list_simpl; rewrite app_comm_cons ; rewrite (app_assoc l1); auto.
+  + list_simpl.
+    rewrite HeqA in pi2.
+    remember (l1' ++ £ X :: l2') as l0.
+    revert l1' l2' Heql0 HeqA; clear - P_gax_noN_l P_gax_cut pi2;
+      induction pi2; intros l1' l2' Heql0 HeqA; subst;
+      try (constructor; apply IHpi2; auto; fail).
+    * destruct l1'; inversion Heql0; subst.
+      - rewrite <- HeqA; list_simpl; apply gax_ir.
+      - destruct l1'; inversion H1.
+    * case_eq (ipperm P); intros HP; rewrite HP in p; simpl in p; auto.
+      assert (p' := p).
+      apply Permutation_Type_vs_elt_inv in p'.
+      destruct p' as [[l1'' l2''] Heq]; simpl in Heq.
+      rewrite Heq in p.
+      apply Permutation_Type_app_inv in p.
+      apply IHpi2 in Heq; auto.
+      apply ex_ir with (l1'' ++ fst (projT2 (ipgax P) a) ++ l2''); auto.
+      rewrite HP; apply Permutation_Type_app_middle; auto.
+    * trichot_Type_elt_app_exec Heql0; subst.
+      - rewrite 2 app_assoc; apply ex_oc_ir with lw; auto.
+        list_simpl; apply IHpi2; list_simpl; auto.
+      - destruct Heql2 as [Heql2 _]; decomp_map_Type Heql2; inversion Heql2.
+      - list_simpl; apply ex_oc_ir with lw; auto.
+        rewrite 2 app_assoc; apply IHpi2; list_simpl; auto.
+    * destruct l1'; inversion Heql0.
+    * trichot_Type_elt_elt_exec Heql0.
+      - list_simpl; apply one_ilr; rewrite app_assoc; apply IHpi2; list_simpl; auto.
+      - inversion Heql2.
+      - rewrite 2 app_assoc; apply one_ilr; list_simpl; apply IHpi2; list_simpl; auto.
+    * dichot_Type_elt_app_exec Heql0; subst.
+      - rewrite 2 app_assoc; apply tens_irr; list_simpl; auto.
+      - list_simpl; apply tens_irr; auto.
+    * trichot_Type_elt_elt_exec Heql0.
+      - list_simpl; apply tens_ilr; rewrite 2 app_comm_cons; rewrite app_assoc; apply IHpi2; list_simpl; auto.
+      - inversion Heql2.
+      - rewrite 2 app_assoc; apply tens_ilr; list_simpl; apply IHpi2; list_simpl; auto.
+    * apply lpam_irr; list_simpl; apply IHpi2; list_simpl; auto.
+    * trichot_Type_elt_elt_exec Heql0.
+      - dichot_Type_elt_app_exec Heql2; subst.
+        ++ list_simpl; rewrite 2 app_assoc; apply lpam_ilr; list_simpl; auto.
+        ++ list_simpl; apply lpam_ilr; auto.
+           rewrite app_comm_cons; rewrite app_assoc; apply IHpi2_2; list_simpl; auto.
+      - inversion Heql2.
+      - rewrite 2 app_assoc; apply lpam_ilr; auto.
+        list_simpl; apply IHpi2_2; list_simpl; auto.
+    * apply gen_irr; rewrite <- 2 app_assoc; apply IHpi2; list_simpl; auto.
+    * destruct l1'; inversion Heql0; subst.
+      list_simpl; apply gen_ilr ; apply IHpi2; auto.
+    * apply lmap_irr; rewrite app_comm_cons; apply IHpi2; auto.
+    * rewrite app_assoc in Heql0; trichot_Type_elt_elt_exec Heql0.
+      - list_simpl; apply lmap_ilr; auto.
+        rewrite app_comm_cons; rewrite app_assoc; apply IHpi2_2; list_simpl; auto.
+      - inversion Heql2.
+      - dichot_Type_elt_app_exec Heql1; subst.
+        ++ list_simpl; rewrite 2 app_assoc; apply lmap_ilr; auto.
+           list_simpl; apply IHpi2_2; list_simpl; auto.
+        ++ list_simpl; rewrite (app_assoc l4); rewrite (app_assoc _ l); apply lmap_ilr; auto.
+           list_simpl; apply IHpi2_1; list_simpl; auto.
+    * apply neg_irr; rewrite app_comm_cons; apply IHpi2; auto.
+    * trichot_Type_elt_elt_exec Heql0.
+      - destruct l0; inversion Heql2.
+      - inversion Heql2.
+      - rewrite 2 app_assoc; apply neg_ilr; list_simpl; apply IHpi2; list_simpl; auto.
+    * apply with_irr; [ apply IHpi2_1 | apply IHpi2_2 ]; auto.
+    * trichot_Type_elt_elt_exec Heql0.
+      - list_simpl; apply with_ilr1; rewrite app_comm_cons; rewrite app_assoc; apply IHpi2; list_simpl; auto.
+      - inversion Heql2.
+      - rewrite 2 app_assoc; apply with_ilr1; list_simpl; apply IHpi2; list_simpl; auto.
+    * trichot_Type_elt_elt_exec Heql0.
+      - list_simpl; apply with_ilr2; rewrite app_comm_cons; rewrite app_assoc; apply IHpi2; list_simpl; auto.
+      - inversion Heql2.
+      - rewrite 2 app_assoc; apply with_ilr2; list_simpl; apply IHpi2; list_simpl; auto.
+    * trichot_Type_elt_elt_exec Heql0.
+      - list_simpl; apply zero_ilr; rewrite app_assoc; apply IHpi2; list_simpl; auto.
+      - inversion Heql2.
+      - rewrite 2 app_assoc; apply zero_ilr; list_simpl; apply IHpi2; list_simpl; auto.
+    * trichot_Type_elt_elt_exec Heql0.
+      - list_simpl; apply plus_ilr; rewrite app_comm_cons; rewrite app_assoc;
+          [ apply IHpi2_1 | apply IHpi2_2 ]; list_simpl; auto.
+      - inversion Heql2.
+      - rewrite 2 app_assoc; apply plus_ilr; list_simpl;
+          [ apply IHpi2_1 | apply IHpi2_2 ]; list_simpl; auto.
+    * symmetry in Heql0; decomp_map_Type Heql0; inversion Heql0.
+    * trichot_Type_elt_elt_exec Heql0.
+      - list_simpl; apply de_ilr; rewrite app_comm_cons; rewrite app_assoc; apply IHpi2; list_simpl; auto.
+      - inversion Heql2.
+      - rewrite 2 app_assoc; apply de_ilr; list_simpl; apply IHpi2; list_simpl; auto.
+    * trichot_Type_elt_elt_exec Heql0.
+      - list_simpl; apply wk_ilr; rewrite app_assoc; apply IHpi2; list_simpl; auto.
+      - inversion Heql2.
+      - rewrite 2 app_assoc; apply wk_ilr; list_simpl; apply IHpi2; list_simpl; auto.
+    * trichot_Type_elt_elt_exec Heql0.
+      - list_simpl; apply co_ilr; rewrite 2 app_comm_cons; rewrite app_assoc; apply IHpi2; list_simpl; auto.
+      - inversion Heql2.
+      - rewrite 2 app_assoc; apply co_ilr; list_simpl; apply IHpi2; list_simpl; auto.
+    * apply cut_ir with (ivar X); auto.
+      - rewrite <- HeqA; apply gax_ir.
+      - rewrite <- Heql0; apply cut_ir with A; auto.
+    * rewrite <- HeqA in Heql0.
+      destruct (P_gax_cut a a0 l1' l2') as [c [H1 H2]]; auto.
+      rewrite H1, H2.
+      apply gax_ir.
+  Qed.
+
+End CutElim_At.
+
 
 Section Okada.
 
   Variable P : ipfrag.
-  Hypothesis P_axfree : projT1 (ipgax P) -> False.
 
   Instance PSILL : PhaseSpace (ipperm P) :=
     PS_ctx (ill P) (ipperm P) (@P_perm P) (@P_weak P) (@P_cntr P).
   Instance CLILL : ClosureOp := PSCL.
 
   Notation "↓" := (fun A Γ => ill P Γ A).
+
+  Notation ILLval := (fun x => ↓(£x)).
 
   Fact ILLdc_closed: forall A, cl (↓A) ⊆ ↓A.
   Proof. apply dc_closed. Qed.
@@ -47,10 +186,69 @@ Section Okada.
   Fact ILLvdc_closed: forall x, cl (↓(£x)) ⊆ ↓(£x).
   Proof. intros; apply ILLdc_closed. Qed.
 
+  Hypothesis P_gax_noN_l : gax_noN_l P.
+  Hypothesis P_gax_at_l : gax_at_l P.
+  Hypothesis P_gax_at_r : gax_at_r P.
+  Hypothesis P_gax_cut : gax_cut P.
+
+  Let ltimes := fold_right (fun x y => tensor PSCompose x y) (unit PSunit).
+  Let lcompose := fold_right (fun x y => Composes PSCompose x y) (sg PSunit).
+  Fact ILLgax : forall a, list_Form_sem PSILL ILLval (fst (projT2 (ipgax P) a))
+                    ⊆ Form_sem PSILL ILLval (snd (projT2 (ipgax P) a)).
+  Proof.
+    red in P_gax_at_l, P_gax_at_r.
+    intros a; specialize P_gax_at_l with a; specialize P_gax_at_r with a.
+    remember (snd (projT2 (ipgax P) a)) as b.
+    destruct b; try (exfalso; inversion P_gax_at_r; fail); simpl.
+    assert ({l : list IAtom | fst (projT2 (ipgax P) a) = map ivar l }) as [l Heq].
+    { revert P_gax_at_l ; remember (fst (projT2 (ipgax P) a)) as L; clear.
+      induction L; intros Hat.
+      - exists nil; reflexivity.
+      - destruct a; try (exfalso; inversion Hat; inversion H1; fail).
+        assert (Forall iatomic L) as HatL by (inversion Hat; assumption).
+        destruct (IHL HatL) as [l Heq]; subst.
+        exists (i :: l); reflexivity. }
+    rewrite Heq.
+    replace (list_Form_sem PSILL ILLval (map ivar l))
+       with (ltimes (map ILLval l)).
+    2: { clear; induction l; auto.
+         simpl; rewrite IHl; auto. }
+    apply subset_trans with (cl (lcompose (map ILLval l))).
+    { clear; induction l; try reflexivity.
+      revert IHl; simpl.
+      remember (ltimes (map (fun x Γ => ill P Γ (£ x)) l)) as L1; clear HeqL1.
+      remember (lcompose (map (fun x Γ => ill P Γ (£ x)) l)) as L2; clear HeqL2.
+      remember (fun Γ : list iformula => ill P Γ (£ a)) as L0; clear HeqL0.
+      intros IH.
+      apply (fst (@cl_prop _ (CL_ctx (ill P)) _ _)).
+      apply composes_congruent_l_1; auto.
+      unfold cl_stability_r; apply cl_ctx_stable_r.
+      apply P_perm. }
+    apply cl_closed. { apply ILLvdc_closed. }
+    assert (ill P (nil ++ map ivar l) (ivar i)) as pi
+      by (rewrite Heqb; rewrite <- Heq; apply gax_ir).
+    apply subset_trans with (fun Γ => ill P (nil ++ Γ) (£ i)).
+    2 : { intros A H; auto. }
+    revert pi; remember nil as l0; clear Heql0.
+    revert l0; clear - P_gax_noN_l P_gax_cut; induction l; intros l0 pi.
+    + simpl; intros l Heq; subst; auto.
+    + intros Ga H.
+      inversion H; subst.
+      list_simpl in pi.
+      assert (pi' := @cut_at _ P_gax_noN_l P_gax_cut _ _ _ _ _ X pi).
+      rewrite app_assoc in pi'.
+      apply IHl in pi'.
+      apply pi' in X0.
+      rewrite <- app_assoc in X0.
+      apply ex_ir with (l0 ++ a0 ++ b); auto.
+      apply PEperm_Type_app_head; auto.
+  Qed.
+
   Instance PMILL : PhaseModel P := {
     PMPS := PSILL;
-    PMval := fun x => ↓(£x);
-    PMval_closed := ILLvdc_closed
+    PMval := ILLval;
+    PMval_closed := ILLvdc_closed;
+    PMgax := ILLgax
   }.
 
   Infix "∘" := (Composes PSCompose) (at level 50, no associativity).
@@ -58,10 +256,10 @@ Section Okada.
   Infix "⟜" := (Magicwand_r PSCompose) (at level 52, left associativity).
   Notation v := PMval.
   Notation Hv := PMval_closed.
-  Notation "'⟦' A '⟧'" := (Form_sem PMILL A) (at level 49).
+  Notation "'⟦' A '⟧'" := (Form_sem PSILL ILLval A) (at level 49).
 
   Let cl_sem_closed A : cl (⟦A⟧) ⊆ ⟦A⟧.
-  Proof. apply closed_Form_sem; auto. Qed.
+  Proof. apply (@closed_Form_sem _ PMILL); auto. Qed.
 
   Section Okada_Lemma.
 
@@ -206,7 +404,7 @@ Section Okada.
       apply one_irr.
     Qed.
 
-    Let rule_zero_l : cl (fun _ => False) (⟘::∅).
+    Let rule_zero_l : cl (fun _ => False) (0::∅).
     Proof.
       apply rule_zero_l_eq, zero_ilr.
     Qed.
@@ -317,7 +515,7 @@ Section Okada.
 
   End Okada_Lemma.
 
-  Notation "'⟬߭' Γ '⟭'" := (list_Form_sem PMILL Γ) (at level 49).
+  Notation "'⟬߭' Γ '⟭'" := (list_Form_sem PSILL ILLval Γ) (at level 49).
 
   (* We lift the result to contexts, ie list of formulas *)
 
@@ -342,22 +540,20 @@ Notation "l '⊢' x [ Q ]" := (ill Q l x) (at level 70, no associativity).
 Section cut_admissibility.
 
   Variable P : ipfrag.
-  Hypothesis P_axfree : projT1 (ipgax P) -> False.
+  Hypothesis P_gax_noN_l : gax_noN_l P.
+  Hypothesis P_gax_at_l : gax_at_l P.
+  Hypothesis P_gax_at_r : gax_at_r P.
+  Hypothesis P_gax_cut : gax_cut P.
 
   Instance PSILL_cfat : PhaseSpace (ipperm P) := PSILL (cutupd_ipfrag P false).
   Instance CL_cfat : ClosureOp := PSCL.
 
-  Lemma ILLdc_closed_cfat : forall x,
-    cl (fun ga => ill (cutupd_ipfrag P false) ga (£x)) ⊆ fun ga => ill (cutupd_ipfrag P false) ga (£x).
-  Proof.
-    intros x Ga H1; red in H1.
-    replace Ga with (nil++Ga++nil); [ apply H1 | ]; intros; rewrite <- app_nil_end; auto.
-  Qed.
-
+  (* Coercion: the phase model relying on cut-free provability over P is a phase model for P *)
   Instance PMILL_cfat : PhaseModel P := {
     PMPS := PSILL_cfat;
     PMval := fun x ga => ill (cutupd_ipfrag P false) ga (£x);
-    PMval_closed := ILLdc_closed_cfat
+    PMval_closed :=  @ILLvdc_closed (cutupd_ipfrag P false);
+    PMgax := @ILLgax (cutupd_ipfrag P false) P_gax_noN_l P_gax_at_l P_gax_at_r P_gax_cut
   }.
 
   Theorem ill_cut_elimination Γ A : Γ ⊢ A [P] -> Γ ⊢ A [cutupd_ipfrag P false].

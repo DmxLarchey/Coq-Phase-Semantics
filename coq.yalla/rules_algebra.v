@@ -577,8 +577,8 @@ Section Rules.
       + intros H x []; apply H.
     Qed.
 
-    Fact rule_zero_l_eq : cl (fun _ => False) (⟘::∅)
-                     ≡ ∀ ϴ Γ A, ϴ++⟘ :: Γ ⊨ A.
+    Fact rule_zero_l_eq : cl (fun _ => False) (0::∅)
+                     ≡ ∀ ϴ Γ A, ϴ++ 0 :: Γ ⊨ A.
     Proof. 
       split.
       + intros H Th Ga A; apply H; tauto.
