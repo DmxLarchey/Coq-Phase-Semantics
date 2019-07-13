@@ -174,6 +174,8 @@ Section Okada.
     PS_ctx (ill P) (ipperm P) (@P_perm P) (@P_weak P) (@P_cntr P).
   Instance CLILL : ClosureOp := PSCL.
 
+  Hint Resolve (@composes_monotone _ PSCompose).
+
   Notation "↓" := (fun A Γ => ill P Γ A).
 
   Notation ILLval := (fun x => ↓(£x)).
@@ -191,7 +193,7 @@ Section Okada.
   Hypothesis P_gax_at_r : gax_at_r P.
   Hypothesis P_gax_cut : gax_cut P.
 
-  Let ltimes := fold_right (fun x y => tensor PSCompose x y) (unit PSunit).
+  Let ltimes := fold_right (fun x y => tensor (Composes PSCompose) x y) (unit PSunit).
   Let lcompose := fold_right (fun x y => Composes PSCompose x y) (sg PSunit).
   Fact ILLgax : forall a, list_Form_sem PSILL ILLval (fst (projT2 (ipgax P) a))
                     ⊆ Form_sem PSILL ILLval (snd (projT2 (ipgax P) a)).

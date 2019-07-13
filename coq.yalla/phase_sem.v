@@ -50,8 +50,8 @@ Section Phase_Spaces.
     PSCompose : Web -> Web -> Web -> Type;
     PSunit : Web;
     PSExp : Web -> Type;
-    PScl_stable_l : cl_stability_l PSCompose;
-    PScl_stable_r : cl_stability_r PSCompose;
+    PScl_stable_l : cl_stability_l (Composes PSCompose);
+    PScl_stable_r : cl_stability_r (Composes PSCompose);
     PScl_associative_1 : cl_associativity_1 PSCompose;
     PScl_associative_2 : cl_associativity_2 PSCompose;
     PScl_neutral_1 : cl_neutrality_1 PSCompose PSunit;
@@ -59,8 +59,8 @@ Section Phase_Spaces.
     PScl_neutral_3 : cl_neutrality_3 PSCompose PSunit;
     PScl_neutral_4 : cl_neutrality_4 PSCompose PSunit;
     PSsub_monoid_1 : sub_monoid_hyp_1 PSunit PSExp;
-    PSsub_monoid_2 : sub_monoid_hyp_2 PSCompose PSExp;
-    PSsub_J : sub_J_hyp PSCompose PSunit PSExp;
+    PSsub_monoid_2 : sub_monoid_hyp_2 (Composes PSCompose) PSExp;
+    PSsub_J : sub_J_hyp (Composes PSCompose) PSunit PSExp;
     PScl_commute : b = true -> cl_commutativity PSCompose
   }.
 
@@ -69,7 +69,7 @@ Section Phase_Spaces.
 
   Infix "⊸" := (Magicwand_l PSCompose) (at level 51, right associativity).
   Infix "⟜" := (Magicwand_r PSCompose) (at level 52, left associativity).
-  Infix "⊛" := (tensor PSCompose) (at level 59).
+  Infix "⊛" := (tensor (Composes PSCompose)) (at level 59).
   Notation "x ⊓ y" := (glb x y) (at level 50, no associativity).
   Notation "x ⊔ y" := (lub x y) (at level 50, no associativity).
   Notation "❗ A" := (bang PSExp A) (at level 40, no associativity).
@@ -121,6 +121,12 @@ Section Phase_Spaces.
                (@PScl_neutral_1 (ipperm P) PS) (@PScl_neutral_2 (ipperm P) PS)
                (@PScl_neutral_3 (ipperm P) PS) (@PScl_neutral_4 (ipperm P) PS)
                (@PSsub_monoid_1 (ipperm P) PS) (@PSsub_monoid_2 (ipperm P) PS) (@PSsub_J (ipperm P) PS).
+  Hint Resolve (@composes_monotone _ PSCompose)
+               composes_associative_1 composes_associative_2 composes_commute_1
+               composes_neutral_l_1 composes_neutral_l_2 composes_neutral_r_1 composes_neutral_r_2.
+
+
+  Infix "∘" := (Composes PSCompose) (at level 50, no associativity).
 
   Notation closed := (fun x => cl x ⊆ x).
   Notation v := PMval.
@@ -214,7 +220,7 @@ Section Phase_Spaces.
     { induction ll as [ | y ll IHll ].
       + constructor.
       + constructor; auto. }
-    eapply eqset_trans with (2 := ltimes_store _ _ _ _ _ _ _ _).
+    eapply eqset_trans with (2 := ltimes_store _ _ _ _ _ _ _ _ _).
     rewrite map_map.
     apply eq_eqset; clear Hll.
     induction ll as [ | a ll IHll ]; simpl; auto.
@@ -276,7 +282,7 @@ Section Phase_Spaces.
       repeat rewrite list_Form_sem_cons.
       repeat rewrite list_Form_sem_nil.
       eapply eqset_trans.
-      apply times_commute ; apply PScl_commute; auto.
+      apply times_commute; apply composes_commute_1 ; apply PScl_commute; auto.
       apply times_congruence; auto.
       + apply unit_neutral_r; auto.
       + apply eqset_sym, unit_neutral_r; auto.
@@ -421,7 +427,7 @@ Section Phase_Spaces.
       apply subset_trans with (2 := H), list_Form_sem_mono_l.
       apply subset_trans with (unit PSunit ⊛ ⟬߭Δ⟭).
       * apply times_monotone; simpl; auto; try reflexivity.
-        apply (@store_inc_unit _ _ PSCompose); auto.
+        apply (@store_inc_unit _ _ (Composes PSCompose)); auto.
       * apply unit_neutral_l; auto.
     Qed.
 

@@ -194,20 +194,10 @@ Section Subset.
 
     Context { CL : ClosureOp }.
 
-    (* this is a relational/non-deterministic monoid *)
-    Variable Compose : M -> M -> M -> Type.
-
-    (* Composition lifted to predicates *)
-    Inductive Composes (A B : M -> Type) : M -> Type :=
-      In_composes : forall a b c, A a -> B b -> Compose a b c -> Composes A B c.
-
+    Variable Composes : (M -> Type) -> (M -> Type) -> M -> Type.
     Infix "∘" := Composes (at level 50, no associativity).
 
-    Global Instance composes_monotone : Proper (subset ==> subset ==> subset) Composes.
-    Proof.
-      intros X1 Y1 H1 X2 Y2 H2 x [a b c Ha Hb Hc].
-      apply (In_composes _ _ (H1 _ Ha) (H2 _ Hb) Hc).
-    Qed.
+    Hypothesis composes_monotone : Proper (subset ==> subset ==> subset) Composes.
 
     Hint Resolve composes_monotone.
 
@@ -318,6 +308,414 @@ Section Subset.
     Proof. intros; apply eqset_trans with (cl (B ∘ C)); auto. Qed.
 
 
+
+    (* Associativity *)
+
+    Hypothesis composes_associative_1 : forall A B C, A ∘ (B ∘ C) ⊆ cl ((A ∘ B) ∘ C).
+
+    Hint Immediate composes_associative_1.
+
+    Hypothesis composes_associative_2 : forall A B C, (A ∘ B) ∘ C ⊆ cl (A ∘ (B ∘ C)).
+
+    Hint Immediate composes_associative_2.
+
+    Proposition composes_associative A B C : cl (A ∘ (B ∘ C)) ≃ cl ((A ∘ B) ∘ C).
+    Proof. split; auto; apply cl_inc; auto. Qed.
+
+    Hint Immediate composes_associative.
+
+
+    (* Unit *)
+
+    Variable e : M.
+
+    Hypothesis composes_neutral_l_1 : forall A, A ⊆ cl (sg e ∘ A).
+    Hypothesis composes_neutral_l_2 : forall A, sg e ∘ A ⊆ cl A.
+
+    Hint Resolve composes_neutral_l_1 composes_neutral_l_2.
+
+    Proposition composes_neutral_l A : cl (sg e ∘ A) ≃ cl A.
+    Proof. split; apply cl_subset; auto. Qed.
+
+    Hypothesis composes_neutral_r_1 : forall A, A ⊆ cl (A ∘ sg e).
+    Hypothesis composes_neutral_r_2 : forall A, A ∘ sg e ⊆ cl A.
+
+    Hint Resolve composes_neutral_r_1 composes_neutral_r_2.
+
+    Proposition composes_neutral_r A : cl (A ∘ sg e) ≃ cl A.
+    Proof. split; apply cl_subset; auto. Qed.
+
+    Definition unit := (cl (sg e)).
+
+    Proposition closed_unit : closed unit.
+    Proof. simpl; apply cl_idempotent. Qed.
+
+
+    (* Tensor *)
+    Definition tensor x y := (cl (x ∘ y)).
+    Infix "⊛" := tensor (at level 59).
+
+    Proposition closed_times A B : closed (A⊛B).
+    Proof. simpl; apply cl_idempotent. Qed.
+
+    Global Instance times_monotone : Proper (subset ==> subset ==> subset) tensor.
+    Proof. simpl; intros ? ? ? ? ? ?; apply cl_monotone, composes_monotone; auto. Qed.
+
+    Proposition unit_neutral_l_1 A : closed A -> unit ⊛ A ⊆ A.
+    Proof.
+      intros H; apply subset_trans with (2 := H).
+      apply cl_subset.
+      apply subset_trans with (1 := @cl_stable_l _ _).
+      apply cl_subset; auto.
+    Qed.
+
+    Proposition unit_neutral_l_2 A : A ⊆ unit ⊛ A.
+    Proof.
+      unfold unit; intros a Ha; simpl.
+      generalize (composes_neutral_l_1 _ _ Ha).
+      apply cl_monotone, composes_monotone; auto.
+    Qed.
+
+    Proposition unit_neutral_l A : closed A -> unit ⊛ A ≃ A.
+    Proof.
+      intros H; split. 
+      revert H; apply unit_neutral_l_1.
+      apply unit_neutral_l_2.
+    Qed.
+
+    Proposition unit_neutral_r_1 A : closed A -> A ⊛ unit ⊆ A.
+    Proof.
+      intros H; apply subset_trans with (2 := H).
+      apply cl_subset.
+      apply subset_trans with (1 := @cl_stable_r _ _).
+      apply cl_subset; auto.
+    Qed.
+
+    Proposition unit_neutral_r_2 A : A ⊆ A ⊛ unit.
+    Proof.
+      unfold unit; intros a Ha; simpl.
+      generalize (composes_neutral_r_1 _ _ Ha).
+      apply cl_monotone, composes_monotone; auto.
+    Qed.
+
+    Proposition unit_neutral_r A : closed A -> A ⊛ unit ≃ A.
+    Proof.
+      intros H; split. 
+      revert H; apply unit_neutral_r_1.
+      apply unit_neutral_r_2.
+    Qed.
+
+    Hint Resolve unit_neutral_l unit_neutral_r. 
+
+    Proposition times_associative A B C : (A⊛B)⊛C ≃ A⊛(B⊛C).
+    Proof.
+      apply eqset_sym, eqset_trans with (1 := cl_equiv_3 _ _ ).
+      apply eqset_sym, eqset_trans with (1 := cl_equiv_2 _ _ ).
+      apply eqset_sym, composes_associative.
+    Qed.
+
+    Proposition times_associative_1 A B C : (A⊛B)⊛C ⊆ A⊛(B⊛C).     Proof. apply times_associative. Qed.
+    Proposition times_associative_2 A B C : A⊛(B⊛C) ⊆ (A⊛B)⊛C.     Proof. apply times_associative. Qed.
+
+    Hint Resolve times_associative_1 times_associative_2.
+
+    Global Instance times_congruence : Proper (eqset ==> eqset ==> eqset) tensor.
+    Proof. intros ? ? ? ? ? ?; apply composes_congruent; auto. Qed.
+
+
+
+    (* Exponentials *)
+    (* J := { x | x ∈ unit /\ x ∈ x ⊛ x } with unit = cl e and x ⊛ x = cl (x∘x) *)
+
+    Let J x := (cl (sg e) x * (cl (sg x ∘ sg x)) x)%type.
+
+    Let In_J : forall x, cl (sg e) x -> (cl (sg x ∘ sg x)) x -> J x.
+    Proof. split; auto. Qed.
+
+    Let J_inv x : J x -> unit x * cl (sg x ∘ sg x) x.
+    Proof. auto. Qed.
+
+    Proposition J_inc_unit : J ⊆ unit.
+    Proof. induction 1; trivial. Qed.
+
+    Variable K : M -> Type.
+
+    Definition sub_monoid_hyp_1 := ((cl K) e).
+    Definition sub_monoid_hyp_2 := (K ∘ K ⊆ K).
+    Definition sub_J_hyp := (K ⊆ J).
+
+    Hypothesis sub_monoid_1 : sub_monoid_hyp_1.
+    Hypothesis sub_monoid_2 : sub_monoid_hyp_2.
+    Hypothesis sub_J : sub_J_hyp.
+
+    Proposition K_inc_unit : K ⊆ unit.
+    Proof. apply subset_trans with J; trivial; apply J_inc_unit. Qed.
+
+    Proposition K_compose A B : (K ∩ A) ∘ (K ∩ B) ⊆ K ∩ (A ∘ B).
+    Proof.
+      intros x Hx.
+      split; [ apply sub_monoid_2 | ];
+        revert Hx; apply composes_monotone; intros z [Hz1 Hz2]; assumption.
+    Qed.
+
+    Definition bang A := cl (K∩A).
+
+    Notation "❗ A" := (bang A) (at level 40, no associativity).
+
+    Fact store_inc_unit A : ❗ A ⊆ unit.
+    Proof.
+      apply subset_trans with (cl K).
+      + apply cl_monotone; red; tauto.
+      + apply cl_subset, K_inc_unit.
+    Qed.
+
+    Hint Resolve store_inc_unit.
+
+    Proposition closed_store A : closed (❗A).
+    Proof. simpl; apply cl_idempotent. Qed.
+
+    Proposition store_dec A : closed A -> ❗A ⊆ A.
+    Proof.
+      intros HA; simpl.
+      apply subset_trans with (cl A); trivial.
+      apply cl_monotone.
+      apply glb_out_r.
+    Qed.
+
+    Global Instance store_monotone : Proper (subset ==> subset) bang.
+    Proof. intros ? ? ?; apply cl_monotone; intros ? []; split; auto. Qed.
+
+    Hint Resolve store_monotone.
+
+    Global Instance store_congruence : Proper (eqset ==> eqset) bang.
+    Proof. intros ? ? [? ?]; split; auto. Qed.
+
+    Proposition store_der A B : closed B -> ❗A ⊆ B -> ❗A ⊆ ❗B.
+    Proof.
+      unfold bang.
+      intros H1 H2; apply cl_monotone; intros x []; split; auto.
+      apply H2, cl_increase; auto.
+    Qed.
+
+    Proposition store_unit_1 : unit ⊆ ❗top.
+    Proof.
+      unfold top; apply cl_subset.
+      intros ? []; apply cl_monotone with K; auto; red; auto.
+    Qed.
+
+    Hint Resolve J_inc_unit.
+
+    Proposition store_unit_2 : ❗top ⊆ unit.
+    Proof.
+      apply cl_subset; trivial.
+      apply subset_trans with J; auto.
+      intros ? []; auto.
+    Qed.
+
+    Hint Resolve store_unit_1 store_unit_2.
+
+    Proposition store_unit : unit ≃ ❗top.
+    Proof. split; auto. Qed.
+
+    Hint Resolve store_unit.
+
+    Proposition store_comp A B : closed A -> closed B -> ❗A ⊛ ❗B ≃ ❗(A ⊓ B).
+    Proof.
+      intros HA HB; split.
+      + apply subset_trans with (cl ((K ⊓ A) ∘ (K ⊓ B))).
+        * apply cl_subset; trivial; apply cl_stable.
+        * apply cl_monotone.
+          intros x H.
+          split; [ | split ].
+          - apply sub_monoid_2; revert H; apply composes_monotone; intros z [Hz _]; assumption.
+          - apply unit_neutral_r_1; auto; apply cl_increase.
+            revert H; apply composes_monotone; intros z [Hz1 Hz2]; try assumption.
+            apply K_inc_unit; auto.
+          - apply unit_neutral_l_1; auto; apply cl_increase.
+            revert H; apply composes_monotone; intros z [Hz1 Hz2]; try assumption.
+            apply K_inc_unit; auto.
+      + apply cl_subset; trivial.
+        intros x (H1 & H2 & H3).
+        apply cl_monotone with (sg x ∘ sg x).
+        2: { apply sub_J in H1; destruct H1; trivial. }
+        apply composes_monotone; intros z Heq; subst; apply cl_increase; auto.
+    Qed.
+
+    Let ltimes := fold_right (fun x y => x ⊛ y) unit.
+    Definition lcap := fold_right (fun x y => x∩y) top.
+
+    Proposition ltimes_store ll : Forall_Type closed ll ->
+      ltimes (map bang ll) ≃ ❗(lcap ll).
+    Proof.
+      unfold ltimes, lcap.
+      induction 1; simpl; auto.
+      apply eqset_trans with (❗ x ⊛ ❗(fold_right (fun x y => x ∩ y) top l)).
+      * apply times_congruence; auto.
+      * apply store_comp; auto.
+    Qed.
+
+    Proposition store_compose_idem A : closed A -> ❗A ⊆ ❗A⊛❗A.
+    Proof.
+      intros HA.
+      apply subset_trans with (❗(A∩A)).
+      + apply store_der. 
+        * apply closed_glb; trivial.
+        * apply subset_trans with A.
+          - apply store_dec; trivial.
+          - red; tauto.
+     + apply (snd (store_comp HA HA)).
+    Qed.
+
+
+    (* Commutativity *)
+
+    Hypothesis composes_commute_1 : forall A B, A ∘ B ⊆ cl (B ∘ A).
+
+    Hint Resolve composes_commute_1.
+
+    Proposition composes_commute A B : cl (A∘B) ≃ cl (B∘A).
+    Proof. split; intros x Hx; apply cl_idempotent; revert Hx; apply cl_monotone; auto. Qed.
+
+    Hint Resolve composes_commute.
+
+    Proposition cl_stable_l_imp_stable_r : cl_stability_l -> cl_stability_r.
+    Proof.
+      intros Hl A B x Hx.
+      apply cl_idempotent.
+      apply cl_monotone with (cl B ∘ A).
+      apply subset_trans with (2 := fst (composes_commute _ _)); auto.
+      apply composes_commute_1; auto.
+    Qed.
+
+    Proposition cl_stable_r_imp_stable_l : cl_stability_r -> cl_stability_l.
+    Proof.
+      intros Hl A B.
+      apply subset_trans with (2 := fst (composes_commute _ _)); auto.
+      apply subset_trans with (1 := @composes_commute_1 _ _); auto.
+    Qed.
+
+    Proposition cl_stable_l_imp_stable : cl_stability_l -> cl_stability.
+    Proof. auto. Qed.
+
+    Proposition times_commute_1 A B : A⊛B ⊆ B⊛A.
+    Proof. simpl; apply cl_subset; auto. Qed.
+
+    Hint Resolve times_commute_1.
+
+    Proposition times_commute A B : A⊛B ≃ B⊛A.
+    Proof. split; auto. Qed.
+
+  End Relational_Phase.
+
+
+
+  Section Relational_Phase_Pointwise.
+
+    Context { CL : ClosureOp }.
+
+    (* this is a relational/non-deterministic monoid *)
+    Variable Compose : M -> M -> M -> Type.
+
+    (* Composition lifted to predicates *)
+    Inductive Composes (A B : M -> Type) : M -> Type :=
+      In_composes : forall a b c, A a -> B b -> Compose a b c -> Composes A B c.
+
+    Infix "∘" := Composes (at level 50, no associativity).
+
+    Global Instance composes_monotone : Proper (subset ==> subset ==> subset) Composes.
+    Proof.
+      intros X1 Y1 H1 X2 Y2 H2 x [a b c Ha Hb Hc].
+      apply (In_composes _ _ (H1 _ Ha) (H2 _ Hb) Hc).
+    Qed.
+
+
+    (* Associativity *)
+
+    Definition cl_associativity_1 := (forall a b c, sg a ∘ (sg b ∘ sg c) ⊆ cl ((sg a ∘ sg b) ∘ sg c)).
+    Definition cl_associativity_2 := (forall a b c, (sg a ∘ sg b) ∘ sg c ⊆ cl (sg a ∘ (sg b ∘ sg c))).
+
+    Hypothesis cl_associative_1 : cl_associativity_1.
+    Hypothesis cl_associative_2 : cl_associativity_2.
+
+    Proposition composes_associative_1 A B C : A ∘ (B ∘ C) ⊆ cl ((A ∘ B) ∘ C).
+    Proof.
+      intros _ [a _ k Ha [b c y Hb Hc Hy] Hk].
+      generalize (@cl_associative_1 a b c k); intros H.
+      spec all in H.
+      apply In_composes with (3 := Hk); auto.
+      apply In_composes with (3 := Hy); auto.
+      revert H.
+      apply cl_monotone.
+      repeat apply composes_monotone; apply sg_subset; auto.
+    Qed.
+
+    Hint Immediate composes_associative_1.
+
+    Proposition composes_associative_2 A B C : (A ∘ B) ∘ C ⊆ cl (A ∘ (B ∘ C)).
+    Proof.
+      intros _ [_ c k [a b y Ha Hb Hy] Hc Hk].
+      generalize (@cl_associative_2 a b c k); intros H.
+      spec all in H.
+      apply In_composes with (3 := Hk); auto.
+      apply In_composes with (3 := Hy); auto.
+      revert H.
+      apply cl_monotone.
+      repeat apply composes_monotone; apply sg_subset; auto.
+    Qed.
+
+    (* Unit *)
+
+    Variable e : M.
+
+    Definition cl_neutrality_1  := (forall a, cl (sg e ∘ sg a) a).
+    Definition cl_neutrality_2  := (forall a, sg e ∘ sg a ⊆ cl (sg a)).
+    Definition cl_neutrality_3  := (forall a, cl (sg a ∘ sg e) a).
+    Definition cl_neutrality_4  := (forall a, sg a ∘ sg e ⊆ cl (sg a)).
+
+    Hypothesis cl_neutral_1 : cl_neutrality_1.
+    Hypothesis cl_neutral_2 : cl_neutrality_2.
+    Hypothesis cl_neutral_3 : cl_neutrality_3.
+    Hypothesis cl_neutral_4 : cl_neutrality_4.
+
+    Proposition composes_neutral_l_1 A : A ⊆ cl (sg e ∘ A).
+    Proof.
+      intros a Ha.
+      generalize (cl_neutral_1 a).
+      apply cl_monotone, composes_monotone; auto.
+      apply sg_subset; auto.
+    Qed.
+
+    Proposition composes_neutral_l_2 A : sg e ∘ A ⊆ cl A.
+    Proof.
+      intros _ [y a x [] Ha Hx].
+      generalize (@cl_neutral_2 a x); intros H.
+      spec all in H.
+      constructor 1 with e a; auto.
+      revert H; apply cl_monotone, sg_subset; auto.
+    Qed.
+
+    Proposition composes_neutral_r_1 A : A ⊆ cl (A ∘ sg e).
+    Proof.
+      intros a Ha.
+      generalize (cl_neutral_3 a).
+      apply cl_monotone, composes_monotone; auto.
+      apply sg_subset; auto.
+    Qed.
+
+    Proposition composes_neutral_r_2 A : A ∘ sg e ⊆ cl A.
+    Proof.
+      intros _ [a y x Ha [] Hx].
+      generalize (@cl_neutral_4 a x); intros H.
+      spec all in H.
+      constructor 1 with a e; auto.
+      revert H; apply cl_monotone, sg_subset; auto.
+    Qed.
+
+
+    Hypothesis cl_stable_l : cl_stability_l Composes.
+    Hypothesis cl_stable_r : cl_stability_r Composes.
+
+
     (* Adjunct *)
 
     Definition Magicwand_l A B k := A ∘ sg k ⊆ B.
@@ -418,6 +816,7 @@ Section Subset.
     Proof. 
       apply magicwand_r_adj_1.
       apply (@subset_trans _ (cl ((cl Y ⟜ X) ∘ X))); auto.
+      apply cl_stable; auto.
       apply cl_subset; apply magicwand_r_spec; auto.
     Qed.
 
@@ -456,185 +855,10 @@ Section Subset.
 
     Hint Resolve magicwand_r_eq_3.
 
-
-    (* Associativity *)
-
-    Definition cl_associativity_1 := (forall a b c, sg a ∘ (sg b ∘ sg c) ⊆ cl ((sg a ∘ sg b) ∘ sg c)).
-    Definition cl_associativity_2 := (forall a b c, (sg a ∘ sg b) ∘ sg c ⊆ cl (sg a ∘ (sg b ∘ sg c))).
-
-    Hypothesis cl_associative_1 : cl_associativity_1.
-    Hypothesis cl_associative_2 : cl_associativity_2.
-
-    Proposition composes_associative_1 A B C : A ∘ (B ∘ C) ⊆ cl ((A ∘ B) ∘ C).
-    Proof.
-      intros _ [a _ k Ha [b c y Hb Hc Hy] Hk].
-      generalize (@cl_associative_1 a b c k); intros H.
-      spec all in H.
-      apply In_composes with (3 := Hk); auto.
-      apply In_composes with (3 := Hy); auto.
-      revert H.
-      apply cl_monotone.
-      repeat apply composes_monotone; apply sg_subset; auto.
-    Qed.
-
-    Hint Immediate composes_associative_1.
-
-    Proposition composes_associative_2 A B C : (A ∘ B) ∘ C ⊆ cl (A ∘ (B ∘ C)).
-    Proof.
-      intros _ [_ c k [a b y Ha Hb Hy] Hc Hk].
-      generalize (@cl_associative_2 a b c k); intros H.
-      spec all in H.
-      apply In_composes with (3 := Hk); auto.
-      apply In_composes with (3 := Hy); auto.
-      revert H.
-      apply cl_monotone.
-      repeat apply composes_monotone; apply sg_subset; auto.
-    Qed.
-
-    Hint Immediate composes_associative_2.
-
-    Proposition composes_associative A B C : cl (A ∘ (B ∘ C)) ≃ cl ((A ∘ B) ∘ C).
-    Proof. split; auto; apply cl_inc; auto. Qed.
-
-    Hint Immediate composes_associative.
-
-
-    (* Unit *)
-
-    Variable e : M.
-
-    Definition cl_neutrality_1  := (forall a, cl (sg e ∘ sg a) a).
-    Definition cl_neutrality_2  := (forall a, sg e ∘ sg a ⊆ cl (sg a)).
-    Definition cl_neutrality_3  := (forall a, cl (sg a ∘ sg e) a).
-    Definition cl_neutrality_4  := (forall a, sg a ∘ sg e ⊆ cl (sg a)).
-
-    Hypothesis cl_neutral_1 : cl_neutrality_1.
-    Hypothesis cl_neutral_2 : cl_neutrality_2.
-    Hypothesis cl_neutral_3 : cl_neutrality_3.
-    Hypothesis cl_neutral_4 : cl_neutrality_4.
-
-    Proposition composes_neutral_l_1 A : A ⊆ cl (sg e ∘ A).
-    Proof.
-      intros a Ha.
-      generalize (cl_neutral_1 a).
-      apply cl_monotone, composes_monotone; auto.
-      apply sg_subset; auto.
-    Qed.
-
-    Proposition composes_neutral_l_2 A : sg e ∘ A ⊆ cl A.
-    Proof.
-      intros _ [y a x [] Ha Hx].
-      generalize (@cl_neutral_2 a x); intros H.
-      spec all in H.
-      constructor 1 with e a; auto.
-      revert H; apply cl_monotone, sg_subset; auto.
-    Qed.
-
-    Hint Resolve composes_neutral_l_1 composes_neutral_l_2.
-
-    Proposition composes_neutral_l A : cl (sg e ∘ A) ≃ cl A.
-    Proof. split; apply cl_subset; auto. Qed.
-
-    Proposition composes_neutral_r_1 A : A ⊆ cl (A ∘ sg e).
-    Proof.
-      intros a Ha.
-      generalize (cl_neutral_3 a).
-      apply cl_monotone, composes_monotone; auto.
-      apply sg_subset; auto.
-    Qed.
-
-    Proposition composes_neutral_r_2 A : A ∘ sg e ⊆ cl A.
-    Proof.
-      intros _ [a y x Ha [] Hx].
-      generalize (@cl_neutral_4 a x); intros H.
-      spec all in H.
-      constructor 1 with a e; auto.
-      revert H; apply cl_monotone, sg_subset; auto.
-    Qed.
-
-    Hint Resolve composes_neutral_r_1 composes_neutral_r_2.
-
-    Proposition composes_neutral_r A : cl (A ∘ sg e) ≃ cl A.
-    Proof. split; apply cl_subset; auto. Qed.
-
-    Definition unit := (cl (sg e)).
-
-    Proposition closed_unit : closed unit.
-    Proof. simpl; apply cl_idempotent. Qed.
-
-
-    (* Tensor *)
-    Definition tensor x y := (cl (x ∘ y)).
-    Infix "⊛" := tensor (at level 59).
-
-    Proposition closed_times A B : closed (A⊛B).
-    Proof. simpl; apply cl_idempotent. Qed.
-
-    Global Instance times_monotone : Proper (subset ==> subset ==> subset) tensor.
-    Proof. simpl; intros ? ? ? ? ? ?; apply cl_monotone, composes_monotone; auto. Qed.
-
-    Proposition unit_neutral_l_1 A : closed A -> unit ⊛ A ⊆ A.
-    Proof.
-      intros H; apply subset_trans with (2 := H).
-      apply cl_subset.
-      apply subset_trans with (1 := @cl_stable_l _ _).
-      apply cl_subset; auto.
-    Qed.
-
-    Proposition unit_neutral_l_2 A : A ⊆ unit ⊛ A.
-    Proof.
-      unfold unit; intros a Ha; simpl.
-      generalize (composes_neutral_l_1 _ _ Ha).
-      apply cl_monotone, composes_monotone; auto.
-    Qed.
-
-    Proposition unit_neutral_l A : closed A -> unit ⊛ A ≃ A.
-    Proof.
-      intros H; split. 
-      revert H; apply unit_neutral_l_1.
-      apply unit_neutral_l_2.
-    Qed.
-
-    Proposition unit_neutral_r_1 A : closed A -> A ⊛ unit ⊆ A.
-    Proof.
-      intros H; apply subset_trans with (2 := H).
-      apply cl_subset.
-      apply subset_trans with (1 := @cl_stable_r _ _).
-      apply cl_subset; auto.
-    Qed.
-
-    Proposition unit_neutral_r_2 A : A ⊆ A ⊛ unit.
-    Proof.
-      unfold unit; intros a Ha; simpl.
-      generalize (composes_neutral_r_1 _ _ Ha).
-      apply cl_monotone, composes_monotone; auto.
-    Qed.
-
-    Proposition unit_neutral_r A : closed A -> A ⊛ unit ≃ A.
-    Proof.
-      intros H; split. 
-      revert H; apply unit_neutral_r_1.
-      apply unit_neutral_r_2.
-    Qed.
-
-    Hint Resolve unit_neutral_l unit_neutral_r. 
-
-    Proposition times_associative A B C : (A⊛B)⊛C ≃ A⊛(B⊛C).
-    Proof.
-      apply eqset_sym, eqset_trans with (1 := cl_equiv_3 _ _ ).
-      apply eqset_sym, eqset_trans with (1 := cl_equiv_2 _ _ ).
-      apply eqset_sym, composes_associative.
-    Qed.
-
-    Proposition times_associative_1 A B C : (A⊛B)⊛C ⊆ A⊛(B⊛C).     Proof. apply times_associative. Qed.
-    Proposition times_associative_2 A B C : A⊛(B⊛C) ⊆ (A⊛B)⊛C.     Proof. apply times_associative. Qed.
-
-    Hint Resolve times_associative_1 times_associative_2.
-
-    Global Instance times_congruence : Proper (eqset ==> eqset ==> eqset) tensor.
-    Proof. intros ? ? ? ? ? ?; apply composes_congruent; auto. Qed.
-
     (* Adjunction properties *)
+
+    Infix "⊛" := (tensor Composes) (at level 59).
+
     Proposition adjunction_l_1 A B C : closed C -> B ⊛ A ⊆ C -> A ⊆ B ⊸ C.
     Proof. unfold tensor; intros ? H; apply magicwand_l_adj_1, subset_trans with (2 := H); auto. Qed.
 
@@ -656,7 +880,6 @@ Section Subset.
 
     Proposition adjunction_r A B C : closed C -> (A ⊛ B ⊆ C ≡ A ⊆ C ⟜ B).
     Proof. split; [ apply adjunction_r_1 | apply adjunction_r_2 ]; auto. Qed.
-
 
   (* ⊆ ≃ ∩ ∪ ∘ ⊓ ⊔ *)
 
@@ -687,152 +910,6 @@ Section Subset.
       apply adjunction_l; auto; intros ? ?; apply cl_increase; auto. 
     Qed.
 
-
-    (* Exponentials *)
-    (* J := { x | x ∈ unit /\ x ∈ x ⊛ x } with unit = cl e and x ⊛ x = cl (x∘x) *)
-
-    Let J x := (cl (sg e) x * (cl (sg x ∘ sg x)) x)%type.
-
-    Let In_J : forall x, cl (sg e) x -> (cl (sg x ∘ sg x)) x -> J x.
-    Proof. split; auto. Qed.
-
-    Let J_inv x : J x -> unit x * cl (sg x ∘ sg x) x.
-    Proof. auto. Qed.
-
-    Proposition J_inc_unit : J ⊆ unit.
-    Proof. induction 1; trivial. Qed.
-
-    Variable K : M -> Type.
-
-    Definition sub_monoid_hyp_1 := ((cl K) e).
-    Definition sub_monoid_hyp_2 := (K ∘ K ⊆ K).
-    Definition sub_J_hyp := (K ⊆ J).
-
-    Hypothesis sub_monoid_1 : sub_monoid_hyp_1.
-    Hypothesis sub_monoid_2 : sub_monoid_hyp_2.
-    Hypothesis sub_J : sub_J_hyp.
-
-    Proposition K_inc_unit : K ⊆ unit.
-    Proof. apply subset_trans with J; trivial; apply J_inc_unit. Qed.
-
-    Proposition K_compose A B : (K ∩ A) ∘ (K ∩ B) ⊆ K ∩ (A ∘ B).
-    Proof.
-      intros x Hx.
-      induction Hx as [ a b c [ ] [ ] Hc ]; split.
-      + apply sub_monoid_2; constructor 1 with a b; auto.
-      + constructor 1 with a b; auto.
-    Qed.
-
-    Definition bang A := cl (K∩A).
-
-    Notation "❗ A" := (bang A) (at level 40, no associativity).
-
-    Fact store_inc_unit A : ❗ A ⊆ unit.
-    Proof.
-      apply subset_trans with (cl K).
-      + apply cl_monotone; red; tauto.
-      + apply cl_subset, K_inc_unit.
-    Qed.
-
-    Hint Resolve store_inc_unit.
-
-    Proposition closed_store A : closed (❗A).
-    Proof. simpl; apply cl_idempotent. Qed.
-
-    Proposition store_dec A : closed A -> ❗A ⊆ A.
-    Proof.
-      intros HA; simpl.
-      apply subset_trans with (cl A); trivial.
-      apply cl_monotone.
-      apply glb_out_r.
-    Qed.
-
-    Global Instance store_monotone : Proper (subset ==> subset) bang.
-    Proof. intros ? ? ?; apply cl_monotone; intros ? []; split; auto. Qed.
-
-    Hint Resolve store_monotone.
-
-    Global Instance store_congruence : Proper (eqset ==> eqset) bang.
-    Proof. intros ? ? [? ?]; split; auto. Qed.
-
-    Proposition store_der A B : closed B -> ❗A ⊆ B -> ❗A ⊆ ❗B.
-    Proof.
-      unfold bang.
-      intros H1 H2; apply cl_monotone; intros x []; split; auto.
-      apply H2, cl_increase; auto.
-    Qed.
-
-    Proposition store_unit_1 : unit ⊆ ❗top.
-    Proof.
-      unfold top; apply cl_subset.
-      intros ? []; apply cl_monotone with K; auto; red; auto.
-    Qed.
-
-    Hint Resolve J_inc_unit.
-
-    Proposition store_unit_2 : ❗top ⊆ unit.
-    Proof.
-      apply cl_subset; trivial.
-      apply subset_trans with J; auto.
-      intros ? []; auto.
-    Qed.
-
-    Hint Resolve store_unit_1 store_unit_2.
-
-    Proposition store_unit : unit ≃ ❗top.
-    Proof. split; auto. Qed.
-
-    Hint Resolve store_unit.
-
-    Proposition store_comp A B : closed A -> closed B -> ❗A ⊛ ❗B ≃ ❗(A ⊓ B).
-    Proof.
-      intros HA HB; split.
-      + apply subset_trans with (cl ((K ⊓ A) ∘ (K ⊓ B))).
-        * apply cl_subset; trivial; apply cl_stable.
-        * apply cl_monotone.
-          intros x [ a b c [ H1 H2 ] [ H3 H4 ] Hc ].
-          assert (H5 : unit a). { apply K_inc_unit; auto. }
-          assert (H6 : unit b). { apply K_inc_unit; auto. }
-          split; [ | split ].
-          - apply sub_monoid_2; constructor 1 with a b; auto.
-          - apply unit_neutral_r_1; auto; apply cl_increase.
-            constructor 1 with a b; auto.
-          - apply unit_neutral_l_1; auto; apply cl_increase.
-            constructor 1 with a b; auto.
-      + apply cl_subset; trivial.
-        intros x (H1 & H2 & H3).
-        apply cl_monotone with (sg x ∘ sg x).
-        2: { apply sub_J in H1; destruct H1; trivial. }
-        intros d [ a b ? ? Hab ]; subst a b; constructor 1 with x x; auto;
-          apply cl_increase; auto.
-    Qed.
-
-    Let ltimes := fold_right (fun x y => x ⊛ y) unit.
-    Definition lcap := fold_right (fun x y => x∩y) top.
-
-    Proposition ltimes_store ll : Forall_Type closed ll ->
-      ltimes (map bang ll) ≃ ❗(lcap ll).
-    Proof.
-      unfold ltimes, lcap.
-      induction 1; simpl; auto.
-      apply eqset_trans with (❗ x ⊛ ❗(fold_right (fun x y => x ∩ y) top l)).
-      * apply times_congruence; auto.
-      * apply store_comp; auto.
-    Qed.
-
-    Proposition store_compose_idem A : closed A -> ❗A ⊆ ❗A⊛❗A.
-    Proof.
-      intros HA.
-      apply subset_trans with (❗(A∩A)).
-      + apply store_der. 
-        * apply closed_glb; trivial.
-        * apply subset_trans with A.
-          - apply store_dec; trivial.
-          - red; tauto.
-     + apply (snd (store_comp HA HA)).
-    Qed.
-
-
     (* Commutativity *)
 
     Definition cl_commutativity := (forall a b, sg a ∘ sg b ⊆ cl (sg b ∘ sg a)).
@@ -848,45 +925,23 @@ Section Subset.
       constructor 1 with (3 := Hc); auto.
     Qed.
 
-    Hint Resolve composes_commute_1.
-
-    Proposition composes_commute A B : cl (A∘B) ≃ cl (B∘A).
-    Proof. split; intros x Hx; apply cl_idempotent; revert Hx; apply cl_monotone; auto. Qed.
-
-    Hint Resolve composes_commute.
-
-    Proposition cl_stable_l_imp_stable_r : cl_stability_l -> cl_stability_r.
-    Proof.
-      intros Hl A B x Hx.
-      apply cl_idempotent.
-      apply cl_monotone with (cl B ∘ A).
-      apply subset_trans with (2 := fst (composes_commute _ _)); auto.
-      apply composes_commute_1; auto.
-    Qed.
-
-    Proposition cl_stable_r_imp_stable_l : cl_stability_r -> cl_stability_l.
-    Proof.
-      intros Hl A B.
-      apply subset_trans with (2 := fst (composes_commute _ _)); auto.
-      apply subset_trans with (1 := @composes_commute_1 _ _); auto.
-    Qed.
-
-    Proposition cl_stable_l_imp_stable : cl_stability_l -> cl_stability.
-    Proof. auto. Qed.
-
     Proposition cl_associative_1_imp_2 : cl_associativity_1 -> cl_associativity_2.
     Proof.
       intros H1 a b c.
-      apply subset_trans with (2 := fst (composes_commute _ _)).
+      apply subset_trans with (2 := fst (composes_commute _ composes_commute_1 _ _)).
       apply subset_trans with (cl ((sg c ∘ sg b) ∘ sg a)).
       + apply subset_trans with (2 := cl_subset (H1 _ _ _)).
-        apply subset_trans with (2 := fst (composes_commute _ _)).
+        apply subset_trans with (2 := fst (composes_commute _ composes_commute_1 _ _)).
         apply subset_cl, composes_congruent; auto.
+        apply composes_monotone.
+        split; auto.
       + apply composes_congruent; auto.
+        apply composes_monotone.
+        split; auto.
     Qed.
 
     Proposition cl_neutrality_1_imp_3 : cl_neutrality_1 -> cl_neutrality_3.
-    Proof. intros H x; generalize (H x); apply composes_commute. Qed.
+    Proof. intros H x; generalize (H x) ; apply composes_commute, composes_commute_1. Qed.
 
     Proposition cl_neutrality_2_imp_4 : cl_neutrality_2 -> cl_neutrality_4.
     Proof.
@@ -898,15 +953,8 @@ Section Subset.
       revert Hxy; apply cl_commute.
     Qed.
 
-    Proposition times_commute_1 A B : A⊛B ⊆ B⊛A.
-    Proof. simpl; apply cl_subset; auto. Qed.
-
-    Hint Resolve times_commute_1.
-
-    Proposition times_commute A B : A⊛B ≃ B⊛A.
-    Proof. split; auto. Qed.
-
-  End Relational_Phase.
+  End Relational_Phase_Pointwise.
 
 End Subset.
+
 
