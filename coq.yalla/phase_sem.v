@@ -173,13 +173,13 @@ Section Phase_Spaces.
   Fact list_Form_sem_app ll mm : ⟬߭ll++mm⟭ ≃ ⟬߭ll⟭ ⊛⟬߭mm⟭.
   Proof.
     induction ll as [ | f ll IHll ]; simpl app; auto.
-    + apply eqset_sym, unit_neutral_l; auto.
+    + apply eqset_sym, unit_neutral_l; auto; red; auto.
     + apply (@eqset_trans _ _ (⟦f⟧ ⊛ ⟬߭ ll ++ mm ⟭)); try reflexivity.
       apply (@eqset_trans _ _ (⟦ f ⟧ ⊛ (⟬߭ ll ⟭ ⊛ ⟬߭ mm ⟭))).
       * apply times_congruence; auto.
         apply eqset_refl.
       * apply (@eqset_trans _ _ (⟦ f ⟧ ⊛ ⟬߭ ll ⟭ ⊛ ⟬߭ mm ⟭)).
-        apply eqset_sym; apply times_associative; auto.
+        apply eqset_sym; apply times_associative; auto; red; auto.
         apply times_congruence; auto; reflexivity.
   Qed.
 
@@ -225,7 +225,7 @@ Section Phase_Spaces.
     apply eq_eqset; clear Hll.
     induction ll as [ | a ll IHll ]; simpl; auto.
     rewrite IHll; auto.
-    Unshelve. all: auto.
+    Unshelve. all: auto; red; auto.
   Qed.
 
   (* All the rules of the ILL sequent calculus (including cut) are closed
@@ -237,7 +237,7 @@ Section Phase_Spaces.
     Notation "l '⊢' x" := (ill P l x) (at level 70, no associativity).
 
     Fact ill_ax_sound a : ⟬߭a::nil⟭  ⊆ ⟦a⟧.
-    Proof. intro; apply unit_neutral_r; auto. Qed.
+    Proof. intro; apply unit_neutral_r; auto; red; auto. Qed.
 
     Fact ill_cut_sound Γ ϴ Δ a b : ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭Δ++a::ϴ⟭ ⊆ ⟦b⟧ -> ⟬߭Δ++Γ++ϴ⟭ ⊆ ⟦b⟧.
     Proof.
@@ -284,8 +284,8 @@ Section Phase_Spaces.
       eapply eqset_trans.
       apply times_commute; apply composes_commute_1 ; apply PScl_commute; auto.
       apply times_congruence; auto.
-      + apply unit_neutral_r; auto.
-      + apply eqset_sym, unit_neutral_r; auto.
+      + apply unit_neutral_r; auto; red; auto.
+      + apply eqset_sym, unit_neutral_r; auto; red; auto.
     Qed.
 
     Fact ill_perm_sound Γ Δ a : Γ ~[ipperm P] Δ -> ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭Δ⟭ ⊆ ⟦a⟧.
@@ -316,13 +316,13 @@ Section Phase_Spaces.
       apply subset_trans with (⟬߭Γ⟭ ⊛ (⟦ a ⟧ ⊸ ⟦ b ⟧)).
       * apply times_congruence; auto; try reflexivity.
         rewrite list_Form_sem_cons, list_Form_sem_nil. 
-        apply eqset_sym, unit_neutral_r; auto.
+        apply eqset_sym, unit_neutral_r; auto; red; auto.
         apply closed_magicwand_l; auto.
       * apply subset_trans with (⟦b⟧).
         apply adjunction_l; auto; try reflexivity.
         apply magicwand_l_monotone; auto; reflexivity.
         rewrite list_Form_sem_cons, list_Form_sem_nil.
-        apply unit_neutral_r; auto.
+        apply unit_neutral_r; auto; red; auto.
     Qed.
 
     Fact ill_neg_l_sound Γ a :  ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭Γ++ineg a::nil⟭ ⊆ ⟦N⟧.
@@ -331,7 +331,7 @@ Section Phase_Spaces.
       replace (⟬߭ Γ ++ ineg a :: nil ⟭) with (⟬߭ nil ++ Γ ++ a -o N :: nil⟭)
         by (unfold list_Form_sem; rewrite ? map_app; simpl; reflexivity).
       apply ill_limp_l_sound; auto.
-      unfold list_Form_sem; simpl; apply unit_neutral_r_1; auto.
+      unfold list_Form_sem; simpl; apply unit_neutral_r_1; auto; red; auto.
       apply Hv.
     Qed.
 
@@ -345,7 +345,7 @@ Section Phase_Spaces.
       do 2 rewrite list_Form_sem_cons.
       rewrite list_Form_sem_nil.
       apply subset_trans with (⟦ b ⟧).
-      2: apply unit_neutral_r; auto.
+      2: apply unit_neutral_r; auto; red; auto.
       apply adjunction_r; auto.
       apply magicwand_r_monotone; auto; reflexivity.
     Qed.
@@ -356,7 +356,7 @@ Section Phase_Spaces.
       replace (⟬߭ igen a :: Γ ⟭) with (⟬߭ nil ++ N o- a :: Γ ++ nil⟭)
         by (unfold list_Form_sem; simpl; rewrite app_nil_r; reflexivity).
       apply ill_rimp_l_sound; auto.
-      unfold list_Form_sem; simpl; apply unit_neutral_r_1; auto.
+      unfold list_Form_sem; simpl; apply unit_neutral_r_1; auto; red; auto.
       apply Hv.
     Qed.
 
@@ -377,7 +377,7 @@ Section Phase_Spaces.
       apply subset_trans with (2 := snd (list_Form_sem_app _ _)).
       apply times_monotone; auto; try reflexivity.
       rewrite list_Form_sem_cons, list_Form_sem_nil.
-      apply unit_neutral_r; auto.
+      apply unit_neutral_r; auto; red; auto.
     Qed.
 
     Fact ill_gen_r_sound Γ a : ⟬߭Γ++a::nil⟭ ⊆ ⟦N⟧ -> ⟬߭Γ⟭ ⊆ ⟦igen a⟧.
@@ -428,7 +428,7 @@ Section Phase_Spaces.
       apply subset_trans with (unit PSunit ⊛ ⟬߭Δ⟭).
       * apply times_monotone; simpl; auto; try reflexivity.
         apply (@store_inc_unit _ _ (Composes PSCompose)); auto.
-      * apply unit_neutral_l; auto.
+      * apply unit_neutral_l; auto; red; auto.
     Qed.
 
     Fact ill_cntr_sound Γ Δ a b : ⟬߭Γ++!a::!a::Δ⟭ ⊆ ⟦b⟧ -> ⟬߭Γ++!a::Δ⟭ ⊆ ⟦b⟧.
@@ -448,7 +448,7 @@ Section Phase_Spaces.
       intros H.
       apply subset_trans with (2 := H), list_Form_sem_mono_l.
       do 3 rewrite list_Form_sem_cons.
-      apply times_associative; auto.
+      apply times_associative; auto; red; auto.
     Qed.
 
     Fact ill_times_r_sound Γ Δ a b : ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭Δ⟭ ⊆ ⟦b⟧ -> ⟬߭Γ++Δ⟭ ⊆ ⟦a⟧⊛⟦b⟧.
@@ -500,7 +500,7 @@ Section Phase_Spaces.
     Proof.
       intros H.
       apply subset_trans with (2 := H), list_Form_sem_mono_l.
-      apply unit_neutral_l; auto.
+      apply unit_neutral_l; auto; red; auto.
     Qed.
 
     Fact ill_unit_r_sound : ⟬߭nil⟭ ⊆ ⟦𝝐⟧.

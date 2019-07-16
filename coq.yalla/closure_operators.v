@@ -311,13 +311,13 @@ Section Subset.
 
     (* Associativity *)
 
-    Hypothesis composes_associative_1 : forall A B C, A ∘ (B ∘ C) ⊆ cl ((A ∘ B) ∘ C).
+    Definition associative_1_g := forall A B C, A ∘ (B ∘ C) ⊆ cl ((A ∘ B) ∘ C).
+    Definition associative_2_g := forall A B C, (A ∘ B) ∘ C ⊆ cl (A ∘ (B ∘ C)).
 
-    Hint Immediate composes_associative_1.
+    Hypothesis composes_associative_1 : associative_1_g.
+    Hypothesis composes_associative_2 : associative_2_g.
 
-    Hypothesis composes_associative_2 : forall A B C, (A ∘ B) ∘ C ⊆ cl (A ∘ (B ∘ C)).
-
-    Hint Immediate composes_associative_2.
+    Hint Immediate composes_associative_1 composes_associative_2.
 
     Proposition composes_associative A B C : cl (A ∘ (B ∘ C)) ≃ cl ((A ∘ B) ∘ C).
     Proof. split; auto; apply cl_inc; auto. Qed.
@@ -329,18 +329,21 @@ Section Subset.
 
     Variable e : M.
 
-    Hypothesis composes_neutral_l_1 : forall A, A ⊆ cl (sg e ∘ A).
-    Hypothesis composes_neutral_l_2 : forall A, sg e ∘ A ⊆ cl A.
+    Definition neutrality_l_1_g  := forall A, A ⊆ cl (sg e ∘ A).
+    Definition neutrality_l_2_g  := forall A, sg e ∘ A ⊆ cl A.
+    Definition neutrality_r_1_g  := forall A, A ⊆ cl (A ∘ sg e).
+    Definition neutrality_r_2_g  := forall A, A ∘ sg e ⊆ cl A.
 
-    Hint Resolve composes_neutral_l_1 composes_neutral_l_2.
+    Hypothesis composes_neutral_l_1 : neutrality_l_1_g.
+    Hypothesis composes_neutral_l_2 : neutrality_l_2_g.
+    Hypothesis composes_neutral_r_1 : neutrality_r_1_g.
+    Hypothesis composes_neutral_r_2 : neutrality_r_2_g.
+
+    Hint Resolve composes_neutral_r_1 composes_neutral_r_2
+                 composes_neutral_l_1 composes_neutral_l_2.
 
     Proposition composes_neutral_l A : cl (sg e ∘ A) ≃ cl A.
     Proof. split; apply cl_subset; auto. Qed.
-
-    Hypothesis composes_neutral_r_1 : forall A, A ⊆ cl (A ∘ sg e).
-    Hypothesis composes_neutral_r_2 : forall A, A ∘ sg e ⊆ cl A.
-
-    Hint Resolve composes_neutral_r_1 composes_neutral_r_2.
 
     Proposition composes_neutral_r A : cl (A ∘ sg e) ≃ cl A.
     Proof. split; apply cl_subset; auto. Qed.
