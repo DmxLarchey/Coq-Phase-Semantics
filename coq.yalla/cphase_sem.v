@@ -60,6 +60,7 @@ Section Phase_Spaces.
     Variable mix2_bool : bool.
     Variable PS : CPhaseSpace perm_bool mix0_bool mix2_bool.
     Variable v : Atom -> CWeb -> Type.
+
     Instance CL0 : ClosureOp := bidualCL CPScommute.
 
     Fixpoint Form_sem f :=
@@ -107,6 +108,7 @@ Section Phase_Spaces.
 
     Context { P : pfrag }.
     Variable PM : CPhaseModel P.
+
     Instance PS : CPhaseSpace (pperm P) (pmix0 P) (pmix2 P) := CPMPS.
     Instance CL : ClosureOp := bidualCL CPScommute.
 
