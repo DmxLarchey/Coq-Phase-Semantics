@@ -21,11 +21,11 @@ rewrite Heq.
 reflexivity.
 Qed.
 
-Lemma Permutation_Type_morph_transp {A} : forall P : list A -> Prop,
+Lemma Permutation_Type_morph_transp {A} : forall P : list A -> Type,
   (forall a b l1 l2, P (l1 ++ a :: b :: l2) -> P (l1 ++ b :: a :: l2)) ->
-    Proper ((@Permutation_Type A) ==> iff) P.
+    Proper ((@Permutation_Type A) ==> arrow) P.
 Proof with try eassumption.
-assert (forall P : list A -> Prop,
+assert (forall P : list A -> Type,
          (forall a b l1 l2, P (l1 ++ a :: b :: l2) ->
                             P (l1 ++ b :: a :: l2)) ->
          forall l1 l2, Permutation_Type l1 l2 ->
@@ -42,14 +42,10 @@ assert (forall P : list A -> Prop,
   - apply IHPermutation_Type2.
     apply IHPermutation_Type1... }
 intros P HP l1 l2 H.
-split ; intro H'.
-- rewrite <- (app_nil_l l2).
-  rewrite <- (app_nil_l l1) in H'.
-  eapply Himp...
-- symmetry in H.
-  rewrite <- (app_nil_l l1).
-  rewrite <- (app_nil_l l2) in H'.
-  eapply Himp...
+intro H'.
+rewrite <- (app_nil_l l2).
+rewrite <- (app_nil_l l1) in H'.
+eapply Himp...
 Qed.
 
 Lemma Permutation_Type_elt {A} : forall (a : A) l1 l2 l1' l2',

@@ -18,10 +18,14 @@ basic_misc.v
 yalla_ax.v
 iformulas.v
 ill_def.v
+formulas.v
+ll_def.v
 
 utils_tac.v
 closure_operators.v
 phase_sem.v
 rules_algebra.v
 cut_elim.v
-
+orthogonality.v
+cphase_sem.v
+cokada.v
