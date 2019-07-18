@@ -44,6 +44,8 @@ Section Phase_Spaces.
   Notation bidual := (fun X => dual (dual X)).
   Notation tridual := (fun X => dual (dual (dual X))).
 
+
+
   Notation "x ⊓ y" := (glb x y) (at level 50, no associativity).
   Notation "x ⊔ y" := (lub x y) (at level 50, no associativity).
 
@@ -60,8 +62,34 @@ Section Phase_Spaces.
     Variable mix2_bool : bool.
     Variable PS : CPhaseSpace perm_bool mix0_bool mix2_bool.
     Variable v : Atom -> CWeb -> Type.
-
     Instance CL0 : ClosureOp := bidualCL CPScommute.
+
+    Infix "∘" := (MComposes CPSCompose) (at level 50, no associativity).
+    Notation "'fact' X" := (cl X ⊆ X) (at level 50).
+
+    Hint Resolve (@dual_is_fact _ CPSCompose CPSPole CPScommute)
+                 CPScommute CPSassociative_l CPSassociative_r CPSassociative_ll CPSassociative_lr
+                 CPSneutral_1 CPSneutral_2 CPSneutral_l_1 CPSneutral_l_2 CPSneutral_r_1 CPSneutral_r_2
+                 (@stability_l _ _ _ CPScommute CPSassociative_l CPSassociative_r)
+                 (@stability_r _ _ _ CPScommute CPSassociative_l CPSassociative_r)
+                 CPSsub_monoid_1 CPSsub_monoid_2 CPSsub_J.
+
+    Lemma CPSfact_pole : cl CPSPole ⊆ CPSPole.
+    Proof. eapply fact_pole; auto. Qed.
+
+    Lemma cl_is_bidual X : cl X ≃ dual (dual X).
+    Proof. reflexivity. Qed.
+
+    Lemma bidual_increase X : X ⊆ dual (dual X).
+    Proof. apply (@cl_increase _ CL0). Qed.
+
+    Lemma bidual_subset X Y : X ⊆ dual (dual Y) -> dual (dual X) ⊆ dual (dual Y).
+    Proof.
+    intros Hc.
+    etransitivity; [ apply cl_is_bidual | ].
+    transitivity (cl Y) ; [ | apply cl_is_bidual ].
+    apply cl_subset; assumption.
+    Qed.
 
     Fixpoint Form_sem f :=
       match f with
@@ -83,6 +111,8 @@ Section Phase_Spaces.
     Definition list_Form_presem ll := fold_right (MComposes CPSCompose) (sg CPSUnit)
                                                            (map (fun x => dual (Form_sem x)) ll).
 
+    Notation "⟬߭  ll ⟭" := (@list_Form_presem ll) (at level 49).
+
     Fact list_Form_presem_nil : list_Form_presem nil = (sg CPSUnit).
     Proof. auto. Qed.
 
@@ -90,16 +120,65 @@ Section Phase_Spaces.
       list_Form_presem (f::ll) = MComposes CPSCompose (dual (⟦f⟧)) (list_Form_presem ll).
     Proof. auto. Qed.
 
+    Fact list_Form_presem_app_1 ll mm : cl (⟬߭  ll++mm ⟭) ⊆ cl (⟬߭  ll ⟭ ∘ ⟬߭  mm ⟭).
+    Proof.
+    induction ll as [ | f ll IHll ]; simpl app; auto.
+    - etransitivity; [ apply neutral_l_1_g | ]; auto.
+      apply cl_subset.
+      apply stability_r; auto.
+    - rewrite 2 list_Form_presem_cons.
+      etransitivity; [ | eapply cl_subset; apply associative_1 ]; auto.
+      transitivity (cl (dual (⟦ f ⟧) ∘ cl (⟬߭  ll ⟭ ∘ ⟬߭  mm ⟭))).
+      + apply cl_subset; etransitivity; [ | apply cl_increase ].
+        apply MComposes_monotone; try reflexivity.
+        apply subset_cl; assumption.
+      + apply cl_subset.
+        apply stability_r; auto.
+    Qed.
+
+    Fact list_Form_presem_app_pole_1 ll mm X : fact X -> ⟬߭  ll ⟭ ∘ ⟬߭  mm ⟭ ⊆ X -> ⟬߭  ll++mm ⟭ ⊆ X.
+    Proof.
+    intros HF Hc.
+    etransitivity; [ | apply HF].
+    apply subset_cl.
+    etransitivity; [ apply list_Form_presem_app_1 | ].
+    apply cl_subset.
+    etransitivity; [ eassumption | apply cl_increase ].
+    Qed.
+
+    Fact list_Form_presem_app_2 ll mm : cl (⟬߭  ll ⟭ ∘ ⟬߭  mm ⟭) ⊆ cl (⟬߭  ll++mm ⟭).
+    Proof.
+    induction ll as [ | f ll IHll ]; simpl app; auto.
+    - apply cl_subset; apply neutral_l_2_g; auto.
+    - rewrite 2 list_Form_presem_cons.
+      etransitivity; [ eapply cl_subset; apply associative_2 | ]; auto.
+      transitivity (cl (dual (⟦ f ⟧) ∘ cl (⟬߭  ll ⟭ ∘ ⟬߭  mm ⟭))).
+      + apply cl_subset; etransitivity; [ | apply cl_increase ].
+        apply MComposes_monotone; try reflexivity.
+        apply cl_increase.
+      + apply cl_subset.
+        etransitivity; [ | apply stability_r ]; auto.
+        apply MComposes_monotone; try reflexivity; assumption.
+    Qed.
+
+    Fact list_Form_presem_app_pole_2 ll mm X : fact X -> ⟬߭  ll++mm ⟭ ⊆ X -> ⟬߭  ll ⟭ ∘ ⟬߭  mm ⟭ ⊆ X.
+    Proof.
+    intros HF Hc.
+    etransitivity; [ | apply HF].
+    apply subset_cl.
+    etransitivity; [ apply list_Form_presem_app_2 | ].
+    apply cl_subset.
+    etransitivity; [ eassumption | apply cl_increase ].
+    Qed.
+
   End Formula_Interpretation.
+
 
   Class CPhaseModel (P : pfrag) := {
     CPMPS : CPhaseSpace (pperm P) (pmix0 P) (pmix2 P);
     CPMval : Atom -> CWeb -> Type;
     CPMval_closed : forall x, (@cl _ (bidualCL CPScommute)) (CPMval x) ⊆ CPMval x;
-(* TODO
-    PMgax : forall a, list_Form_sem PMPS PMval (fst (projT2 (ipgax P) a))
-                    ⊆ Form_sem PMPS PMval (snd (projT2 (ipgax P) a))
-*)
+    CPMgax : forall a, list_Form_presem CPMPS CPMval (projT2 (pgax P) a) ⊆ CPSPole
   }.
 
 
@@ -108,7 +187,6 @@ Section Phase_Spaces.
 
     Context { P : pfrag }.
     Variable PM : CPhaseModel P.
-
     Instance PS : CPhaseSpace (pperm P) (pmix0 P) (pmix2 P) := CPMPS.
     Instance CL : ClosureOp := bidualCL CPScommute.
 
@@ -119,31 +197,12 @@ Section Phase_Spaces.
     Notation "⟬߭  ll ⟭" := (@list_Form_presem (pperm P) (pmix0 P) (pmix2 P) _ CPMval ll) (at level 49).
 
     Hint Resolve (@dual_is_fact _ CPSCompose CPSPole CPScommute)
-                 (@cl_increase _ CL)
+                 (@cl_increase _ CL) (@CPSfact_pole _ _ _ PS)
                  CPScommute CPSassociative_l CPSassociative_r CPSassociative_ll CPSassociative_lr
                  CPSneutral_1 CPSneutral_2 CPSneutral_l_1 CPSneutral_l_2 CPSneutral_r_1 CPSneutral_r_2
                  (@stability_l _ _ _ CPScommute CPSassociative_l CPSassociative_r)
                  (@stability_r _ _ _ CPScommute CPSassociative_l CPSassociative_r)
                  CPSsub_monoid_1 CPSsub_monoid_2 CPSsub_J.
-
-    Lemma CPSfact_pole : cl CPSPole ⊆ CPSPole.
-    Proof. eapply fact_pole; auto. Qed.
-
-    Hint Resolve CPSfact_pole.
-
-    Lemma cl_is_bidual X : cl X ≃ dual (dual X).
-    Proof. reflexivity. Qed.
-
-    Lemma bidual_increase X : X ⊆ dual (dual X).
-    Proof. apply (@cl_increase _ CL). Qed.
-
-    Lemma bidual_subset X Y : X ⊆ dual (dual Y) -> dual (dual X) ⊆ dual (dual Y).
-    Proof.
-    intros Hc.
-    etransitivity; [ apply cl_is_bidual | ].
-    transitivity (cl Y) ; [ | apply cl_is_bidual ].
-    apply cl_subset; assumption.
-    Qed.
 
     Lemma fact_sem : forall A, fact (⟦A⟧).
     Proof.
@@ -228,57 +287,6 @@ Section Phase_Spaces.
     Lemma dualsem : forall A, dual (⟦A⟧) ⊆ CPSPole -> ⟦A⟧ CPSUnit.
     Proof. intros A Hd; apply fact_sem; apply pole_vs_one; auto ; assumption. Qed.
 
-    Fact list_Form_presem_app_1 ll mm : cl (⟬߭  ll++mm ⟭) ⊆ cl (⟬߭  ll ⟭ ∘ ⟬߭  mm ⟭).
-    Proof.
-    induction ll as [ | f ll IHll ]; simpl app; auto.
-    - etransitivity; [ apply neutral_l_1_g | ]; auto.
-      apply cl_subset.
-      apply stability_r; auto.
-    - rewrite 2 list_Form_presem_cons.
-      etransitivity; [ | eapply cl_subset; apply associative_1 ]; auto.
-      transitivity (cl (dual (⟦ f ⟧) ∘ cl (⟬߭  ll ⟭ ∘ ⟬߭  mm ⟭))).
-      + apply cl_subset; etransitivity; [ | apply cl_increase ].
-        apply MComposes_monotone; try reflexivity.
-        apply subset_cl; assumption.
-      + apply cl_subset.
-        apply stability_r; auto.
-    Qed.
-
-    Fact list_Form_presem_app_pole_1 ll mm X : fact X -> ⟬߭  ll ⟭ ∘ ⟬߭  mm ⟭ ⊆ X -> ⟬߭  ll++mm ⟭ ⊆ X.
-    Proof.
-    intros HF Hc.
-    etransitivity; [ | apply HF].
-    apply subset_cl.
-    etransitivity; [ apply list_Form_presem_app_1 | ].
-    apply cl_subset.
-    etransitivity; [ eassumption | apply cl_increase ].
-    Qed.
-
-    Fact list_Form_presem_app_2 ll mm : cl (⟬߭  ll ⟭ ∘ ⟬߭  mm ⟭) ⊆ cl (⟬߭  ll++mm ⟭).
-    Proof.
-    induction ll as [ | f ll IHll ]; simpl app; auto.
-    - apply cl_subset; apply neutral_l_2_g; auto.
-    - rewrite 2 list_Form_presem_cons.
-      etransitivity; [ eapply cl_subset; apply associative_2 | ]; auto.
-      transitivity (cl (dual (⟦ f ⟧) ∘ cl (⟬߭  ll ⟭ ∘ ⟬߭  mm ⟭))).
-      + apply cl_subset; etransitivity; [ | apply cl_increase ].
-        apply MComposes_monotone; try reflexivity.
-        apply cl_increase.
-      + apply cl_subset.
-        etransitivity; [ | apply stability_r ]; auto.
-        apply MComposes_monotone; try reflexivity; assumption.
-    Qed.
-
-    Fact list_Form_presem_app_pole_2 ll mm X : fact X -> ⟬߭  ll++mm ⟭ ⊆ X -> ⟬߭  ll ⟭ ∘ ⟬߭  mm ⟭ ⊆ X.
-    Proof.
-    intros HF Hc.
-    etransitivity; [ | apply HF].
-    apply subset_cl.
-    etransitivity; [ apply list_Form_presem_app_2 | ].
-    apply cl_subset.
-    etransitivity; [ eassumption | apply cl_increase ].
-    Qed.
-
     Fact list_Form_sem_bang ll : cl (⟬߭ ⁇ll ⟭) ≃ ❗ (lcap (map (fun x => (dual (⟦x⟧))) ll)).
     Proof.
     unfold list_Form_presem.
@@ -300,8 +308,6 @@ Section Phase_Spaces.
     + apply neutral_r_2_g; auto.
     Qed.
 
-
-    Hypothesis Pgax : projT1 (pgax P) -> False.
 
     Theorem ll_soundness l : ll P l -> ⟬߭  l ⟭  ⊆ CPSPole.
     Proof.
@@ -474,7 +480,7 @@ Section Phase_Spaces.
       etransitivity; [ apply MComposes_monotone; eassumption | ].
       apply commute_pole; auto.
       apply diag_pole.
-    - contradiction Pgax.
+    - apply CPMgax.
     Unshelve. all: auto.
     Qed.
 

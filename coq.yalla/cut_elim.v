@@ -226,11 +226,10 @@ Section Okada.
       apply composes_congruent_l_1; auto.
       unfold cl_stability_r; apply cl_ctx_stable_r.
       apply P_perm. }
-    apply cl_closed. { apply ILLvdc_closed. }
+    apply cl_closed; [ apply ILLvdc_closed | ].
     assert (ill P (nil ++ map ivar l) (ivar i)) as pi
       by (rewrite Heqb; rewrite <- Heq; apply gax_ir).
-    apply subset_trans with (fun Γ => ill P (nil ++ Γ) (£ i)).
-    2 : { intros A H; auto. }
+    apply subset_trans with (fun Γ => ill P (nil ++ Γ) (£ i)); [ | intros A H; auto ].
     revert pi; remember nil as l0; clear Heql0.
     revert l0; clear - P_gax_noN_l P_gax_cut; induction l; intros l0 pi.
     + simpl; intros l Heq; subst; auto.

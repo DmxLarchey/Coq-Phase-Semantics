@@ -158,7 +158,7 @@ Qed.
 
 Lemma PCperm_Type_vs_elt_inv {A} b : forall (a : A) l l1 l2,
   PCperm_Type b l (l1 ++ a :: l2) ->
-  { pl : _ & l = fst pl ++ a :: snd pl & PEperm_Type b (l2 ++ l1) (snd pl ++ fst pl) }.
+  {' (l1',l2') : _ & l = l1' ++ a :: l2' & PEperm_Type b (l2 ++ l1) (l2' ++ l1') }.
 Proof with try reflexivity.
 destruct b ; intros a l l1 l2 HC.
 - assert (Heq := HC).
@@ -179,7 +179,7 @@ Qed.
 
 Lemma PCperm_Type_vs_cons_inv {A} b : forall (a : A) l l1,
   PCperm_Type b l (a :: l1) ->
-  { pl : _ & l = fst pl ++ a :: snd pl & PEperm_Type b l1 (snd pl ++ fst pl) }.
+  {' (l1',l2') : _ & l = l1' ++ a :: l2' & PEperm_Type b l1 (l2' ++ l1') }.
 Proof with try reflexivity.
 intros a l l1 HP.
 rewrite <- app_nil_l in HP.
@@ -188,6 +188,26 @@ destruct HP as [(l' & l'') HP Heq] ; subst.
 exists (l',l'')...
 rewrite app_nil_r in Heq.
 assumption.
+Qed.
+
+Lemma PCperm_Type_cons_vs_cons {A} B : forall (a b : A) la lb,
+  PCperm_Type B (b :: lb) (a :: la) ->
+    ( prod (a = b) (PEperm_Type B lb la) )
+  + { '(l1,l2) : _ & lb = l1 ++ a :: l2 & PEperm_Type B la (l2 ++ b :: l1) }.
+Proof with try reflexivity.
+intros a b l1 l2 HP.
+apply PCperm_Type_vs_cons_inv in HP.
+destruct HP as [(l1',l2') Heq HP'].
+destruct l1' ; inversion Heq ; subst.
+- left.
+  split.
+  + reflexivity.
+  + rewrite app_nil_r in HP'.
+    destruct B; symmetry; apply HP'.
+- right.
+  exists (l1', l2').
+  + reflexivity.
+  + assumption.
 Qed.
 
 Instance PCperm_Type_map {A B} (f : A -> B) b :
