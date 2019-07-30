@@ -29,7 +29,7 @@ Set Implicit Arguments.
   Hint Resolve P_perm P_weak P_cntr.
 
   Definition gax_noN_l P := forall a, List_Type.In_Type N (fst (projT2 (ipgax P) a)) -> False.
-  Definition gax_at_l P := forall a, Forall iatomic (fst (projT2 (ipgax P) a)).
+  Definition gax_at_l P := forall a, Forall_Type iatomic (fst (projT2 (ipgax P) a)).
   Definition gax_at_r P := forall a, iatomic (snd (projT2 (ipgax P) a)).
   Definition gax_cut P := forall a b l1 l2,
                             fst (projT2 (ipgax P) b) = l1 ++ snd (projT2 (ipgax P) a) :: l2 -> 
@@ -201,20 +201,18 @@ Section Okada.
     red in P_gax_at_l, P_gax_at_r.
     intros a; specialize P_gax_at_l with a; specialize P_gax_at_r with a.
     remember (snd (projT2 (ipgax P) a)) as b.
-    destruct b; try (exfalso; inversion P_gax_at_r; fail); simpl.
+destruct b; inversion P_gax_at_r; simpl.
     assert ({l : list IAtom | fst (projT2 (ipgax P) a) = map ivar l }) as [l Heq].
     { revert P_gax_at_l ; remember (fst (projT2 (ipgax P) a)) as L; clear.
       induction L; intros Hat.
       - exists nil; reflexivity.
-      - destruct a; try (exfalso; inversion Hat; inversion H1; fail).
-        assert (Forall iatomic L) as HatL by (inversion Hat; assumption).
-        destruct (IHL HatL) as [l Heq]; subst.
-        exists (i :: l); reflexivity. }
+      - inversion Hat; inversion H1; subst.
+        destruct (IHL H2) as [l Heq]; subst.
+        exists (x0 :: l); reflexivity. }
     rewrite Heq.
     replace (list_Form_sem PSILL ILLval (map ivar l))
-       with (ltimes (map ILLval l)).
-    2: { clear; induction l; auto.
-         simpl; rewrite IHl; auto. }
+       with (ltimes (map ILLval l))
+      by (clear; induction l; auto; simpl; rewrite IHl; auto).
     apply subset_trans with (cl (lcompose (map ILLval l))).
     { clear; induction l; try reflexivity.
       revert IHl; simpl.

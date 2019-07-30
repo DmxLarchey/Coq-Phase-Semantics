@@ -4,7 +4,7 @@ Bool_more.v
 List_more.v
 Permutation_more.v
 Injective.v
-wf_nat_more.v
+Wf_nat_more.v
 
 List_Type.v
 List_Type_more.v

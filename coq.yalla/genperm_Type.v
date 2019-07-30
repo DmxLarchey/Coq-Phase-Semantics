@@ -1,6 +1,4 @@
-(* genperm Library *)
-
-(* with output in Type *)
+(* genperm_Type Library *)
 
 (** * Factorized statements for different notions of permutation *)
 
@@ -60,6 +58,14 @@ Instance cperm_PCperm_Type {A} b : Proper (CPermutation_Type ==> PCperm_Type b) 
 Proof with try assumption.
 destruct b ; intros l l' HC...
 apply cperm_perm_Type...
+Qed.
+
+Lemma PCperm_Type_monot {A} : forall b1 b2, Bool.leb b1 b2 ->
+  forall l1 l2 : list A, PCperm_Type b1 l1 l2 -> PCperm_Type b2 l1 l2.
+Proof.
+intros b1 b2 Hleb l1 l2.
+destruct b1; destruct b2; try (now inversion Hleb).
+apply cperm_perm_Type.
 Qed.
 
 Instance PCperm_Type_refl {A} b : Reflexive (@PCperm_Type A b).
@@ -307,6 +313,14 @@ Ltac PEperm_Type_solve :=
 Instance PEperm_perm_Type {A} b : Proper (PEperm_Type b ==> (@Permutation_Type A)) id.
 Proof.
 destruct b ; intros l l' HP ; simpl in HP ; now subst.
+Qed.
+
+Lemma PEperm_Type_monot {A} : forall b1 b2, Bool.leb b1 b2 ->
+  forall l1 l2 : list A, PEperm_Type b1 l1 l2 -> PEperm_Type b2 l1 l2.
+Proof.
+intros b1 b2 Hleb l1 l2.
+destruct b1; destruct b2; try (now inversion Hleb).
+simpl; intros HP; subst; reflexivity.
 Qed.
 
 Instance PEperm_Type_refl {A} b : Reflexive (@PEperm_Type A b).

@@ -1,5 +1,5 @@
 Require Import Psatz.
-Require Import List_more List_Type_more Permutation_Type genperm_Type wf_nat_more.
+Require Import List_more List_Type_more Permutation_Type genperm_Type Wf_nat_more.
 
 Require Import closure_operators cphase_sem.
 
@@ -10,7 +10,7 @@ Notation "X '≃' Y" := (eqset X Y) (at level 75, format "X  ≃  Y", no associa
 Notation "A '∩' B" := (fun z => A z * B z : Type)%type (at level 50, format "A  ∩  B", left associativity).
 Notation "A '∪' B" := (fun z => A z + B z : Type)%type (at level 50, format "A  ∪  B", left associativity).
 
-Definition gax_at P := forall a, Forall atomic (projT2 (pgax P) a).
+Definition gax_at P := forall a, Forall_Type atomic (projT2 (pgax P) a).
 Definition gax_cut P := forall a b x l1 l2 l3 l4,
   projT2 (pgax P) a = (l1 ++ dual x :: l2) -> projT2 (pgax P) b = (l3 ++ x :: l4) ->
   { c | projT2 (pgax P) c = l3 ++ l2 ++ l1 ++ l4 }.
@@ -396,7 +396,7 @@ Section Okada.
   intros a; red in P_gax_at; specialize P_gax_at with a.
   assert (pi := gax_r _ a).
   remember (projT2 (pgax P) a) as l; clear Heql a.
-  enough (forall l, Forall atomic l -> forall l0, ll P (l0 ++ l) -> sg l0 ∘ ⟬߭ l ⟭  ⊆ CPSPole) as IH.
+  enough (forall l, Forall_Type atomic l -> forall l0, ll P (l0 ++ l) -> sg l0 ∘ ⟬߭ l ⟭  ⊆ CPSPole) as IH.
   { specialize IH with l nil.
     etransitivity; [ | apply CPSfact_pole ].
     apply subset_cl.
