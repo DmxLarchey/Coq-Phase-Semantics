@@ -15,7 +15,7 @@ Lemma ex_app P : forall l1 l2, ll P (l1 ++ l2) -> ll P (l2 ++ l1).
 Proof. intros l1 l2 pi; eapply ex_r ; [ apply pi | apply PCperm_Type_app_comm ]. Defined.
 
 
-Global Instance CPS_ctx P : CPhaseSpace (pperm P) (pmix0 P) (pmix2 P).
+Global Instance CPS_ctx P : CPhaseSpace (pperm P) (pmix P).
 Proof.
 split with (list formula) (@app formula) (@nil formula) (ll P)
            (fun Γ => { Δ | Γ = map wn Δ }) (ex_app P).
@@ -53,9 +53,18 @@ split with (list formula) (@app formula) (@nil formula) (ll P)
   rewrite HP; simpl.
   apply Permutation_Type_app_tail.
   apply Permutation_Type_app_comm.
-- apply mix0_r.
-- intros Hmix2 l H; inversion H.
-  apply mix2_r; assumption.
+- intros n Hmix l H.
+  assert ({ L : _ & length L = n & prod (l = concat L)
+                                        (Forall_Type (ll P) L)}) as [L Hlen [Heq HF]]; subst.
+  { clear Hmix; revert l H; induction n; simpl; intros l H.
+    - subst.
+      exists nil; try split; try reflexivity.
+      constructor.
+    - inversion H; subst.
+      destruct (IHn _ X0) as [L1 Hlen [Heq HF]]; subst.
+      exists (x :: L1); try split; try reflexivity.
+      constructor; assumption. }
+  apply mix_r ; [ apply Hmix | assumption ].
 Defined.
 
 Section Okada.
@@ -67,14 +76,14 @@ Section Okada.
   Notation "↓" := (fun A Γ => ll P (A::Γ)).
   Notation LLval := (fun x => ↓(var x)).
 
-  Instance CPSLL : CPhaseSpace (pperm P) (pmix0 P) (pmix2 P) := CPS_ctx P.
+  Instance CPSLL : CPhaseSpace (pperm P) (pmix P) := CPS_ctx P.
 
   Infix "∘" := (MComposes CPSCompose) (at level 50, no associativity).
   Notation dual := (ldual (R CPSCompose CPSPole)).
-  Notation "'⟦' A '⟧'" := (@Form_sem (pperm P) (pmix0 P) (pmix2 P) _ LLval A) (at level 49).
-  Notation "⟬߭  ll ⟭" := (@list_Form_presem (pperm P) (pmix0 P) (pmix2 P) _ LLval ll) (at level 49).
+  Notation "'⟦' A '⟧'" := (@Form_sem (pperm P) (pmix P) _ LLval A) (at level 49).
+  Notation "⟬߭  ll ⟭" := (@list_Form_presem (pperm P) (pmix P) _ LLval ll) (at level 49).
 
-  Hint Resolve (@CPSfact_pole _ _ _ CPSLL) (@CPScommute _ _ _ CPSLL)
+  Hint Resolve (@CPSfact_pole _ _ CPSLL) (@CPScommute _ _ CPSLL)
                CPSassociative_l CPSassociative_r
                CPSneutral_1 CPSneutral_2
                CPSneutral_l_1 CPSneutral_l_2 CPSneutral_r_1 CPSneutral_r_2.
@@ -203,7 +212,7 @@ Section Cut_Elim.
   Notation "↓" := (fun A Γ => ll (cutupd_pfrag P false) (A::Γ)).
   Notation LLval_cf := (fun x => ↓(var x)).
 
-  Instance CPSLL_cf : CPhaseSpace (pperm P) (pmix0 P) (pmix2 P) := CPS_ctx (cutupd_pfrag P false).
+  Instance CPSLL_cf : CPhaseSpace (pperm P) (pmix P) := CPS_ctx (cutupd_pfrag P false).
 
   Instance PMLL_cf : CPhaseModel P.
   Proof. split with CPSLL_cf LLval_cf.

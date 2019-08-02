@@ -14,8 +14,13 @@ Section Phase_Spaces.
   Notation "A '∩' B" := (fun z => A z * B z : Type)%type (at level 50, format "A  ∩  B", left associativity).
   Notation "A '∪' B" := (fun z => A z + B z : Type)%type (at level 50, format "A  ∪  B", left associativity).
 
+  Fixpoint MComposes_n {M} n c e x : M -> Type :=
+    match n with
+    | 0    => sg e
+    | S k  => MComposes c x (MComposes_n k c e x)
+    end.
 
-  Class CPhaseSpace (bp b0 b2 : bool) := {
+  Class CPhaseSpace (bp : bool) (bm : nat -> bool) := {
     CWeb : Type;
     CPSCompose : CWeb -> CWeb -> CWeb;
     CPSUnit : CWeb;
@@ -36,8 +41,7 @@ Section Phase_Spaces.
     CPSsub_monoid_2 : sub_monoid_hyp_2 (MComposes CPSCompose) CPSExp;
     CPSsub_J : @sub_J_hyp _ (bidualCL CPScommute) (MComposes CPSCompose) CPSUnit CPSExp;
     CPSfcommute : bp = true -> pole_fcommute CPSCompose CPSPole;
-    CPSmix0 : b0 = true -> CPSPole CPSUnit;
-    CPSmix2 : b2 = true -> MComposes CPSCompose CPSPole CPSPole ⊆ CPSPole
+    CPSmix : forall n, bm n = true -> MComposes_n n CPSCompose CPSUnit CPSPole ⊆ CPSPole
   }.
 
   Notation dual := (ldual (R CPSCompose CPSPole)).
@@ -58,9 +62,8 @@ Section Phase_Spaces.
 
     Reserved Notation "'⟦' A '⟧'" (at level 49).
     Variable perm_bool : bool.
-    Variable mix0_bool : bool.
-    Variable mix2_bool : bool.
-    Variable PS : CPhaseSpace perm_bool mix0_bool mix2_bool.
+    Variable mix_bool : nat -> bool.
+    Variable PS : CPhaseSpace perm_bool mix_bool.
     Variable v : Atom -> CWeb -> Type.
     Instance CL0 : ClosureOp := bidualCL CPScommute.
 
@@ -136,7 +139,7 @@ Section Phase_Spaces.
         apply stability_r; auto.
     Qed.
 
-    Fact list_Form_presem_app_pole_1 ll mm X : fact X -> ⟬߭  ll ⟭ ∘ ⟬߭  mm ⟭ ⊆ X -> ⟬߭  ll++mm ⟭ ⊆ X.
+    Fact list_Form_presem_app_fact_1 ll mm X : fact X -> ⟬߭  ll ⟭ ∘ ⟬߭  mm ⟭ ⊆ X -> ⟬߭  ll++mm ⟭ ⊆ X.
     Proof.
     intros HF Hc.
     etransitivity; [ | apply HF].
@@ -161,7 +164,7 @@ Section Phase_Spaces.
         apply MComposes_monotone; try reflexivity; assumption.
     Qed.
 
-    Fact list_Form_presem_app_pole_2 ll mm X : fact X -> ⟬߭  ll++mm ⟭ ⊆ X -> ⟬߭  ll ⟭ ∘ ⟬߭  mm ⟭ ⊆ X.
+    Fact list_Form_presem_app_fact_2 ll mm X : fact X -> ⟬߭  ll++mm ⟭ ⊆ X -> ⟬߭  ll ⟭ ∘ ⟬߭  mm ⟭ ⊆ X.
     Proof.
     intros HF Hc.
     etransitivity; [ | apply HF].
@@ -175,7 +178,7 @@ Section Phase_Spaces.
 
 
   Class CPhaseModel (P : pfrag) := {
-    CPMPS : CPhaseSpace (pperm P) (pmix0 P) (pmix2 P);
+    CPMPS : CPhaseSpace (pperm P) (pmix P);
     CPMval : Atom -> CWeb -> Type;
     CPMval_closed : forall x, (@cl _ (bidualCL CPScommute)) (CPMval x) ⊆ CPMval x;
     CPMgax : forall a, list_Form_presem CPMPS CPMval (projT2 (pgax P) a) ⊆ CPSPole
@@ -187,17 +190,17 @@ Section Phase_Spaces.
 
     Context { P : pfrag }.
     Variable PM : CPhaseModel P.
-    Instance PS : CPhaseSpace (pperm P) (pmix0 P) (pmix2 P) := CPMPS.
+    Instance PS : CPhaseSpace (pperm P) (pmix P) := CPMPS.
     Instance CL : ClosureOp := bidualCL CPScommute.
 
     Infix "∘" := (MComposes CPSCompose) (at level 50, no associativity).
     Notation "'fact' X" := (cl X ⊆ X) (at level 50).
 
-    Notation "'⟦' A '⟧'" := (@Form_sem (pperm P) (pmix0 P) (pmix2 P) _ CPMval A) (at level 49).
-    Notation "⟬߭  ll ⟭" := (@list_Form_presem (pperm P) (pmix0 P) (pmix2 P) _ CPMval ll) (at level 49).
+    Notation "'⟦' A '⟧'" := (@Form_sem (pperm P) (pmix P) _ CPMval A) (at level 49).
+    Notation "⟬߭  ll ⟭" := (@list_Form_presem (pperm P) (pmix P) _ CPMval ll) (at level 49).
 
     Hint Resolve (@dual_is_fact _ CPSCompose CPSPole CPScommute)
-                 (@cl_increase _ CL) (@CPSfact_pole _ _ _ PS)
+                 (@cl_increase _ CL) (@CPSfact_pole _ _ PS)
                  CPScommute CPSassociative_l CPSassociative_r CPSassociative_ll CPSassociative_lr
                  CPSneutral_1 CPSneutral_2 CPSneutral_l_1 CPSneutral_l_2 CPSneutral_r_1 CPSneutral_r_2
                  (@stability_l _ _ _ CPScommute CPSassociative_l CPSassociative_r)
@@ -311,7 +314,7 @@ Section Phase_Spaces.
 
     Theorem ll_soundness l : ll P l -> ⟬߭  l ⟭  ⊆ CPSPole.
     Proof.
-    induction 1.
+    induction 1 using ll_nested_ind.
     - etransitivity; [ apply associative_1 | ]; auto.
       apply cl_closed; auto.
       etransitivity; [ apply neutral_r_2_g | ]; auto.
@@ -323,8 +326,8 @@ Section Phase_Spaces.
       + revert IHX.
         apply (Permutation_Type_morph_transp (fun x => ⟬߭  x ⟭ ⊆ CPSPole)); auto.
         clear l1 l2 p; intros a b l1 l2 Hp.
-        apply list_Form_presem_app_pole_2 in Hp; auto.
-        apply list_Form_presem_app_pole_1; auto.
+        apply list_Form_presem_app_fact_2 in Hp; auto.
+        apply list_Form_presem_app_fact_1; auto.
         intros x Hx; inversion Hx; inversion X0; inversion X2.
         apply CPScommute; apply CPSassociative_lr; apply CPSassociative_l.
         apply CPSfcommute ; [ rewrite Heq, HP; reflexivity | ].
@@ -332,16 +335,16 @@ Section Phase_Spaces.
         apply Hp.
         do 3 (constructor; auto).
       + inversion p; subst.
-        apply list_Form_presem_app_pole_2 in IHX; auto.
-        apply list_Form_presem_app_pole_1; auto.
+        apply list_Form_presem_app_fact_2 in IHX; auto.
+        apply list_Form_presem_app_fact_1; auto.
         apply commute_pole; auto; assumption.
-    - apply list_Form_presem_app_pole_2 in IHX; auto.
+    - apply list_Form_presem_app_fact_2 in IHX; auto.
       apply commute_pole in IHX; apply compose_adj_l in IHX; auto.
-      apply list_Form_presem_app_pole_2 in IHX; auto.
+      apply list_Form_presem_app_fact_2 in IHX; auto.
       apply compose_adj_r in IHX.
-      apply list_Form_presem_app_pole_1; auto.
+      apply list_Form_presem_app_fact_1; auto.
       apply commute_pole; auto; apply compose_adj_r.
-      apply list_Form_presem_app_pole_1; auto.
+      apply list_Form_presem_app_fact_1; auto.
       apply compose_adj_l; auto.
       apply cl_closed in IHX; auto.
       etransitivity; [ | apply IHX ].
@@ -365,38 +368,46 @@ Section Phase_Spaces.
           etransitivity; [ apply glb_out_r | apply glb_out_r ].
       + apply glb_in; [ apply glb_out_l | ].
         etransitivity; [ apply glb_out_r | intros x; apply IHL1 ].
-    - intros x Hx; rewrite <- Hx.
-      apply CPSmix0; assumption.
-    - apply list_Form_presem_app_pole_1; auto.
-      etransitivity; [ | apply CPSmix2 ]; auto.
-      apply MComposes_monotone; assumption.
+    - transitivity (cl (MComposes_n (length L) CPSCompose CPSUnit CPSPole)).
+      + clear eqpmix.
+        revert PL X; induction L; intros PL X; auto.
+        etransitivity ; [ apply cl_increase | ].
+        etransitivity ; [ apply list_Form_presem_app_1 | ].
+        apply cl_subset.
+        inversion X; subst.
+        etransitivity ; [ apply MComposes_monotone | ] ; try eassumption.
+        * eapply IHL; try eassumption.
+        * apply (@stability_r _ _ _ CPScommute CPSassociative_l CPSassociative_r).
+      + apply cl_closed; auto.
+        apply CPSmix.
+        apply eqpmix.
     - rewrite list_Form_presem_cons.
       etransitivity; [ apply neutral_r_2_g | ]; auto.
       apply cl_closed; auto.
       etransitivity; [ | apply pole_as_bot ]; auto.
       apply lmonot; apply cl_increase.
     - rewrite list_Form_presem_cons.
-      transitivity (⟦ one ⟧ ∘ ⟬߭  l ⟭).
+      transitivity (⟦ one ⟧ ∘ ⟬߭  l0 ⟭).
       + apply MComposes_monotone; auto; try reflexivity.
         apply lmonot; apply pole_as_bot; simpl; auto.
-      + assert (sg CPSUnit ∘ ⟬߭  l ⟭ ⊆ cl CPSPole) as H.
+      + assert (sg CPSUnit ∘ ⟬߭  l0 ⟭ ⊆ cl CPSPole) as H.
         { etransitivity; [ apply neutral_l_2_g | ]; auto.
           do 2 apply lmonot; assumption. }
         etransitivity; [ | apply CPSfact_pole ].
         apply cl_subset in H.
         etransitivity; [ | apply H ].
-        transitivity (cl(sg CPSUnit) ∘ ⟬߭  l ⟭); [ | apply stability_l ]; auto.
+        transitivity (cl(sg CPSUnit) ∘ ⟬߭  l0 ⟭); [ | apply stability_l ]; auto.
         apply MComposes_monotone; reflexivity.
     - apply compose_adj_l in IHX1; apply compose_adj_l in IHX2; auto.
       apply compose_adj_r.
       apply lmonot.
-      apply list_Form_presem_app_pole_1; auto.
+      apply list_Form_presem_app_fact_1; auto.
       etransitivity; [ | apply cl_increase ].
       apply MComposes_monotone; 
         (etransitivity; [ | apply fact_sem ]);
         apply subset_cl; apply lmonot; assumption.
     - rewrite list_Form_presem_cons; rewrite 2 list_Form_presem_cons in IHX.
-      transitivity (cl ((dual (⟦ A ⟧) ∘ dual (⟦ B ⟧)) ∘ ⟬߭  l ⟭)).
+      transitivity (cl ((dual (⟦ A ⟧) ∘ dual (⟦ B ⟧)) ∘ ⟬߭  l0 ⟭)).
       + etransitivity; [ | apply stability_l ]; auto.
         apply MComposes_monotone; try reflexivity.
       + apply cl_closed in IHX; auto.
@@ -443,8 +454,8 @@ Section Phase_Spaces.
       etransitivity; [ | apply IHX ].
       apply lmonot; etransitivity; [ apply cl_increase | ]; apply lmonot.
       apply glb_out_r.
-    - transitivity (cl (⟬߭  l ⟭)); [ | apply cl_closed ]; auto.
-      transitivity (unit CPSUnit ∘ ⟬߭  l ⟭).
+    - transitivity (cl (⟬߭  l0 ⟭)); [ | apply cl_closed ]; auto.
+      transitivity (unit CPSUnit ∘ ⟬߭  l0 ⟭).
       + apply MComposes_monotone; try reflexivity.
         etransitivity; [ | apply cl_idempotent ].
         simpl; do 2 apply lmonot.
@@ -454,7 +465,7 @@ Section Phase_Spaces.
       + etransitivity; [ apply stability_l | ]; auto.
         apply cl_subset; apply neutral_l_2_g; auto.
     - rewrite list_Form_presem_cons; rewrite 2 list_Form_presem_cons in IHX.
-      transitivity (cl ((⟦ oc (formulas.dual A) ⟧ ∘ ⟦ oc (formulas.dual A) ⟧) ∘ ⟬߭  l ⟭)).
+      transitivity (cl ((⟦ oc (formulas.dual A) ⟧ ∘ ⟦ oc (formulas.dual A) ⟧) ∘ ⟬߭  l0 ⟭)).
       + etransitivity; [ | apply stability_l ]; auto.
         apply MComposes_monotone; try reflexivity.
         transitivity (⟦ formulas.dual (wn A) ⟧); [ apply Form_sem_dual | ].
@@ -474,7 +485,7 @@ Section Phase_Spaces.
     - rewrite list_Form_presem_cons in IHX1; rewrite list_Form_presem_cons in IHX2.
       apply commute_pole in IHX1; apply commute_pole in IHX2; auto.
       apply compose_adj_l in IHX1; apply compose_adj_l in IHX2; auto.
-      apply list_Form_presem_app_pole_1; auto.
+      apply list_Form_presem_app_fact_1; auto.
       assert (⟬߭  l1 ⟭ ⊆ dual (dual (dual (⟦ A ⟧))))
         by (etransitivity; [ eassumption | ]; do 2 apply lmonot; apply Form_sem_dual).
       etransitivity; [ apply MComposes_monotone; eassumption | ].

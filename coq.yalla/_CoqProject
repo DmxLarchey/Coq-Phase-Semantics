@@ -14,6 +14,7 @@ Permutation_Type_solve.v
 CyclicPerm_Type.v
 CPermutation_Type_solve.v
 genperm_Type.v
+Dependent_Forall_Type.v
 
 basic_misc.v
 yalla_ax.v
@@ -21,9 +22,9 @@ iformulas.v
 ill_def.v
 formulas.v
 ll_def.v
+ll_cut_at.v
 
 ill_cut_at.v
-ll_cut_at.v
 
 utils_tac.v
 closure_operators.v
