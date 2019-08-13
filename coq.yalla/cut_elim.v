@@ -9,14 +9,12 @@
 
 Require Import List_more List_Type genperm_Type.
 
-Require Import phase_sem rules_algebra.
+Require Import orthogonality phase_sem rules_algebra.
 Require Import ill_cut_at.
 
 Set Implicit Arguments.
 
-  Notation " x '~[' b ']' y " := (PEperm_Type b x y) (at level 70, format "x  ~[ b ]  y").
-
-  Lemma P_perm : forall P Γ Δ A, Γ ~[ipperm P] Δ -> ill P Γ A -> ill P Δ A.
+  Lemma P_perm : forall P Γ Δ A, PEperm_Type (ipperm P) Γ Δ -> ill P Γ A -> ill P Δ A.
   Proof. intros; eapply ex_ir; eassumption. Qed.
 
   Lemma P_weak : forall P, forall ϴ Γ Δ A, ill P (ϴ++Δ) A -> ill P (ϴ++‼Γ++Δ) A.
@@ -43,7 +41,7 @@ Section Okada.
     PS_ctx (ill P) (ipperm P) (@P_perm P) (@P_weak P) (@P_cntr P).
   Instance CLILL : ClosureOp := PSCL.
 
-  Hint Resolve (@composes_monotone _ PSCompose).
+  Hint Resolve (@composes_monotone _ PScompose).
 
   Notation "↓" := (fun A Γ => ill P Γ A).
 
@@ -62,10 +60,10 @@ Section Okada.
   Hypothesis P_gax_at_r : gax_at_r P.
   Hypothesis P_gax_cut : gax_cut P.
 
-  Let ltimes := fold_right (fun x y => tensor (Composes PSCompose) x y) (unit PSunit).
-  Let lcompose := fold_right (fun x y => Composes PSCompose x y) (sg PSunit).
-  Fact ILLgax : forall a, list_Form_sem PSILL ILLval (fst (projT2 (ipgax P) a))
-                    ⊆ Form_sem PSILL ILLval (snd (projT2 (ipgax P) a)).
+(* TODO replace lcompose by list_form_presem ??? *)
+  Let lcompose := fold_right (fun x y => composes PScompose x y) (sg PSunit).
+  Fact ILLgax : forall a, list_form_presem PSILL ILLval (fst (projT2 (ipgax P) a))
+                    ⊆ form_sem PSILL ILLval (snd (projT2 (ipgax P) a)).
   Proof.
     red in P_gax_at_l, P_gax_at_r.
     intros a; specialize P_gax_at_l with a; specialize P_gax_at_r with a.
@@ -79,21 +77,22 @@ Section Okada.
         destruct (IHL H2) as [l Heq]; subst.
         exists (x0 :: l); reflexivity. }
     rewrite Heq.
-    replace (list_Form_sem PSILL ILLval (map ivar l))
-       with (ltimes (map ILLval l))
+    replace (list_form_presem PSILL ILLval (map ivar l))
+       with (lcompose (map ILLval l))
       by (clear; induction l; auto; simpl; rewrite IHl; auto).
     apply subset_trans with (cl (lcompose (map ILLval l))).
     { clear; induction l; try reflexivity.
-      revert IHl; simpl.
-      remember (ltimes (map (fun x Γ => ill P Γ (£ x)) l)) as L1; clear HeqL1.
+    - simpl; unfold ldual, rdual; simpl.
+      intros x H; unfold list_form_presem in H; simpl in H; subst.
+      unfold ctx_orth; intros [[de1 de2] A] H.
+      specialize H with nil; apply H; reflexivity.
+    - revert IHl; simpl.
+      remember (lcompose (map (fun x Γ => ill P Γ (£ x)) l)) as L1; clear HeqL1.
       remember (lcompose (map (fun x Γ => ill P Γ (£ x)) l)) as L2; clear HeqL2.
       remember (fun Γ : list iformula => ill P Γ (£ a)) as L0; clear HeqL0.
       intros IH.
-      apply (fst (@cl_prop _ (CL_ctx (ill P)) _ _)).
-      apply composes_congruent_l_1; auto.
-      unfold cl_stability_r; apply cl_ctx_stable_r.
-      apply P_perm. }
-    apply cl_closed; [ apply ILLvdc_closed | ].
+      apply (@cl_increase _ _ (CL_ctx (ill P))). }
+    apply cl_closed; [ apply subset_preorder | apply dc_closed | ].
     assert (ill P (nil ++ map ivar l) (ivar i)) as pi
       by (rewrite Heqb; rewrite <- Heq; apply gax_ir).
     apply subset_trans with (fun Γ => ill P (nil ++ Γ) (£ i)); [ | intros A H; auto ].
@@ -107,9 +106,7 @@ Section Okada.
       rewrite app_assoc in pi'.
       apply IHl in pi'.
       apply pi' in X0.
-      rewrite <- app_assoc in X0.
-      apply ex_ir with (l0 ++ a0 ++ b); auto.
-      apply PEperm_Type_app_head; auto.
+      rewrite <- app_assoc in X0; auto.
   Qed.
 
   Instance PMILL : PhaseModel P := {
@@ -119,281 +116,138 @@ Section Okada.
     PMgax := ILLgax
   }.
 
-  Infix "∘" := (Composes PSCompose) (at level 50, no associativity).
-  Infix "⊸" := (Magicwand_l PSCompose) (at level 51, right associativity).
-  Infix "⟜" := (Magicwand_r PSCompose) (at level 52, left associativity).
+  Infix "∘" := (composes PScompose) (at level 50, no associativity).
+  Infix "⊸" := (magicwand_l PScompose) (at level 51, right associativity).
+  Infix "⟜" := (magicwand_r PScompose) (at level 53, left associativity).
   Notation v := PMval.
   Notation Hv := PMval_closed.
-  Notation "'⟦' A '⟧'" := (Form_sem PSILL ILLval A) (at level 49).
+  Notation "⟦ A ⟧" := (form_sem PSILL ILLval A) (at level 49).
 
   Let cl_sem_closed A : cl (⟦A⟧) ⊆ ⟦A⟧.
-  Proof. apply (@closed_Form_sem _ PMILL); auto. Qed.
+  Proof. apply (@form_sem_closed _ PMILL); auto. Qed.
 
   Section Okada_Lemma.
 
-    (** This is Okada's lemma which states that the interpretation ⟦A⟧
-        of A is nearly identical to ↓A, 
-
-               A::nil ∈ ⟦A⟧ ⊆ ↓A.
-
-        a result which is similar to what happens in the Lidenbaum construction.
-        Indeed, in Lidenbaum construction, one proves 
-
-                 ⟦A⟧ ≃ ↓A
-
-        but that result needs the cut-rule.  
-
-        The MAJOR difference is that Okada's proof does not require 
-        the use of cut. It is done by induction on A.
-
-         But first, let us give the algebraic interpretation
-         of the rules of the cut-free ILL sequent calculus *)
-
-    Let rule_ax A : ↓A (A::∅).
-    Proof. apply ax_exp_ill. Qed.
-
-    Let rule_limp_l A B : (↓A ⊸ cl (sg (B::∅))) (A -o B::∅). 
-    Proof.
-      apply rule_limp_l_eq; eauto. 
-      intros ? ? ? ?; apply lmap_ilr. 
-    Qed.
-
-    Let rule_limp_r A B : sg (A::∅) ⊸ ↓B ⊆ ↓(A -o B).
-    Proof.
-      apply rule_limp_r_eq; eauto. 
-      intros ?; apply lmap_irr. 
-    Qed.
-
-    Let rule_neg_l A : (↓A ⊸ cl (sg (N::∅))) (ineg A::∅). 
-    Proof.
-      apply rule_neg_l_eq; eauto.
-      intros; apply neg_map_rule; auto.
-    Qed.
-
-    Let rule_neg_r A : sg (A::∅) ⊸ ↓N ⊆ ↓(ineg A).
-    Proof.
-      apply rule_neg_r_eq; eauto. 
-      intros ?; apply neg_irr. 
-    Qed.
-
-    Let rule_rimp_l A B : (cl (sg (B::∅)) ⟜ ↓A) (B o- A::∅).
-    Proof.
-      apply rule_rimp_l_eq; eauto. 
-      intros ? ? ? ?; apply lpam_ilr. 
-    Qed.
-
-    Let rule_rimp_r A B : ↓B ⟜ sg (A::∅) ⊆ ↓(B o- A).
-    Proof.
-      apply rule_rimp_r_eq; eauto.
-      intros ?; apply lpam_irr.
-    Qed.
-
-    Let rule_gen_l A : (cl (sg (N::∅)) ⟜ ↓A) (igen A::∅).
-    Proof.
-      apply rule_gen_l_eq; eauto. 
-      intros; apply gen_pam_rule; auto.
-    Qed.
-
-    Let rule_gen_r A : ↓N ⟜ sg (A::∅) ⊆ ↓(igen A).
-    Proof.
-      apply rule_gen_r_eq; eauto.
-      intros ?; apply gen_irr.
-    Qed.
-
-    Let rule_times_l A B : cl (sg (A::B::nil)) (A⊗B::nil).
-    Proof.
-      apply rule_times_l_eq.
-      intros ? ? ?; apply tens_ilr.
-    Qed.
-
-    Let rule_times_r A B : ↓A ∘ ↓B ⊆ ↓(A⊗B).
-    Proof.
-      apply rule_times_r_eq; eauto.
-      intros ? ?; apply tens_irr.
-    Qed.
-
-    Let rule_with_l1 A B : cl (sg (A::∅)) (A&B::∅).
-    Proof.
-      apply rule_with_l1_eq.
-      intros ? ? ?; apply with_ilr1.
-    Qed.
-
-    Let rule_with_l2 A B : cl (sg (B::∅)) (A&B::∅).
-    Proof.
-      apply rule_with_l2_eq.
-      intros ? ? ?; apply with_ilr2.
-    Qed.
-
-    Let rule_with_r A B : ↓A ∩ ↓B ⊆ ↓(A & B).
-    Proof.
-      apply rule_with_r_eq.
-      intros ?; apply with_irr.
-    Qed.
-
-    Let rule_plus_l A B : cl (sg (A::∅) ∪ sg (B::∅)) (A⊕B::∅).
-    Proof.
-      apply rule_plus_l_eq.
-      intros ? ?; apply plus_ilr.
-    Qed.
-
-    Let rule_plus_r1 A B : ↓A ⊆ ↓(A⊕B).
-    Proof.
-      apply rule_plus_r1_eq.
-      intro; apply plus_irr1.
-    Qed.
-
-    Let rule_plus_r2 A B : ↓B ⊆ ↓(A⊕B).
-    Proof.
-      apply rule_plus_r2_eq.
-      intro; apply plus_irr2.
-    Qed.
-
-    Let rule_bang_l A : cl (sg (A::∅)) (!A::∅).
-    Proof.
-      apply rule_bang_l_eq.
-      intros ? ?; apply de_ilr.
-    Qed.
-
-    Let rule_bang_r A : PSExp ∩ ↓A ⊆ ↓(!A).
-    Proof.
-      apply rule_bang_r_eq.
-      intros ?; apply oc_irr.
-    Qed.
-
-    Let rule_unit_l : cl (sg ∅) (𝝐::nil).
-    Proof.
-      apply rule_unit_l_eq.
-      intros ?; apply one_ilr.
-    Qed.
-
-    Let rule_unit_r : sg ∅ ⊆ ↓𝝐.
-    Proof.
-      apply rule_unit_r_eq.
-      apply one_irr.
-    Qed.
-
-    Let rule_zero_l : cl (fun _ => False) (0::∅).
-    Proof.
-      apply rule_zero_l_eq, zero_ilr.
-    Qed.
-
-    Let rule_top_r : (fun _ => True) ⊆ ↓⟙ .
-    Proof.
-      apply rule_top_r_eq, top_irr. 
-    Qed.
-
-    Let mwl_mono (X Y X' Y' : _ -> Type) : X ⊆ X' -> Y ⊆ Y' -> X' ⊸ Y ⊆ X ⊸ Y'.
-    Proof. intros; apply magicwand_l_monotone; auto. Qed.
-
-    Let mwr_mono (X Y X' Y' : _ -> Type) : X ⊆ X' -> Y ⊆ Y' -> Y ⟜ X' ⊆ Y' ⟜ X.
-    Proof. intros; apply magicwand_r_monotone; auto. Qed.
-
-    Let subset_prop (K : Type) (X Y : K -> Type)  x : Y ⊆ X -> Y x -> X x.
-    Proof. simpl; auto. Qed.
-
     Let cl_under_closed X Y : cl Y ⊆ Y -> X ⊆ Y -> cl X ⊆ Y.
-    Proof. apply cl_closed. Qed.
+    Proof. apply cl_closed; apply subset_preorder. Qed.
 
     Lemma Okada_formula A : ((sg (A::nil) ⊆ ⟦A⟧) * (⟦A⟧ ⊆ ↓A))%type.
     Proof.
-      induction A; auto.
-      + split; simpl; auto; try reflexivity.
-        intros _ []; apply rule_ax.
-      + split.
-        * intros _ []; apply rule_unit_l.
-        * simpl; apply cl_under_closed ; auto.
-      + destruct IHA1 as [IHA1 IHA3].
-        destruct IHA2 as [IHA2 IHA4].
-        split.
-        * intros _ [].
-          apply subset_prop with (2 := @rule_times_l _ _).
-          simpl; apply cl_ctx_mono.
-          intros _ []; constructor 1 with (A1::∅) (A2::∅); auto.
-          red; reflexivity.
-        * simpl ; apply cl_under_closed; auto.
-          intros x Hx; apply rule_times_r.
-          revert Hx; apply composes_monotone; eauto.
-      + destruct IHA1 as [IHA1 IHA3].
-        destruct IHA2 as [IHA2 IHA4].
-        split.
-        * intros _ []; simpl.
-          apply subset_prop with (2 := @rule_rimp_l _ _).
-          apply mwr_mono; auto; apply cl_under_closed; auto.
-        * simpl; intros x Hx; apply rule_rimp_r.
-          revert Hx; apply mwr_mono; auto.
-      + destruct IHA as [IHA1 IHA2].
-        split.
-        * intros _ []; simpl.
-          eapply subset_prop ; [ | apply rule_gen_l ].
-          apply mwr_mono; auto; apply cl_under_closed; auto.
-          unfold N; intros _ []; apply rule_ax.
-        * simpl; intros x Hx; apply rule_gen_r.
-          revert Hx; apply mwr_mono; auto; reflexivity.
-      + destruct IHA1 as [IHA1 IHA3].
-        destruct IHA2 as [IHA2 IHA4].
-        split.
-        * intros _ []; simpl.
-          apply subset_prop with (2 := @rule_limp_l _ _).
-          apply mwl_mono; auto; apply cl_under_closed; auto.
-        * simpl; intros x Hx; apply rule_limp_r.
-          revert Hx; apply mwl_mono; auto.
-      + destruct IHA as [IHA1 IHA2].
-        split.
-        * intros _ []; simpl.
-          eapply subset_prop ; [ | apply rule_neg_l ].
-          apply mwl_mono; auto; apply cl_under_closed; auto.
-          unfold N; intros _ []; apply rule_ax.
-        * simpl; intros x Hx; apply rule_neg_r.
-          revert Hx; apply mwl_mono; auto; reflexivity.
-      + split; simpl; red; unfold top; auto.
-      + destruct IHA1 as [IHA1 IHA3].
-        destruct IHA2 as [IHA2 IHA4].
-        split.
-        * intros _ [].
-          simpl; split.
-          - apply cl_under_closed with (2 := IHA1); auto.
-          - apply cl_under_closed with (2 := IHA2); auto.
-        * intros Ga (? & ?); apply rule_with_r; auto.
-      + split.
-        * intros _ []; apply rule_zero_l.
-        * simpl; apply cl_under_closed; auto.
-          intros _ [].
-      + destruct IHA1 as [IHA1 IHA3].
-        destruct IHA2 as [IHA2 IHA4].
-        split.
-        * intros _ [].
-          apply subset_prop with (2 := @rule_plus_l _ _).
-          simpl; apply cl_ctx_mono; auto.
-          intros _ [ [] | [] ]; auto.
-        * simpl; apply cl_under_closed; auto.
-          intros x [ Hx | Hx ]; auto.
-          - apply rule_plus_r1; auto.
-          - apply rule_plus_r2; auto.
-      + destruct IHA as [IHA1 IHA2].
-        split.
-        * intros _ []; simpl.
-          intros Th De B H.
-          apply H with (ϴ := !A::nil); split.
-          - exists (A::nil); auto.
-          - apply subset_prop with (2 := @rule_bang_l _).
-            apply cl_under_closed; auto.
-        * simpl; apply cl_under_closed; auto.
-          intros x []; apply rule_bang_r; split; auto.
+    induction A; simpl;
+      try (destruct IHA as [IHA01 IHA02]);
+      try (destruct IHA1 as [IHA11 IHA12]);
+      try (destruct IHA2 as [IHA21 IHA22]);
+     (split; [ |
+      try (try (apply cl_under_closed; auto);
+           intros x Hx; inversion Hx; subst; constructor; auto; fail)]).
+    - intros x Hx; subst.
+      apply ax_ir.
+    - reflexivity.
+    - unfold ldual, rdual, ctx_orth.
+      intros x Hx [[de1 de2] A] Hy; subst; simpl.
+      constructor.
+      specialize Hy with nil; apply Hy; auto.
+    - unfold ldual, rdual, ctx_orth.
+      intros x Hx [[de1 de2] A] Hy; subst; simpl.
+      constructor.
+      specialize Hy with ((A1 :: nil) ++ A2 :: nil); apply Hy; auto.
+      constructor; auto.
+    - unfold magicwand_r.
+      intros x Hx y Hy; subst.
+      inversion Hy; subst.
+      enough (sg (A2 o- A1 :: b) ⊆ ⟦A2⟧) as Hi by (apply Hi; reflexivity).
+      apply cl_under_closed in IHA21; auto.
+      etransitivity; [ | apply IHA21 ].
+      intros x Hx; subst.
+      unfold cl; simpl; unfold ldual, rdual, ctx_orth.
+      intros [[si1 si2] C] H; simpl.
+      apply lpam_ilr; auto.
+      specialize H with (A2 :: nil); apply H; auto.
+    - intros x Hx; constructor.
+      apply IHA22, Hx; constructor; auto.
+    - unfold magicwand_r.
+      intros x Hx y Hy; subst.
+      inversion Hy; subst; simpl.
+      apply gen_ilr.
+      apply IHA02; auto.
+    - intros x Hx; constructor.
+      apply Hx; constructor; auto.
+    - unfold magicwand_l.
+      intros x Hx y Hy; subst.
+      inversion Hy; subst.
+      enough (sg (a ++ A1 -o A2 :: nil) ⊆ ⟦A2⟧) as Hi by (apply Hi; reflexivity).
+      apply cl_under_closed in IHA21; auto.
+      etransitivity; [ | apply IHA21 ].
+      intros x Hx; subst.
+      unfold cl; simpl; unfold ldual, rdual, ctx_orth.
+      intros [[si1 si2] C] H; list_simpl.
+      apply lmap_ilr; auto.
+      specialize H with (A2 :: nil); apply H; auto.
+    - intros x Hx; constructor.
+      apply IHA22, Hx.
+      change (A1 :: x) with ((A1 :: nil) ++ x); constructor; auto.
+    - unfold magicwand_l.
+      intros x Hx y Hy; subst.
+      inversion Hy; subst; simpl.
+      apply neg_ilr.
+      apply IHA02; auto.
+    - intros x Hx; constructor.
+      apply Hx.
+      change (A :: x) with ((A :: nil) ++ x); constructor; auto.
+    - apply top_greatest.
+    - apply glb_in.
+      + apply cl_under_closed in IHA11; auto.
+        etransitivity; [ | apply IHA11 ].
+        intros x Hx; subst.
+        unfold cl; simpl; unfold ldual, rdual, ctx_orth.
+        intros [[si1 si2] C] H; simpl.
+        apply with_ilr1.
+        specialize H with (A1 :: nil); apply H; auto.
+      + apply cl_under_closed in IHA21; auto.
+        etransitivity; [ | apply IHA21 ].
+        intros x Hx; subst.
+        unfold cl; simpl; unfold ldual, rdual, ctx_orth.
+        intros [[si1 si2] C] H; simpl.
+        apply with_ilr2.
+        specialize H with (A2 :: nil); apply H; auto.
+    - unfold ldual, rdual, ctx_orth.
+      intros x Hx [[de1 de2] A] Hy; subst; simpl.
+      constructor.
+    - unfold ldual, rdual, ctx_orth.
+      intros x Hx [[de1 de2] A] Hy; subst; simpl.
+      constructor.
+      + specialize Hy with (A1 :: nil); apply Hy; auto.
+      + specialize Hy with (A2 :: nil); apply Hy; auto.
+    - unfold ldual, rdual, ctx_orth.
+      intros x Hx [[de1 de2] B] Hy; subst; simpl.
+      specialize Hy with (!A :: nil); apply Hy; auto.
+      split.
+      + exists (A :: nil); reflexivity.
+      + enough (sg (!A :: nil) ⊆ ⟦A⟧) as Hoc by (apply Hoc; reflexivity).
+        apply cl_under_closed in IHA01; auto.
+        etransitivity; [ | apply IHA01 ].
+        intros x Hx; subst.
+        unfold cl; simpl; unfold ldual, rdual, ctx_orth.
+        intros [[si1 si2] C] H; simpl.
+        apply de_ilr.
+        specialize H with (A :: nil); apply H; auto.
+    - apply cl_under_closed; auto.
+      intros x Hx; inversion Hx; subst.
+      inversion H; subst.
+      constructor; auto.
     Qed.
 
   End Okada_Lemma.
 
-  Notation "'⟬߭' Γ '⟭'" := (list_Form_sem PSILL ILLval Γ) (at level 49).
+  Notation "⟬߭ Γ ⟭" := (list_form_presem PSILL ILLval Γ) (at level 49).
 
   (* We lift the result to contexts, ie list of formulas *)
 
   Lemma Okada_ctx Γ: ⟬߭Γ⟭  Γ.
   Proof.
-    induction Γ as [ | A ga Hga ]; simpl; 
-      apply cl_increase; auto.
-    constructor 1 with (A :: nil) ga; auto.
-    + apply Okada_formula; auto.
-    + apply PEperm_Type_refl.
+  induction Γ as [ | A ga Hga ]; unfold list_form_presem; simpl; auto.
+  change (A :: ga) with ((A :: nil) ++ ga); constructor; auto.
+  apply Okada_formula; auto.
   Qed.
 
 End Okada.

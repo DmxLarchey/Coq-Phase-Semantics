@@ -24,11 +24,10 @@ Infix "﹠" := (iwith) (at level 50).
 Infix "⊗" := (itens) (at level 50).
 Infix "⊕" := (iplus) (at level 50).
 Infix "-o" := (ilmap) (at level 51, right associativity).
-Notation "x o- y" := (ilpam y x) (at level 52, left associativity).
-Notation "'!' x" := (ioc x) (at level 52).
+Notation "x o- y" := (ilpam y x) (at level 53, left associativity).
+Notation "! x" := (ioc x) (at level 53).
 Definition ill_lbang := map ioc.
-Notation "'!l' x" := (ill_lbang x) (at level 60, only parsing).
-Notation "‼ x" := (ill_lbang x) (at level 52).
+Notation "‼ x" := (ill_lbang x) (at level 53).
 Notation "£" := ivar.
 Notation "∅" := nil (only parsing).
 
@@ -39,39 +38,40 @@ Set Implicit Arguments.
 
 Section Phase_Spaces.
 
-  Notation "X '⊆' Y" := (subset X Y) (at level 75, format "X  ⊆  Y", no associativity).
-  Notation "X '≃' Y" := (eqset X Y) (at level 75, format "X  ≃  Y", no associativity).
-  Notation "A '∩' B" := (fun z => A z * B z : Type)%type (at level 50, format "A  ∩  B", left associativity).
-  Notation "A '∪' B" := (fun z => A z + B z : Type)%type (at level 50, format "A  ∪  B", left associativity).
+  Infix "⊆" := subset (at level 75, no associativity).
+  Infix "≃" := eqset (at level 75, no associativity).
+  Notation "A ∩ B" := (fun z => A z * B z : Type)%type (at level 50, format "A  ∩  B", left associativity).
+  Notation "A ∪ B" := (fun z => A z + B z : Type)%type (at level 50, format "A  ∪  B", left associativity).
+  Notation sg := (@eq _).
 
   Class PhaseSpace (b : bool) := {
     Web : Type;
-    PSCL : @ClosureOp Web;
-    PSCompose : Web -> Web -> Web -> Type;
+    PScompose : Web -> Web -> Web;
     PSunit : Web;
+    PSCL : @ClosureOp _ (@subset Web);
     PSExp : Web -> Type;
-    PScl_stable_l : cl_stability_l (Composes PSCompose);
-    PScl_stable_r : cl_stability_r (Composes PSCompose);
-    PScl_associative_1 : cl_associativity_1 PSCompose;
-    PScl_associative_2 : cl_associativity_2 PSCompose;
-    PScl_neutral_1 : cl_neutrality_1 PSCompose PSunit;
-    PScl_neutral_2 : cl_neutrality_2 PSCompose PSunit;
-    PScl_neutral_3 : cl_neutrality_3 PSCompose PSunit;
-    PScl_neutral_4 : cl_neutrality_4 PSCompose PSunit;
-    PSsub_monoid_1 : sub_monoid_hyp_1 PSunit PSExp;
-    PSsub_monoid_2 : sub_monoid_hyp_2 (Composes PSCompose) PSExp;
-    PSsub_J : sub_J_hyp (Composes PSCompose) PSunit PSExp;
-    PScl_commute : b = true -> cl_commutativity PSCompose
+    PScl_stable_l : @cl_stability_l _ _ PSCL (composes PScompose);
+    PScl_stable_r : @cl_stability_r _ _ PSCL (composes PScompose);
+    PScl_associative_l : @cl_associativity_l _ _ PSCL (composes PScompose);
+    PScl_associative_r : @cl_associativity_r _ _ PSCL (composes PScompose);
+    PScl_neutral_l_1 : @cl_neutrality_l_1 _ _ PSCL (composes PScompose) (sg PSunit);
+    PScl_neutral_l_2 : @cl_neutrality_l_2 _ _ PSCL (composes PScompose) (sg PSunit);
+    PScl_neutral_r_1 : @cl_neutrality_r_1 _ _ PSCL (composes PScompose) (sg PSunit);
+    PScl_neutral_r_2 : @cl_neutrality_r_2 _ _ PSCL (composes PScompose) (sg PSunit);
+    PSsub_monoid_1 : @sub_monoid_hyp_1 _ PSCL PSunit PSExp;
+    PSsub_monoid_2 : sub_monoid_hyp_2 PScompose PSExp;
+    PSsub_J : @sub_J_hyp _ PScompose PSCL PSunit PSExp;
+    PScl_commute : b = true -> @cl_commutativity _ _ PSCL (composes PScompose)
   }.
 
   (* Interpretation of Linear Logic *)
 
 
-  Infix "⊸" := (Magicwand_l PSCompose) (at level 51, right associativity).
-  Infix "⟜" := (Magicwand_r PSCompose) (at level 52, left associativity).
-  Infix "⊛" := (tensor (Composes PSCompose)) (at level 59).
-  Notation "x ⊓ y" := (glb x y) (at level 50, no associativity).
-  Notation "x ⊔ y" := (lub x y) (at level 50, no associativity).
+  Infix "⊸" := (magicwand_l PScompose) (at level 51, right associativity).
+  Infix "⟜" := (magicwand_r PScompose) (at level 52, left associativity).
+  Infix "⊛" := (tensor (composes PScompose)) (at level 59).
+  Infix "⊓" := glb (at level 50, no associativity).
+  Infix "⊔" := lub (at level 50, no associativity).
   Notation "❗ A" := (bang PSExp A) (at level 40, no associativity).
 
   Section Formula_Interpretation.
@@ -82,11 +82,11 @@ Section Phase_Spaces.
     Variable v : IAtom -> Web -> Type.
     Instance CL0 : ClosureOp := PSCL.
 
-    Fixpoint Form_sem f :=
+    Fixpoint form_sem f :=
       match f with
       | 0     => zero
       | ⟙             => top
-      | 𝝐              => unit PSunit
+      | 𝝐              => @one _ _ PSCL (sg PSunit)
       | £ x    => v x
       | a -o b => ⟦a⟧ ⊸ ⟦b⟧
       | ineg a => ⟦a⟧ ⊸ v atN
@@ -97,18 +97,18 @@ Section Phase_Spaces.
       | a & b  => ⟦a⟧ ⊓ ⟦b⟧
       | !a     => ❗⟦a⟧
       end
-    where "⟦ a ⟧" := (Form_sem a).
+    where "⟦ a ⟧" := (form_sem a).
 
-    Definition list_Form_sem ll := fold_right (fun x y => x⊛y) (unit PSunit) (map Form_sem ll).
+    Definition list_form_presem l := fold_right (composes PScompose) (sg PSunit) (map form_sem l).
 
   End Formula_Interpretation.
 
   Class PhaseModel (P : ipfrag) := {
     PMPS : PhaseSpace (ipperm P);
     PMval : IAtom -> Web -> Type;
-    PMval_closed : forall x, (@cl _ PSCL) (PMval x) ⊆ PMval x;
-    PMgax : forall a, list_Form_sem PMPS PMval (fst (projT2 (ipgax P) a))
-                    ⊆ Form_sem PMPS PMval (snd (projT2 (ipgax P) a))
+    PMval_closed : forall x, (@cl _ _ PSCL) (PMval x) ⊆ PMval x;
+    PMgax : forall a, list_form_presem PMPS PMval (fst (projT2 (ipgax P) a))
+                    ⊆ form_sem PMPS PMval (snd (projT2 (ipgax P) a))
   }.
 
   Context { P : ipfrag }.
@@ -116,117 +116,199 @@ Section Phase_Spaces.
   Instance PS : PhaseSpace (ipperm P) := PMPS.
   Instance CL : ClosureOp := PSCL.
 
-  Hint Resolve (@PScl_stable_l (ipperm P) PS) (@PScl_stable_r (ipperm P) PS)
-               (@PScl_associative_1 (ipperm P) PS) (@PScl_associative_2 (ipperm P) PS)
-               (@PScl_neutral_1 (ipperm P) PS) (@PScl_neutral_2 (ipperm P) PS)
-               (@PScl_neutral_3 (ipperm P) PS) (@PScl_neutral_4 (ipperm P) PS)
-               (@PSsub_monoid_1 (ipperm P) PS) (@PSsub_monoid_2 (ipperm P) PS) (@PSsub_J (ipperm P) PS).
-  Hint Resolve (@composes_monotone _ PSCompose)
-               composes_associative_1 composes_associative_2 composes_commute_1
+  Hint Resolve (@PScl_stable_l _ PS) (@PScl_stable_r _ PS)
+               (@PScl_associative_l _ PS) (@PScl_associative_r _ PS)
+               (@PScl_neutral_l_1 _ PS) (@PScl_neutral_l_2 _ PS)
+               (@PScl_neutral_r_1 _ PS) (@PScl_neutral_r_2 _ PS)
+               (@PSsub_monoid_1 _ PS) (@PSsub_monoid_2 _ PS) (@PSsub_J _ PS).
+  Hint Resolve (@composes_monotone _ PScompose).
+  Hint Resolve (@subset_preorder Web).
+  Hint Resolve  magicwand_l_adj_l magicwand_l_adj_r magicwand_r_adj_l magicwand_r_adj_r.
+(*
+               cl_associative_l composes_associative_2 composes_commute_1
                composes_neutral_l_1 composes_neutral_l_2 composes_neutral_r_1 composes_neutral_r_2.
+*)
 
 
-  Infix "∘" := (Composes PSCompose) (at level 50, no associativity).
+  Infix "∘" := (composes PScompose) (at level 50, no associativity).
 
   Notation closed := (fun x => cl x ⊆ x).
   Notation v := PMval.
   Notation Hv := PMval_closed.
-  Notation PMForm_sem := (Form_sem PMPS PMval).
-  Notation PMlist_Form_sem := (list_Form_sem PMPS PMval).
-  Notation "'⟦' A '⟧'" := (PMForm_sem A) (at level 49).
-  Notation "⟬߭  ll ⟭" := (PMlist_Form_sem ll) (at level 49).
+  Notation PMform_sem := (form_sem PMPS PMval).
+  Notation PMlist_form_sem := (list_form_presem PMPS PMval).
+  Notation "⟦ A ⟧" := (PMform_sem A) (at level 49).
+  Notation "⟬߭  l ⟭" := (PMlist_form_sem l) (at level 49).
 
-  Fact closed_Form_sem f : cl (⟦f⟧) ⊆ ⟦f⟧.
+  Fact form_sem_closed f : cl (⟦f⟧) ⊆ ⟦f⟧.
   Proof.
     induction f; simpl.
     + apply Hv.
-    + apply closed_unit.
-    + apply closed_times.
-    + apply closed_magicwand_r; auto.
-    + apply closed_magicwand_r; auto.
+    + apply one_closed.
+    + apply tensor_closed.
+    + apply magicwand_r_closed with (compose := composes PScompose); auto.
+    + apply magicwand_r_closed with (compose := composes PScompose); auto.
       apply Hv.
-    + apply closed_magicwand_l; auto.
-    + apply closed_magicwand_l; auto.
+    + apply magicwand_l_closed with (compose := composes PScompose); auto.
+    + apply magicwand_l_closed with (compose := composes PScompose); auto.
       apply Hv.
-    + apply closed_top.
-    + apply closed_glb; auto.
-    + apply closed_zero.
-    + apply closed_lub; auto.
-    + apply closed_store.
+    + apply top_closed.
+    + apply glb_closed; auto.
+    + apply zero_closed.
+    + apply lub_closed; auto.
+    + apply store_closed.
   Qed.
 
-  Fact list_Form_sem_nil : ⟬߭nil⟭ = (unit PSunit).
+  Hint Resolve form_sem_closed.
+
+  Fact list_form_presem_nil : ⟬߭nil⟭ = (sg PSunit).
   Proof. auto. Qed.
 
-  Fact list_Form_sem_cons f ll : ⟬߭f::ll⟭  = ⟦f⟧ ⊛ ⟬߭ll⟭.
+  Fact list_form_presem_cons f l : ⟬߭f::l⟭  = ⟦f⟧ ∘ ⟬߭l⟭.
   Proof. auto. Qed.
 
-  Fact closed_list_Form_sem ll : cl (⟬߭ll⟭) ⊆ ⟬߭ll⟭.
+(*
+  Fact list_form_sem_closed l : cl (⟬߭l⟭) ⊆ ⟬߭l⟭.
   Proof.
-    unfold list_Form_sem; induction ll; simpl.
+    unfold list_form_sem; induction l; simpl.
     + apply closed_unit.
     + apply closed_times.
   Qed.
 
-  Hint Resolve closed_Form_sem closed_list_Form_sem.
+  Hint Resolve list_form_sem_closed.
+*)
 
-  Fact list_Form_sem_app ll mm : ⟬߭ll++mm⟭ ≃ ⟬߭ll⟭ ⊛⟬߭mm⟭.
+  Fact list_form_presem_app_1 l m : cl (⟬߭  l ++ m ⟭) ⊆ cl (⟬߭  l ⟭ ∘ ⟬߭  m ⟭).
   Proof.
-    induction ll as [ | f ll IHll ]; simpl app; auto.
-    + apply eqset_sym, unit_neutral_l; auto; red; auto.
-    + apply (@eqset_trans _ _ (⟦f⟧ ⊛ ⟬߭ ll ++ mm ⟭)); try reflexivity.
-      apply (@eqset_trans _ _ (⟦ f ⟧ ⊛ (⟬߭ ll ⟭ ⊛ ⟬߭ mm ⟭))).
-      * apply times_congruence; auto.
-        apply eqset_refl.
-      * apply (@eqset_trans _ _ (⟦ f ⟧ ⊛ ⟬߭ ll ⟭ ⊛ ⟬߭ mm ⟭)).
-        apply eqset_sym; apply times_associative; auto; red; auto.
-        apply times_congruence; auto; reflexivity.
+  induction l as [ | f l IHl ]; simpl app; auto.
+  - etransitivity; [ apply PScl_neutral_l_1 | ]; auto.
+    apply cl_le; auto.
+  - rewrite 2 list_form_presem_cons.
+    etransitivity; [ | eapply cl_le; try apply PScl_associative_l ]; auto.
+    transitivity (cl (⟦ f ⟧ ∘ cl (⟬߭  l ⟭ ∘ ⟬߭  m ⟭))).
+    + apply cl_le; auto; etransitivity; [ | apply cl_increase ].
+      apply composes_monotone; try reflexivity.
+      apply le_cl; auto; assumption.
+    + apply cl_le; auto.
   Qed.
 
-  Fact list_Form_sem_congr_l ll mm pp : ⟬߭mm⟭ ≃ ⟬߭pp⟭  -> ⟬߭ll++mm⟭ ≃ ⟬߭ll++pp⟭.
+  Fact list_form_presem_app_closed_1 l m X : closed X -> ⟬߭  l ⟭ ∘ ⟬߭  m ⟭ ⊆ X -> ⟬߭  l ++ m ⟭ ⊆ X.
   Proof.
-    intros H.
-    do 2 apply eqset_trans with (1 := list_Form_sem_app _ _), eqset_sym.
-    apply times_congruence; auto; reflexivity.
+  intros HF Hc.
+  etransitivity; [ | apply HF].
+  apply le_cl; auto.
+  etransitivity; [ apply list_form_presem_app_1 | ].
+  apply cl_le; auto.
+  etransitivity; [ eassumption | apply cl_increase ].
   Qed.
 
-  Fact list_Form_sem_congr_r ll mm pp : ⟬߭mm⟭ ≃ ⟬߭pp⟭  -> ⟬߭mm++ll⟭ ≃ ⟬߭pp++ll⟭.
+  Fact list_form_presem_app_2 l m : cl (⟬߭  l ⟭ ∘ ⟬߭  m ⟭) ⊆ cl (⟬߭  l ++ m ⟭).
   Proof.
-    intros H.
-    do 2 apply eqset_trans with (1 := list_Form_sem_app _ _), eqset_sym.
-    apply times_congruence; auto; reflexivity.
+  induction l as [ | f l IHl ]; simpl app; auto.
+  - apply cl_le; try apply neutral_l_2_g; auto.
+  - rewrite 2 list_form_presem_cons.
+    etransitivity; [ eapply cl_le; try apply PScl_associative_r | ]; auto.
+    transitivity (cl (⟦ f ⟧ ∘ cl (⟬߭  l ⟭ ∘ ⟬߭  m ⟭))).
+    + apply cl_le; auto; etransitivity; [ | apply cl_increase ].
+      apply composes_monotone; try reflexivity.
+      apply cl_increase.
+    + apply cl_le; auto.
+      etransitivity; [ | apply PScl_stable_r ]; auto.
+      apply composes_monotone; try reflexivity; assumption.
   Qed.
 
-  Fact list_Form_sem_mono_l ll mm pp : ⟬߭mm⟭ ⊆ ⟬߭pp⟭  -> ⟬߭ll++mm⟭ ⊆ ⟬߭ll++pp⟭.
+  Fact list_form_presem_app_closed_2 l m X : closed X -> ⟬߭  l ++ m ⟭ ⊆ X -> ⟬߭  l ⟭ ∘ ⟬߭  m ⟭ ⊆ X.
   Proof.
-    intros H.
-    apply subset_trans with (⟬߭ll⟭ ⊛⟬߭mm⟭); [ apply list_Form_sem_app | ].
-    apply subset_trans with (⟬߭ll⟭ ⊛⟬߭pp⟭); [ | apply list_Form_sem_app ].
-    apply times_monotone; auto; reflexivity.
+  intros HF Hc.
+  etransitivity; [ | apply HF].
+  apply le_cl; auto.
+  etransitivity; [ apply list_form_presem_app_2 | ].
+  apply cl_le; auto.
+  etransitivity; [ eassumption | apply cl_increase ].
   Qed.
 
-  Fact list_Form_sem_mono_r ll mm pp : ⟬߭mm⟭ ⊆ ⟬߭pp⟭  -> ⟬߭mm++ll⟭ ⊆ ⟬߭pp++ll⟭.
+  Fact list_form_presem_app_app_closed_1 l m n X : closed X -> ⟬߭  l ⟭ ∘ (⟬߭  m ⟭ ∘ ⟬߭  n ⟭) ⊆ X -> ⟬߭  l ++ m ++ n ⟭ ⊆ X.
   Proof.
-    intros H.
-    apply subset_trans with (⟬߭mm⟭ ⊛⟬߭ll⟭); [ apply list_Form_sem_app | ].
-    apply subset_trans with (⟬߭pp⟭ ⊛⟬߭ll⟭); [ | apply list_Form_sem_app ].
-    apply times_monotone; auto; reflexivity.
+  intros HF Hc.
+  apply list_form_presem_app_closed_1; auto.
+  transitivity (⟬߭ l ⟭ ∘ cl (⟬߭ m ⟭ ∘ ⟬߭  n ⟭)).
+  - apply composes_monotone; try reflexivity.
+    apply le_cl; auto; apply list_form_presem_app_1.
+  - eapply cl_closed in Hc; auto; [ | apply HF ].
+    etransitivity; [ | apply Hc ].
+    etransitivity; [ | apply PScl_stable_r ].
+    apply composes_monotone; try reflexivity.
   Qed.
 
-  Fact list_Form_sem_bang ll : ⟬߭‼ll⟭ ≃ ❗ (lcap (map PMForm_sem ll)).
+  Fact list_form_presem_app_app_closed_2 l m n X : closed X -> ⟬߭  l ++ m ++ n ⟭ ⊆ X -> ⟬߭  l ⟭ ∘ (⟬߭  m ⟭ ∘ ⟬߭  n ⟭) ⊆ X.
   Proof.
-    unfold list_Form_sem.
-    assert (Forall_Type closed (map PMForm_sem ll)) as Hll.
-    { induction ll as [ | y ll IHll ].
-      + constructor.
-      + constructor; auto. }
-    eapply eqset_trans with (2 := ltimes_store _ _ _ _ _ _ _ _ _).
-    rewrite map_map.
-    apply eq_eqset; clear Hll.
-    induction ll as [ | a ll IHll ]; simpl; auto.
-    rewrite IHll; auto.
-    Unshelve. all: auto; red; auto.
+  intros HF Hc.
+  transitivity (⟬߭ l ⟭ ∘ cl (⟬߭ m ++ n ⟭)).
+  - apply composes_monotone; try reflexivity.
+    apply le_cl; auto; apply list_form_presem_app_2.
+  - etransitivity; [ apply PScl_stable_r | ].
+    apply cl_closed; auto.
+    apply list_form_presem_app_closed_2; auto.
   Qed.
+
+  Fact list_form_presem_mono_app_closed l m1 m2 n X : closed X -> ⟬߭m1⟭ ⊆ ⟬߭m2⟭  ->
+     ⟬߭l ++ m2 ++ n⟭ ⊆ X -> ⟬߭l ++ m1 ++ n⟭ ⊆ X.
+  Proof.
+  intros Hc Hi H.
+  apply list_form_presem_app_app_closed_1; auto.
+  apply list_form_presem_app_app_closed_2 in H; auto.
+  etransitivity; [ | apply H ].
+  apply composes_monotone; try reflexivity.
+  apply composes_monotone; try reflexivity; auto.
+  Qed.
+
+  Fact list_form_presem_mono_cons_closed l a b m X : closed X -> ⟦a⟧ ⊆ ⟦b⟧ ->
+     ⟬߭l ++ b :: m⟭ ⊆ X -> ⟬߭l ++ a :: m⟭ ⊆ X.
+  Proof.
+  intros Hc Hi H.
+  apply list_form_presem_app_closed_1; auto.
+  rewrite list_form_presem_cons.
+  apply list_form_presem_app_closed_2 in H; auto.
+  rewrite list_form_presem_cons in H.
+  etransitivity; [ | apply H ].
+  apply composes_monotone; try reflexivity.
+  apply composes_monotone; try reflexivity; auto.
+  Qed.
+
+  Fact list_form_presem_bang_1 l : cl (⟬߭‼l⟭) ⊆ ❗ (lcap (map PMform_sem l)).
+  Proof.
+  induction l.
+  - simpl; rewrite list_form_presem_nil.
+    apply store_unit_1; auto.
+  - simpl; rewrite list_form_presem_cons.
+    apply cl_le; auto.
+    transitivity (⟦ ! a ⟧ ∘ cl (❗ lcap (map PMform_sem l))).
+    + apply composes_monotone; try reflexivity.
+      etransitivity; [ | etransitivity; [apply IHl | ] ]; auto; apply cl_increase.
+    + etransitivity; [ apply PScl_stable_r | ]; simpl.
+      etransitivity; [ refine (fst (@store_comp _ PScompose _ _ _ PSunit _ _ _ _ _ _ _ _ _)) | ]; auto.
+      * apply mglb_closed.
+        clear IHl; induction l; simpl; auto.
+      * reflexivity.
+  Qed.
+
+  Fact list_form_presem_bang_2 l : ❗ (lcap (map PMform_sem l)) ⊆ cl (⟬߭‼l⟭).
+  Proof.
+  induction l.
+  - simpl; rewrite list_form_presem_nil.
+    eapply store_unit_2; eauto.
+  - simpl; rewrite list_form_presem_cons.
+    transitivity (cl (⟦ ! a ⟧ ∘ ❗ lcap (map PMform_sem l))).
+    + simpl.
+      etransitivity; [ | refine (snd (@store_comp _ PScompose _ _ _ PSunit _ _ _ _ _ _ _ _ _)) ]; auto.
+      reflexivity.
+      apply mglb_closed.
+      clear IHl; induction l; simpl; auto.
+    + apply cl_le; auto.
+      etransitivity; [ | apply PScl_stable_r ].
+      apply composes_monotone; try reflexivity; auto.
+  Qed.
+
 
   (* All the rules of the ILL sequent calculus (including cut) are closed
      under relational phase semantics, hence we deduce the following
@@ -236,28 +318,40 @@ Section Phase_Spaces.
 
     Notation "l '⊢' x" := (ill P l x) (at level 70, no associativity).
 
-    Fact ill_ax_sound a : ⟬߭a::nil⟭  ⊆ ⟦a⟧.
-    Proof. intro; apply unit_neutral_r; auto; red; auto. Qed.
+    Fact ill_ax_sound a : ⟬߭a :: nil⟭  ⊆ ⟦a⟧.
+    Proof. etransitivity; [ apply PScl_neutral_r_2 | ]; auto. Qed.
 
-    Fact ill_cut_sound Γ ϴ Δ a b : ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭Δ++a::ϴ⟭ ⊆ ⟦b⟧ -> ⟬߭Δ++Γ++ϴ⟭ ⊆ ⟦b⟧.
+    Fact ill_cut_sound Γ ϴ Δ a b : ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭Δ ++ a :: ϴ⟭ ⊆ ⟦b⟧ -> ⟬߭Δ ++ Γ ++ ϴ⟭ ⊆ ⟦b⟧.
     Proof.
-      intros H1 H2.
-      apply subset_trans with (2 := H2).
-      apply list_Form_sem_mono_l.
-      apply subset_trans with (1 := fst (list_Form_sem_app _ _)).
-      rewrite list_Form_sem_cons; apply times_monotone; auto; reflexivity.
+    intros H1 H2.
+    apply list_form_presem_app_app_closed_1; auto.
+    transitivity (⟬߭ Δ ⟭ ∘ (⟦ a ⟧ ∘ ⟬߭  ϴ ⟭)).
+    - apply composes_monotone; try reflexivity.
+      apply composes_monotone; try reflexivity; auto.
+    - rewrite <- list_form_presem_cons.
+      apply list_form_presem_app_closed_2; auto.
     Qed.
 
     Fact ill_nc_swap_sound Γ Δ a b c : ⟬߭Γ++!a::!b::Δ⟭ ⊆ ⟦c⟧ -> ⟬߭Γ++!b::!a::Δ⟭ ⊆ ⟦c⟧.
     Proof.
-      intros H x Hx; apply H; revert x Hx.
-      apply list_Form_sem_congr_l.
-      change (!a::!b::Δ) with (‼(a::b::nil)++Δ).
-      change (!b::!a::Δ) with (‼(b::a::nil)++Δ).
-      apply list_Form_sem_congr_r.
-      do 2 apply eqset_trans with (1 := list_Form_sem_bang _), eqset_sym.
-      apply store_congruence.
-      simpl; split; red; tauto.
+    intros H.
+    change (!a::!b::Δ) with ((!a::!b::nil)++Δ) in H.
+    change (!b::!a::Δ) with (map ioc (b::a::nil)++Δ).
+    apply list_form_presem_app_app_closed_1; auto.
+    apply list_form_presem_app_app_closed_2 in H; auto.
+    transitivity (⟬߭ Γ ⟭ ∘ (cl (⟬߭ !a :: !b :: nil ⟭) ∘ ⟬߭ Δ ⟭)).
+    - apply composes_monotone; try reflexivity.
+      apply composes_monotone; try reflexivity.
+      etransitivity; [ apply cl_increase | ].
+      etransitivity; [ apply list_form_presem_bang_1 | ].
+      transitivity (❗ lcap (map PMform_sem (a :: b :: nil))).
+      +  apply store_monotone.
+         simpl; split; tauto.
+      + etransitivity; [ apply list_form_presem_bang_2 | ]; reflexivity.
+    - transitivity (cl (⟬߭ Γ ⟭ ∘ (⟬߭ !a :: !b :: nil ⟭ ∘ ⟬߭ Δ ⟭)));
+        [ transitivity (⟬߭ Γ ⟭ ∘ cl (⟬߭ !a :: !b :: nil ⟭ ∘ ⟬߭ Δ ⟭)) | ]; auto.
+      + apply composes_monotone; try reflexivity; auto.
+      + apply cl_closed; auto.
     Qed.
 
     Fact ill_co_oc_perm_sound l1 l2 lw lw' a : Permutation_Type lw lw' ->
@@ -272,134 +366,159 @@ Section Phase_Spaces.
       + apply ill_nc_swap_sound.
     Qed.
 
-    Fact ill_co_swap_sound (HPerm: ipperm P = true) Γ Δ a b c : ⟬߭Γ++a::b::Δ⟭ ⊆ ⟦c⟧ -> ⟬߭Γ++b::a::Δ⟭ ⊆ ⟦c⟧.
+    Fact ill_co_swap_sound (HPerm: ipperm P = true) Γ Δ a b c :
+      ⟬߭Γ ++ a :: b :: Δ⟭ ⊆ ⟦c⟧ -> ⟬߭Γ ++ b :: a :: Δ⟭ ⊆ ⟦c⟧.
     Proof.
-      intros H x Hx; apply H; revert x Hx.
-      apply list_Form_sem_congr_l.
-      change (a::b::Δ) with ((a::b::nil)++Δ).
-      change (b::a::Δ) with ((b::a::nil)++Δ).
-      apply list_Form_sem_congr_r.
-      repeat rewrite list_Form_sem_cons.
-      repeat rewrite list_Form_sem_nil.
-      eapply eqset_trans.
-      apply times_commute; apply composes_commute_1 ; apply PScl_commute; auto.
-      apply times_congruence; auto.
-      + apply unit_neutral_r; auto; red; auto.
-      + apply eqset_sym, unit_neutral_r; auto; red; auto.
+    intros H.
+    change (a::b::Δ) with ((a::b::nil)++Δ) in H.
+    change (b::a::Δ) with ((b::a::nil)++Δ).
+    apply list_form_presem_app_app_closed_1; auto.
+    apply list_form_presem_app_app_closed_2 in H; auto.
+    transitivity (⟬߭ Γ ⟭ ∘ (cl (⟬߭ a :: b :: nil ⟭) ∘ ⟬߭ Δ ⟭)).
+    - apply composes_monotone; try reflexivity.
+      apply composes_monotone; try reflexivity.
+      transitivity (⟦ b ⟧ ∘ ⟦ a ⟧); [ | transitivity (cl (⟦ a ⟧ ∘ ⟦ b ⟧))].
+      + apply composes_monotone; try reflexivity.
+        etransitivity; [ apply PScl_neutral_r_2 | ]; auto.
+      + apply PScl_commute; auto.
+      + apply cl_le; auto.
+        etransitivity; [ | apply PScl_stable_r ].
+        apply composes_monotone; try reflexivity; auto.
+    - transitivity (cl (⟬߭ Γ ⟭ ∘ (⟬߭ a :: b :: nil ⟭ ∘ ⟬߭ Δ ⟭)));
+        [ transitivity (⟬߭ Γ ⟭ ∘ cl (⟬߭ a :: b :: nil ⟭ ∘ ⟬߭ Δ ⟭)) | ]; auto.
+      + apply composes_monotone; try reflexivity; auto.
+      + apply cl_closed; auto.
     Qed.
 
     Fact ill_perm_sound Γ Δ a : Γ ~[ipperm P] Δ -> ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭Δ⟭ ⊆ ⟦a⟧.
     Proof.
-      assert ({ipperm P = true} + {ipperm P = false}) as Hbool
-        by (clear; destruct (ipperm P); [ left | right ]; reflexivity).
-      destruct Hbool as [Hbool | Hbool]; intros.
-      * rewrite Hbool in X.
-        revert X a X0.
-        induction 1 as [ | a Ga De H1 IH1 | | ] ; intros c; auto.
-        + repeat rewrite list_Form_sem_cons.
-          intros H; apply adjunction_l_2; auto.
-          apply IH1 with (a := a -o c); simpl. 
-          apply adjunction_l_1; auto.
-        + apply ill_co_swap_sound with (Γ := nil) ; assumption.
-      * rewrite Hbool in X; simpl in X; subst; assumption.
+    assert ({ipperm P = true} + {ipperm P = false}) as Hbool
+      by (clear; destruct (ipperm P); [ left | right ]; reflexivity).
+    destruct Hbool as [Hbool | Hbool]; intros.
+    - rewrite Hbool in X.
+      revert X a X0.
+      induction 1 as [ | a Ga De H1 IH1 | | ] ; intros c; auto.
+      + rewrite ? list_form_presem_cons.
+        intros H; apply magicwand_l_adj_r; auto.
+        apply IH1 with (a := a -o c); simpl. 
+        apply magicwand_l_adj_l; auto.
+      + apply ill_co_swap_sound with (Γ := nil) ; assumption.
+    - rewrite Hbool in X; simpl in X; subst; assumption.
     Qed.
 
-    Fact ill_limp_l_sound Γ ϴ Δ a b c :  ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭ϴ++b::Δ⟭ ⊆ ⟦c⟧ -> ⟬߭ϴ++Γ++a -o b::Δ⟭ ⊆ ⟦c⟧.
+(* TODO simplify ? *)
+    Fact ill_unit_l_sound Γ Δ a : ⟬߭Γ ++ Δ⟭ ⊆ ⟦a⟧ -> ⟬߭Γ ++ 𝝐 :: Δ⟭ ⊆ ⟦a⟧.
     Proof.
-      intros H1 H2 x Hx; apply H2; revert x Hx.
-      apply list_Form_sem_mono_l.
-      change (b::Δ) with ((b::nil)++Δ).
-      replace (Γ++a -o b::Δ) with ((Γ++a -o b::nil)++Δ).
-      2: rewrite app_ass; auto.
-      apply list_Form_sem_mono_r.
-      apply subset_trans with (1 := fst (list_Form_sem_app _ _)).
-      apply subset_trans with (⟬߭Γ⟭ ⊛ (⟦ a ⟧ ⊸ ⟦ b ⟧)).
-      * apply times_congruence; auto; try reflexivity.
-        rewrite list_Form_sem_cons, list_Form_sem_nil. 
-        apply eqset_sym, unit_neutral_r; auto; red; auto.
-        apply closed_magicwand_l; auto.
-      * apply subset_trans with (⟦b⟧).
-        apply adjunction_l; auto; try reflexivity.
-        apply magicwand_l_monotone; auto; reflexivity.
-        rewrite list_Form_sem_cons, list_Form_sem_nil.
-        apply unit_neutral_r; auto; red; auto.
+    intros H.
+    apply list_form_presem_app_closed_1; auto.
+    rewrite list_form_presem_cons; simpl; unfold one.
+    transitivity (⟬߭ Γ ⟭ ∘ (cl (sg PSunit ∘ ⟬߭ Δ ⟭))).
+    - apply composes_monotone; try reflexivity; auto.
+    - etransitivity; [ apply PScl_stable_r | ].
+      apply cl_closed; auto.
+      transitivity (⟬߭ Γ ⟭ ∘ cl (⟬߭ Δ ⟭)).
+      + apply composes_monotone; try reflexivity.
+        apply PScl_neutral_l_2.
+      + etransitivity; [ apply PScl_stable_r | ].
+        apply cl_closed; auto.
+        apply list_form_presem_app_closed_2; auto.
     Qed.
 
-    Fact ill_neg_l_sound Γ a :  ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭Γ++ineg a::nil⟭ ⊆ ⟦N⟧.
+    Fact ill_unit_r_sound : ⟬߭nil⟭ ⊆ ⟦𝝐⟧.
+    Proof. apply cl_increase. Qed.
+
+    Fact ill_limp_l_sound Γ ϴ Δ a b c : ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭ϴ ++ b :: Δ⟭ ⊆ ⟦c⟧ -> ⟬߭ϴ ++ Γ ++ a -o b :: Δ⟭ ⊆ ⟦c⟧.
     Proof.
-      intros H.
-      replace (⟬߭ Γ ++ ineg a :: nil ⟭) with (⟬߭ nil ++ Γ ++ a -o N :: nil⟭)
-        by (unfold list_Form_sem; rewrite ? map_app; simpl; reflexivity).
-      apply ill_limp_l_sound; auto.
-      unfold list_Form_sem; simpl; apply unit_neutral_r_1; auto; red; auto.
-      apply Hv.
+    intros H1 H2.
+    apply list_form_presem_app_app_closed_1; auto.
+    rewrite list_form_presem_cons.
+    transitivity (⟬߭ ϴ ⟭ ∘ cl((⟬߭ Γ ⟭ ∘ (⟦ a ⟧ ⊸ ⟦ b ⟧)) ∘ ⟬߭ Δ ⟭)).
+    - apply composes_monotone; try reflexivity.
+      apply PScl_associative_l.
+    - apply list_form_presem_app_closed_2 in H2; auto.
+      eapply cl_closed in H2; auto.
+      etransitivity; [ | apply H2 ].
+      etransitivity; [ | apply PScl_stable_r ].
+      apply composes_monotone; try reflexivity.
+      rewrite list_form_presem_cons.
+      apply cl_le; auto.
+      etransitivity; [ | apply PScl_stable_l ].
+      apply composes_monotone; try reflexivity.
+      etransitivity; [ | apply cl_increase ].
+      apply magicwand_l_adj_r; auto; try reflexivity.
+      apply (@magicwand_l_monotone _ _ _ (composes PScompose)); auto; reflexivity.
     Qed.
 
-    Fact ill_rimp_l_sound Γ ϴ Δ a b c :  ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭ϴ++b::Δ⟭ ⊆ ⟦c⟧ -> ⟬߭ϴ++b o- a::Γ++Δ⟭ ⊆ ⟦c⟧.
+    Fact ill_neg_l_sound Γ a : ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭Γ ++ ineg a :: nil⟭ ⊆ ⟦N⟧.
     Proof.
-      intros H1 H2 x Hx; apply H2; revert x Hx.
-      apply list_Form_sem_mono_l.
-      change (b::Δ) with ((b::nil)++Δ).
-      change (b o- a::Γ++Δ) with ((b o- a::Γ)++Δ).
-      apply list_Form_sem_mono_r.
-      do 2 rewrite list_Form_sem_cons.
-      rewrite list_Form_sem_nil.
-      apply subset_trans with (⟦ b ⟧).
-      2: apply unit_neutral_r; auto; red; auto.
-      apply adjunction_r; auto.
-      apply magicwand_r_monotone; auto; reflexivity.
+    intros H.
+    replace (⟬߭ Γ ++ ineg a :: nil ⟭) with (⟬߭ nil ++ Γ ++ a -o N :: nil⟭)
+      by (unfold list_form_presem; rewrite ? map_app; simpl; reflexivity).
+    apply ill_limp_l_sound; auto.
+    etransitivity; [ apply PScl_neutral_r_2 | ]; auto.
     Qed.
 
-    Fact ill_gen_l_sound Γ a :  ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭igen a::Γ⟭ ⊆ ⟦N⟧.
+    Fact ill_rimp_l_sound Γ ϴ Δ a b c :  ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭ϴ ++ b :: Δ⟭ ⊆ ⟦c⟧ -> ⟬߭ϴ ++ b o- a :: Γ ++ Δ⟭ ⊆ ⟦c⟧.
     Proof.
-      intros H.
-      replace (⟬߭ igen a :: Γ ⟭) with (⟬߭ nil ++ N o- a :: Γ ++ nil⟭)
-        by (unfold list_Form_sem; simpl; rewrite app_nil_r; reflexivity).
-      apply ill_rimp_l_sound; auto.
-      unfold list_Form_sem; simpl; apply unit_neutral_r_1; auto; red; auto.
-      apply Hv.
+    intros H1 H2.
+    rewrite app_comm_cons.
+    apply list_form_presem_app_app_closed_1; auto.
+    rewrite list_form_presem_cons; simpl.
+    apply list_form_presem_app_closed_2 in H2; auto.
+    eapply cl_closed in H2; auto.
+    etransitivity; [ | apply H2 ].
+    etransitivity; [ | apply PScl_stable_r ].
+    apply composes_monotone; try reflexivity.
+    rewrite list_form_presem_cons.
+    etransitivity; [ | apply PScl_stable_l ].
+    apply composes_monotone; try reflexivity.
+    etransitivity; [ | apply cl_increase ].
+    apply magicwand_r_adj_r; auto; try reflexivity.
+    apply (@magicwand_r_monotone _ _ _ (composes PScompose)); auto; reflexivity.
     Qed.
 
-    Fact ill_limp_r_sound Γ a b : ⟬߭a::Γ⟭ ⊆ ⟦b⟧ -> ⟬߭Γ⟭ ⊆ ⟦a⟧ ⊸ ⟦b⟧.
-    Proof. intro; apply adjunction_l; auto. Qed.
-
-    Fact ill_neg_r_sound Γ a : ⟬߭a::Γ⟭ ⊆ ⟦N⟧ -> ⟬߭Γ⟭ ⊆ ⟦ineg a⟧.
+    Fact ill_gen_l_sound Γ a :  ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭igen a :: Γ⟭ ⊆ ⟦N⟧.
     Proof.
-      simpl; change (v atN) with (⟦ivar atN⟧).
-      apply ill_limp_r_sound; auto.
+    intros H.
+    replace (⟬߭ igen a :: Γ ⟭) with (⟬߭ nil ++ N o- a :: Γ ++ nil⟭)
+      by (unfold list_form_presem; simpl; rewrite app_nil_r; reflexivity).
+    apply ill_rimp_l_sound; auto.
+    etransitivity; [ apply PScl_neutral_r_2 | ]; auto.
     Qed.
 
-    Fact ill_rimp_r_sound Γ a b : ⟬߭Γ++a::nil⟭ ⊆ ⟦b⟧ -> ⟬߭Γ⟭ ⊆ ⟦b⟧ ⟜ ⟦a⟧.
+    Fact ill_limp_r_sound Γ a b : ⟬߭a :: Γ⟭ ⊆ ⟦b⟧ -> ⟬߭Γ⟭ ⊆ ⟦a⟧ ⊸ ⟦b⟧.
+    Proof. intro; apply magicwand_l_adj_l; auto. Qed.
+
+    Fact ill_neg_r_sound Γ a : ⟬߭a :: Γ⟭ ⊆ ⟦N⟧ -> ⟬߭Γ⟭ ⊆ ⟦ineg a⟧.
+    Proof. simpl; change (v atN) with (⟦ivar atN⟧); apply ill_limp_r_sound; auto. Qed.
+
+    Fact ill_rimp_r_sound Γ a b : ⟬߭Γ ++ a :: nil⟭ ⊆ ⟦b⟧ -> ⟬߭Γ⟭ ⊆ ⟦b⟧ ⟜ ⟦a⟧.
     Proof.
-      intros H.
-      apply adjunction_r; auto.
-      apply subset_trans with (2 := H).
-      apply subset_trans with (2 := snd (list_Form_sem_app _ _)).
-      apply times_monotone; auto; try reflexivity.
-      rewrite list_Form_sem_cons, list_Form_sem_nil.
-      apply unit_neutral_r; auto; red; auto.
+    intros H.
+    apply magicwand_r_adj_l; auto.
+    apply list_form_presem_app_closed_2 in H; auto.
+    eapply cl_closed in H; auto.
+    etransitivity; [ | apply H ].
+    etransitivity; [ | apply PScl_stable_r ].
+    apply composes_monotone; try reflexivity.
+    apply PScl_neutral_r_1.
     Qed.
 
-    Fact ill_gen_r_sound Γ a : ⟬߭Γ++a::nil⟭ ⊆ ⟦N⟧ -> ⟬߭Γ⟭ ⊆ ⟦igen a⟧.
+    Fact ill_gen_r_sound Γ a : ⟬߭Γ ++ a :: nil⟭ ⊆ ⟦N⟧ -> ⟬߭Γ⟭ ⊆ ⟦igen a⟧.
+    Proof. simpl; change (v atN) with (⟦ivar atN⟧); apply ill_rimp_r_sound; auto. Qed.
+
+    Fact ill_with_l1_sound Γ Δ a b c : ⟬߭Γ ++ a :: Δ⟭ ⊆ ⟦c⟧ -> ⟬߭Γ ++ a ﹠ b :: Δ⟭ ⊆ ⟦c⟧.
     Proof.
-      simpl; change (v atN) with (⟦ivar atN⟧).
-      apply ill_rimp_r_sound; auto.
+    intros H.
+    apply list_form_presem_mono_cons_closed with a; auto.
+    simpl; red; unfold glb; tauto.
     Qed.
 
-    Fact ill_with_l1_sound Γ Δ a b c : ⟬߭Γ++a::Δ⟭ ⊆ ⟦c⟧ -> ⟬߭Γ++a ﹠ b::Δ⟭ ⊆ ⟦c⟧.
+    Fact ill_with_l2_sound Γ Δ a b c : ⟬߭Γ ++ b :: Δ⟭ ⊆ ⟦c⟧ -> ⟬߭Γ ++ a ﹠ b :: Δ⟭ ⊆ ⟦c⟧.
     Proof.
-      intros H.
-      apply subset_trans with (2 := H).
-      apply list_Form_sem_mono_l, times_monotone; auto; try reflexivity.
-      simpl; red; unfold glb; tauto.
-    Qed.
-
-    Fact ill_with_l2_sound Γ Δ a b c : ⟬߭Γ++b::Δ⟭ ⊆ ⟦c⟧ -> ⟬߭Γ++a ﹠ b::Δ⟭ ⊆ ⟦c⟧.
-    Proof.
-      intros H.
-      apply subset_trans with (2 := H).
-      apply list_Form_sem_mono_l, times_monotone; auto; try reflexivity.
-      simpl; red; unfold glb; tauto.
+    intros H.
+    apply list_form_presem_mono_cons_closed with b; auto.
+    simpl; red; unfold glb; tauto.
     Qed.
 
     Fact ill_with_r_sound Γ a b : ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭Γ⟭ ⊆ ⟦b⟧ -> ⟬߭Γ⟭ ⊆ ⟦a﹠b⟧.
@@ -407,104 +526,120 @@ Section Phase_Spaces.
 
     Fact ill_bang_l_sound Γ Δ a b : ⟬߭Γ++a::Δ⟭ ⊆ ⟦b⟧ -> ⟬߭Γ++!a::Δ⟭ ⊆ ⟦b⟧.
     Proof.
-      intros H.
-      apply subset_trans with (2 := H).
-      apply list_Form_sem_mono_l, times_monotone; auto; try reflexivity.
-      apply store_dec; auto.
+    intros H.
+    apply list_form_presem_mono_cons_closed with a; auto.
+    apply store_dec; auto.
     Qed.
 
     Fact ill_bang_r_sound Γ a : ⟬߭‼Γ⟭ ⊆ ⟦ a ⟧ -> ⟬߭‼Γ⟭ ⊆ ❗⟦a⟧.
     Proof.
-      intros H x Hx.
-      apply list_Form_sem_bang in Hx; revert x Hx.
-      apply store_der; auto.
-      intros x Hx; apply H, list_Form_sem_bang; auto.
+    intros H.
+    apply le_cl; auto.
+    etransitivity; [ apply list_form_presem_bang_1 | ].
+    apply store_der; auto.
+    etransitivity; [ apply list_form_presem_bang_2 | ].
+    apply cl_closed; auto.
     Qed.
 
-    Fact ill_weak_sound Γ Δ a b : ⟬߭Γ++Δ⟭ ⊆ ⟦b⟧ -> ⟬߭Γ++!a::Δ⟭ ⊆ ⟦b⟧.
+    Fact ill_weak_sound Γ Δ a b : ⟬߭Γ ++ Δ⟭ ⊆ ⟦b⟧ -> ⟬߭Γ ++ !a :: Δ⟭ ⊆ ⟦b⟧.
     Proof.
-      intros H.
-      apply subset_trans with (2 := H), list_Form_sem_mono_l.
-      apply subset_trans with (unit PSunit ⊛ ⟬߭Δ⟭).
-      * apply times_monotone; simpl; auto; try reflexivity.
-        apply (@store_inc_unit _ _ (Composes PSCompose)); auto.
-      * apply unit_neutral_l; auto; red; auto.
+    intros H.
+    apply list_form_presem_mono_cons_closed with ione; auto.
+    - apply (@store_inc_unit _ PScompose); auto.
+    - apply ill_unit_l_sound; assumption.
     Qed.
 
-    Fact ill_cntr_sound Γ Δ a b : ⟬߭Γ++!a::!a::Δ⟭ ⊆ ⟦b⟧ -> ⟬߭Γ++!a::Δ⟭ ⊆ ⟦b⟧.
+    Fact ill_cntr_sound Γ Δ a b : ⟬߭Γ ++ !a :: !a :: Δ⟭ ⊆ ⟦b⟧ -> ⟬߭Γ ++ !a :: Δ⟭ ⊆ ⟦b⟧.
     Proof.
-      intros H.
-      apply subset_trans with (2 := H), list_Form_sem_mono_l.
-      change (!a::Δ) with (‼(a::nil)++Δ) at 1.
-      change (!a::!a::Δ) with (‼(a::a::nil)++Δ).
-      apply list_Form_sem_mono_r.
-      apply subset_trans with (1 := fst (list_Form_sem_bang _)).
-      apply subset_trans with (2 := snd (list_Form_sem_bang _)).
-      apply store_monotone; simpl; red; tauto.
+    intros H.
+    change (!a::!a::Δ) with ((!a::!a::nil)++Δ) in H.
+    apply list_form_presem_mono_cons_closed with ((!a) ⊗ (!a)); auto.
+    - eapply store_compose_idem; eauto.
+    - apply list_form_presem_app_closed_1; auto.
+      rewrite list_form_presem_cons; simpl.
+      simpl in H.
+      apply list_form_presem_app_closed_2 in H; auto.
+      rewrite 2 list_form_presem_cons in H.
+      transitivity (⟬߭ Γ ⟭ ∘ cl (⟦ ! a ⟧ ∘ (⟦ ! a ⟧ ∘ ⟬߭ Δ ⟭))).
+      + apply composes_monotone; try reflexivity.
+        etransitivity; [ apply PScl_stable_l | ].
+        apply cl_le; auto.
+      + etransitivity; [ apply PScl_stable_r | ].
+        apply cl_closed; auto.
     Qed.
 
-    Fact ill_times_l_sound Γ Δ a b c : ⟬߭Γ++a::b::Δ⟭ ⊆ ⟦c⟧ -> ⟬߭Γ++a⊗b::Δ⟭ ⊆ ⟦c⟧.
+    Fact ill_tensor_l_sound Γ Δ a b c : ⟬߭Γ ++ a :: b :: Δ⟭ ⊆ ⟦c⟧ -> ⟬߭Γ ++ a ⊗ b :: Δ⟭ ⊆ ⟦c⟧.
     Proof.
-      intros H.
-      apply subset_trans with (2 := H), list_Form_sem_mono_l.
-      do 3 rewrite list_Form_sem_cons.
-      apply times_associative; auto; red; auto.
+    intros H.
+    change (a::b::Δ) with ((a::b::nil)++Δ) in H.
+    - apply list_form_presem_app_closed_1; auto.
+      rewrite list_form_presem_cons; simpl.
+      simpl in H.
+      apply list_form_presem_app_closed_2 in H; auto.
+      rewrite 2 list_form_presem_cons in H.
+      transitivity (⟬߭ Γ ⟭ ∘ cl (⟦ a ⟧ ∘ (⟦ b ⟧ ∘ ⟬߭ Δ ⟭))).
+      + apply composes_monotone; try reflexivity.
+        etransitivity; [ apply PScl_stable_l | ].
+        apply cl_le; auto.
+      + etransitivity; [ apply PScl_stable_r | ].
+        apply cl_closed; auto.
     Qed.
 
-    Fact ill_times_r_sound Γ Δ a b : ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭Δ⟭ ⊆ ⟦b⟧ -> ⟬߭Γ++Δ⟭ ⊆ ⟦a⟧⊛⟦b⟧.
-    Proof. 
-      intros ? ?.
-      apply subset_trans with (1 := fst (list_Form_sem_app _ _)).
-      apply times_monotone; auto.
-    Qed.
-
-    Fact ill_plus_l_sound Γ Δ a b c : ⟬߭Γ++a::Δ⟭ ⊆ ⟦c⟧ -> ⟬߭Γ++b::Δ⟭ ⊆ ⟦c⟧ -> ⟬߭Γ++a⊕b::Δ⟭ ⊆ ⟦c⟧.
+    Fact ill_tensor_r_sound Γ Δ a b : ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭Δ⟭ ⊆ ⟦b⟧ -> ⟬߭Γ ++ Δ⟭ ⊆ ⟦a⟧ ⊛ ⟦b⟧.
     Proof.
-      intros H1 H2.
-      apply subset_trans with ((⟬߭Γ⟭ ⊛(⟦a⟧⊛⟬߭Δ⟭)) ⊔ (⟬߭Γ⟭ ⊛(⟦b⟧⊛⟬߭Δ⟭))).
-      2: { apply lub_out; auto.
-           * apply subset_trans with (2 := H1).
-             apply subset_trans with (2 := snd (list_Form_sem_app _ _)).
-             apply times_monotone; auto; reflexivity.
-           * apply subset_trans with (2 := H2).
-             apply subset_trans with (2 := snd (list_Form_sem_app _ _)).
-             apply times_monotone; auto; reflexivity. }
-      apply subset_trans with (1 := fst (list_Form_sem_app _ _)).
-      rewrite list_Form_sem_cons.
-      eapply subset_trans; [ | apply times_lub_distrib_r ]; auto.
-      apply times_monotone; auto; try reflexivity.
-      apply times_lub_distrib_l; auto.
+    intros H1 H2.
+    apply list_form_presem_app_closed_1; [ apply tensor_closed | ].
+    etransitivity; [ eapply composes_monotone; eassumption | ].
+    apply cl_increase.
     Qed.
 
-    Fact ill_plus_r1_sound Γ a b : ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭Γ⟭ ⊆ ⟦a⊕b⟧.
-    Proof. intros ? ? ?; simpl; apply cl_increase; auto. Qed.
-
-    Fact ill_plus_r2_sound Γ a b : ⟬߭Γ⟭ ⊆ ⟦b⟧ -> ⟬߭Γ⟭ ⊆ ⟦a⊕b⟧.
-    Proof. intros ? ? ?; simpl; apply cl_increase; auto. Qed.
-
-    Fact ill_zero_l_sound Γ Δ a : ⟬߭Γ++0::Δ⟭ ⊆ ⟦a⟧.
+    Fact ill_plus_l_sound Γ Δ a b c : ⟬߭Γ ++ a :: Δ⟭ ⊆ ⟦c⟧ -> ⟬߭Γ ++ b :: Δ⟭ ⊆ ⟦c⟧ -> ⟬߭Γ ++ a ⊕ b :: Δ⟭ ⊆ ⟦c⟧.
     Proof.
-      intros x Hx.
-      apply list_Form_sem_app in Hx.
-      rewrite list_Form_sem_cons in Hx.
-      apply zero_least; auto.
-      apply times_zero_distrib_r with (Compose := PSCompose) (A := ⟬߭Γ⟭); auto.
-      revert x Hx; apply times_monotone; auto; try reflexivity.
-      apply times_zero_distrib_l; auto.
+    intros H1 H2.
+    apply list_form_presem_app_closed_2 in H1; auto.
+    rewrite list_form_presem_cons in H1.
+    apply list_form_presem_app_closed_2 in H2; auto.
+    rewrite list_form_presem_cons in H2.
+    transitivity ((⟬߭Γ⟭ ⊛(⟦a⟧⊛⟬߭Δ⟭)) ⊔ (⟬߭Γ⟭ ⊛(⟦b⟧⊛⟬߭Δ⟭))).
+    - apply list_form_presem_app_closed_1; [ apply lub_closed | ].
+      rewrite list_form_presem_cons.
+      eapply subset_trans; [ | apply tensor_lub_distrib_r ]; auto.
+      etransitivity; [ | apply cl_increase ].
+      apply composes_monotone; try reflexivity.
+      etransitivity; [ | apply tensor_lub_distrib_l]; auto.
+      etransitivity; [ | apply cl_increase ].
+      apply composes_monotone; try reflexivity.
+    - apply lub_out; auto.
+      + eapply cl_closed in H1; auto.
+        etransitivity; [ | apply H1 ].
+        apply cl_le; auto.
+        etransitivity; [ | apply PScl_stable_r ]; reflexivity.
+      + eapply cl_closed in H2; auto.
+        etransitivity; [ | apply H2 ].
+        apply cl_le; auto.
+        etransitivity; [ | apply PScl_stable_r ]; reflexivity.
+    Qed.
+
+    Fact ill_plus_r1_sound Γ a b : ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭Γ⟭ ⊆ ⟦a ⊕ b⟧.
+    Proof. intros H x Hx; apply H in Hx; apply lub_in_l; assumption. Qed.
+
+    Fact ill_plus_r2_sound Γ a b : ⟬߭Γ⟭ ⊆ ⟦b⟧ -> ⟬߭Γ⟭ ⊆ ⟦a ⊕ b⟧.
+    Proof. intros H x Hx; apply H in Hx; apply lub_in_r; assumption. Qed.
+
+    Fact ill_zero_l_sound Γ Δ a : ⟬߭Γ ++ 0 :: Δ⟭ ⊆ ⟦a⟧.
+    Proof.
+    apply list_form_presem_app_closed_1; auto.
+    rewrite list_form_presem_cons; simpl.
+    etransitivity; [ | apply zero_least ]; auto.
+    etransitivity; [ | apply tensor_zero_distrib_r with (compose := PScompose) (A := ⟬߭Γ⟭)]; auto.
+    etransitivity; [ | apply cl_increase ].
+    apply composes_monotone; try reflexivity.
+    etransitivity; [ | apply tensor_zero_distrib_l with (compose := PScompose) (A := ⟬߭Δ⟭)]; auto.
+    etransitivity; [ | apply cl_increase ]; reflexivity.
     Qed.
 
     Fact ill_top_r_sound Γ : ⟬߭Γ⟭ ⊆ ⟦⟙⟧.
     Proof. simpl; red; unfold top; auto. Qed.
-
-    Fact ill_unit_l_sound Γ Δ a : ⟬߭Γ++Δ⟭ ⊆ ⟦a⟧ -> ⟬߭Γ++𝝐::Δ⟭ ⊆ ⟦a⟧.
-    Proof.
-      intros H.
-      apply subset_trans with (2 := H), list_Form_sem_mono_l.
-      apply unit_neutral_l; auto; red; auto.
-    Qed.
-
-    Fact ill_unit_r_sound : ⟬߭nil⟭ ⊆ ⟦𝝐⟧.
-    Proof. simpl; red; auto. Qed.
 
     Notation "l '⊢' x" := (ill P l x) (at level 70, no associativity).
 
@@ -513,23 +648,21 @@ Section Phase_Spaces.
                  ill_gen_r_sound ill_gen_l_sound ill_neg_r_sound ill_neg_l_sound
                  ill_with_l1_sound ill_with_l2_sound ill_with_r_sound
                  ill_bang_l_sound ill_bang_r_sound ill_weak_sound ill_cntr_sound
-                 ill_times_l_sound ill_times_r_sound
+                 ill_tensor_l_sound ill_tensor_r_sound
                  ill_plus_l_sound ill_plus_r1_sound ill_plus_r2_sound
                  ill_zero_l_sound ill_top_r_sound 
                  ill_unit_l_sound ill_unit_r_sound.
 
     Theorem ill_soundness Γ a : Γ ⊢ a -> ⟬߭Γ⟭  ⊆ ⟦a⟧.
     Proof.
-      induction 1; try auto ; try now (simpl; auto).
-      + revert p IHX; apply ill_perm_sound.
-      + apply ill_co_oc_perm_sound with (lw := lw); auto.
-      + apply ill_cut_sound with A; auto.
-      + apply PMgax.
+    induction 1; try auto ; try now (simpl; auto).
+    - revert p IHX; apply ill_perm_sound.
+    - apply ill_co_oc_perm_sound with (lw := lw); auto.
+    - apply ill_cut_sound with A; auto.
+    - apply PMgax.
     Qed.
 
   End soundness.
 
 End Phase_Spaces.
-
-
 
