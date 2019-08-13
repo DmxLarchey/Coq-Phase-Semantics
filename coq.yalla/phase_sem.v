@@ -66,7 +66,7 @@ Section Phase_Spaces.
 
   (* Interpretation of Linear Logic *)
 
-
+  Infix "∘" := (composes PScompose) (at level 50, no associativity).
   Infix "⊸" := (magicwand_l PScompose) (at level 51, right associativity).
   Infix "⟜" := (magicwand_r PScompose) (at level 52, left associativity).
   Infix "⊛" := (tensor (composes PScompose)) (at level 59).
@@ -82,33 +82,39 @@ Section Phase_Spaces.
     Variable v : IAtom -> Web -> Type.
     Instance CL0 : ClosureOp := PSCL.
 
-    Fixpoint form_sem f :=
+    Fixpoint form_presem f :=
       match f with
       | 0     => zero
       | ⟙             => top
-      | 𝝐              => @one _ _ PSCL (sg PSunit)
+      | 𝝐              => @one _ _ CL0 (sg PSunit)
       | £ x    => v x
-      | a -o b => ⟦a⟧ ⊸ ⟦b⟧
-      | ineg a => ⟦a⟧ ⊸ v atN
-      | b o- a => ⟦b⟧ ⟜ ⟦a⟧
-      | igen a => v atN ⟜ ⟦a⟧
+      | a -o b => ⟦a⟧ ⊸ cl(⟦b⟧)
+      | ineg a => ⟦a⟧ ⊸ cl(v atN)
+      | b o- a => cl(⟦b⟧) ⟜ ⟦a⟧
+      | igen a => cl(v atN) ⟜ ⟦a⟧
       | a ⊗ b  => ⟦a⟧ ⊛ ⟦b⟧
       | a ⊕ b  => ⟦a⟧ ⊔ ⟦b⟧
-      | a & b  => ⟦a⟧ ⊓ ⟦b⟧
-      | !a     => ❗⟦a⟧
+      | a & b  => cl(⟦a⟧) ⊓ cl(⟦b⟧)
+      | !a     => ❗(cl(⟦a⟧))
       end
-    where "⟦ a ⟧" := (form_sem a).
+    where "⟦ a ⟧" := (form_presem a).
 
-    Definition list_form_presem l := fold_right (composes PScompose) (sg PSunit) (map form_sem l).
+    Definition list_form_presem l := fold_right (composes PScompose) (sg PSunit) (map form_presem l).
+    Notation "⟬߭  l ⟭" := (list_form_presem l) (at level 49).
+
+    Fact list_form_presem_nil : ⟬߭nil⟭ = (sg PSunit).
+    Proof. auto. Qed.
+
+    Fact list_form_presem_cons f l : ⟬߭f::l⟭  = ⟦f⟧ ∘ ⟬߭l⟭.
+    Proof. auto. Qed.
 
   End Formula_Interpretation.
 
   Class PhaseModel (P : ipfrag) := {
     PMPS : PhaseSpace (ipperm P);
     PMval : IAtom -> Web -> Type;
-    PMval_closed : forall x, (@cl _ _ PSCL) (PMval x) ⊆ PMval x;
     PMgax : forall a, list_form_presem PMPS PMval (fst (projT2 (ipgax P) a))
-                    ⊆ form_sem PMPS PMval (snd (projT2 (ipgax P) a))
+                    ⊆ @cl _ _ PSCL (form_presem PMPS PMval (snd (projT2 (ipgax P) a)))
   }.
 
   Context { P : ipfrag }.
@@ -116,6 +122,7 @@ Section Phase_Spaces.
   Instance PS : PhaseSpace (ipperm P) := PMPS.
   Instance CL : ClosureOp := PSCL.
 
+  Hint Resolve (@cl_idempotent _ _ CL).
   Hint Resolve (@PScl_stable_l _ PS) (@PScl_stable_r _ PS)
                (@PScl_associative_l _ PS) (@PScl_associative_r _ PS)
                (@PScl_neutral_l_1 _ PS) (@PScl_neutral_l_2 _ PS)
@@ -134,49 +141,10 @@ Section Phase_Spaces.
 
   Notation closed := (fun x => cl x ⊆ x).
   Notation v := PMval.
-  Notation Hv := PMval_closed.
-  Notation PMform_sem := (form_sem PMPS PMval).
-  Notation PMlist_form_sem := (list_form_presem PMPS PMval).
-  Notation "⟦ A ⟧" := (PMform_sem A) (at level 49).
-  Notation "⟬߭  l ⟭" := (PMlist_form_sem l) (at level 49).
-
-  Fact form_sem_closed f : cl (⟦f⟧) ⊆ ⟦f⟧.
-  Proof.
-    induction f; simpl.
-    + apply Hv.
-    + apply one_closed.
-    + apply tensor_closed.
-    + apply magicwand_r_closed with (compose := composes PScompose); auto.
-    + apply magicwand_r_closed with (compose := composes PScompose); auto.
-      apply Hv.
-    + apply magicwand_l_closed with (compose := composes PScompose); auto.
-    + apply magicwand_l_closed with (compose := composes PScompose); auto.
-      apply Hv.
-    + apply top_closed.
-    + apply glb_closed; auto.
-    + apply zero_closed.
-    + apply lub_closed; auto.
-    + apply store_closed.
-  Qed.
-
-  Hint Resolve form_sem_closed.
-
-  Fact list_form_presem_nil : ⟬߭nil⟭ = (sg PSunit).
-  Proof. auto. Qed.
-
-  Fact list_form_presem_cons f l : ⟬߭f::l⟭  = ⟦f⟧ ∘ ⟬߭l⟭.
-  Proof. auto. Qed.
-
-(*
-  Fact list_form_sem_closed l : cl (⟬߭l⟭) ⊆ ⟬߭l⟭.
-  Proof.
-    unfold list_form_sem; induction l; simpl.
-    + apply closed_unit.
-    + apply closed_times.
-  Qed.
-
-  Hint Resolve list_form_sem_closed.
-*)
+  Notation PMform_presem := (form_presem PMPS PMval).
+  Notation PMlist_form_presem := (list_form_presem PMPS PMval).
+  Notation "⟦ A ⟧" := (PMform_presem A) (at level 49).
+  Notation "⟬߭  l ⟭" := (PMlist_form_presem l) (at level 49).
 
   Fact list_form_presem_app_1 l m : cl (⟬߭  l ++ m ⟭) ⊆ cl (⟬߭  l ⟭ ∘ ⟬߭  m ⟭).
   Proof.
@@ -262,7 +230,7 @@ Section Phase_Spaces.
   apply composes_monotone; try reflexivity; auto.
   Qed.
 
-  Fact list_form_presem_mono_cons_closed l a b m X : closed X -> ⟦a⟧ ⊆ ⟦b⟧ ->
+  Fact list_form_presem_mono_cons_closed l a b m X : closed X -> ⟦a⟧ ⊆ cl(⟦b⟧) ->
      ⟬߭l ++ b :: m⟭ ⊆ X -> ⟬߭l ++ a :: m⟭ ⊆ X.
   Proof.
   intros Hc Hi H.
@@ -270,19 +238,24 @@ Section Phase_Spaces.
   rewrite list_form_presem_cons.
   apply list_form_presem_app_closed_2 in H; auto.
   rewrite list_form_presem_cons in H.
-  etransitivity; [ | apply H ].
-  apply composes_monotone; try reflexivity.
-  apply composes_monotone; try reflexivity; auto.
+  transitivity (⟬߭ l ⟭ ∘ (cl(⟦ b ⟧) ∘ ⟬߭ m ⟭)).
+  - apply composes_monotone; try reflexivity.
+    apply composes_monotone; try reflexivity; auto.
+  - transitivity (⟬߭ l ⟭ ∘ cl (⟦ b ⟧ ∘ ⟬߭ m ⟭)).
+    + apply composes_monotone; try reflexivity.
+      apply PScl_stable_l.
+    + etransitivity; [ apply PScl_stable_r | ].
+      apply cl_closed; auto.
   Qed.
 
-  Fact list_form_presem_bang_1 l : cl (⟬߭‼l⟭) ⊆ ❗ (lcap (map PMform_sem l)).
+  Fact list_form_presem_bang_1 l : cl (⟬߭‼l⟭) ⊆ ❗ (lcap (map (fun x => cl (⟦ x ⟧)) l)).
   Proof.
   induction l.
   - simpl; rewrite list_form_presem_nil.
     apply store_unit_1; auto.
   - simpl; rewrite list_form_presem_cons.
     apply cl_le; auto.
-    transitivity (⟦ ! a ⟧ ∘ cl (❗ lcap (map PMform_sem l))).
+    transitivity (⟦ ! a ⟧ ∘ cl (❗ lcap (map (fun x => cl (⟦ x ⟧)) l))).
     + apply composes_monotone; try reflexivity.
       etransitivity; [ | etransitivity; [apply IHl | ] ]; auto; apply cl_increase.
     + etransitivity; [ apply PScl_stable_r | ]; simpl.
@@ -292,18 +265,41 @@ Section Phase_Spaces.
       * reflexivity.
   Qed.
 
-  Fact list_form_presem_bang_2 l : ❗ (lcap (map PMform_sem l)) ⊆ cl (⟬߭‼l⟭).
+(*
+  Fact list_form_presem_bang_2 l : ❗ (lcap (map PMform_presem l)) ⊆ cl (⟬߭‼l⟭).
   Proof.
   induction l.
   - simpl; rewrite list_form_presem_nil.
     eapply store_unit_2; eauto.
   - simpl; rewrite list_form_presem_cons.
-    transitivity (cl (⟦ ! a ⟧ ∘ ❗ lcap (map PMform_sem l))).
+    transitivity (cl (⟦ ! a ⟧ ∘ ❗ lcap (map PMform_presem l))).
     + simpl.
-      etransitivity; [ | refine (snd (@store_comp _ PScompose _ _ _ PSunit _ _ _ _ _ _ _ _ _)) ]; auto.
-      reflexivity.
-      apply mglb_closed.
+      etransitivity; [ | refine (@store_comp_2 _ PScompose _ PSunit _ _ _ _) ]; auto.
       clear IHl; induction l; simpl; auto.
+      * apply store_monotone.
+        intros x [Ha Ht]; split; auto.
+        apply (@cl_increase _ _ CL); auto.
+      * apply store_monotone.
+        intros x [Ha Ht]; split; auto.
+        apply (@cl_increase _ _ CL); auto.
+    + apply cl_le; auto.
+      etransitivity; [ | apply PScl_stable_r ].
+      apply composes_monotone; try reflexivity; auto.
+  Qed.
+*)
+
+  Fact list_form_presem_bang_2 l : ❗ (lcap (map (fun x => cl (⟦ x ⟧)) l)) ⊆ cl (⟬߭‼l⟭).
+  Proof.
+  induction l.
+  - simpl; rewrite list_form_presem_nil.
+    eapply store_unit_2; eauto.
+  - simpl; rewrite list_form_presem_cons.
+    transitivity (cl (⟦ ! a ⟧ ∘ ❗ lcap (map (fun x => cl (⟦ x ⟧)) l))).
+    + simpl.
+      etransitivity; [ | refine (@store_comp_2 _ PScompose _ PSunit _ _ _ _) ]; auto.
+      clear IHl; induction l; simpl; auto;
+        apply store_monotone;
+        intros x [Ha Ht]; split; auto.
     + apply cl_le; auto.
       etransitivity; [ | apply PScl_stable_r ].
       apply composes_monotone; try reflexivity; auto.
@@ -318,21 +314,26 @@ Section Phase_Spaces.
 
     Notation "l '⊢' x" := (ill P l x) (at level 70, no associativity).
 
-    Fact ill_ax_sound a : ⟬߭a :: nil⟭  ⊆ ⟦a⟧.
-    Proof. etransitivity; [ apply PScl_neutral_r_2 | ]; auto. Qed.
+    Fact ill_ax_sound a : ⟬߭a :: nil⟭  ⊆ cl (⟦a⟧).
+    Proof. apply PScl_neutral_r_2. Qed.
 
-    Fact ill_cut_sound Γ ϴ Δ a b : ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭Δ ++ a :: ϴ⟭ ⊆ ⟦b⟧ -> ⟬߭Δ ++ Γ ++ ϴ⟭ ⊆ ⟦b⟧.
+    Fact ill_cut_sound Γ ϴ Δ a b : ⟬߭Γ⟭ ⊆ cl(⟦a⟧) -> ⟬߭Δ ++ a :: ϴ⟭ ⊆ cl(⟦b⟧) -> ⟬߭Δ ++ Γ ++ ϴ⟭ ⊆ cl(⟦b⟧).
     Proof.
     intros H1 H2.
     apply list_form_presem_app_app_closed_1; auto.
-    transitivity (⟬߭ Δ ⟭ ∘ (⟦ a ⟧ ∘ ⟬߭  ϴ ⟭)).
+    transitivity (⟬߭ Δ ⟭ ∘ (cl (⟦ a ⟧) ∘ ⟬߭  ϴ ⟭)).
     - apply composes_monotone; try reflexivity.
       apply composes_monotone; try reflexivity; auto.
-    - rewrite <- list_form_presem_cons.
-      apply list_form_presem_app_closed_2; auto.
+    - transitivity (cl (⟬߭ Δ ⟭ ∘ (⟦ a ⟧ ∘ ⟬߭ ϴ ⟭))).
+      + etransitivity; [ | apply PScl_stable_r ].
+        apply composes_monotone; try reflexivity.
+        apply PScl_stable_l.
+      + apply cl_le; auto.
+        rewrite <- list_form_presem_cons.
+        apply list_form_presem_app_closed_2; auto.
     Qed.
 
-    Fact ill_nc_swap_sound Γ Δ a b c : ⟬߭Γ++!a::!b::Δ⟭ ⊆ ⟦c⟧ -> ⟬߭Γ++!b::!a::Δ⟭ ⊆ ⟦c⟧.
+    Fact ill_nc_swap_sound Γ Δ a b c : ⟬߭Γ++!a::!b::Δ⟭ ⊆ cl (⟦c⟧) -> ⟬߭Γ++!b::!a::Δ⟭ ⊆ cl (⟦c⟧).
     Proof.
     intros H.
     change (!a::!b::Δ) with ((!a::!b::nil)++Δ) in H.
@@ -344,7 +345,7 @@ Section Phase_Spaces.
       apply composes_monotone; try reflexivity.
       etransitivity; [ apply cl_increase | ].
       etransitivity; [ apply list_form_presem_bang_1 | ].
-      transitivity (❗ lcap (map PMform_sem (a :: b :: nil))).
+      transitivity (❗ lcap (map (fun x => cl (⟦ x ⟧)) (a :: b :: nil))).
       +  apply store_monotone.
          simpl; split; tauto.
       + etransitivity; [ apply list_form_presem_bang_2 | ]; reflexivity.
@@ -355,7 +356,7 @@ Section Phase_Spaces.
     Qed.
 
     Fact ill_co_oc_perm_sound l1 l2 lw lw' a : Permutation_Type lw lw' ->
-             ⟬߭ l1 ++ map ioc lw ++ l2 ⟭ ⊆ ⟦ a ⟧ -> ⟬߭ l1 ++ map ioc lw' ++ l2 ⟭ ⊆ ⟦ a ⟧.
+             ⟬߭ l1 ++ map ioc lw ++ l2 ⟭ ⊆ cl (⟦ a ⟧) -> ⟬߭ l1 ++ map ioc lw' ++ l2 ⟭ ⊆ cl(⟦ a ⟧).
     Proof.
       intros HP; revert l1 l2; induction HP; intros l1 l2; auto.
       + replace (l1 ++ map ioc (x :: l) ++ l2) with ((l1 ++ ioc x :: nil) ++ map ioc l ++ l2)
@@ -367,7 +368,7 @@ Section Phase_Spaces.
     Qed.
 
     Fact ill_co_swap_sound (HPerm: ipperm P = true) Γ Δ a b c :
-      ⟬߭Γ ++ a :: b :: Δ⟭ ⊆ ⟦c⟧ -> ⟬߭Γ ++ b :: a :: Δ⟭ ⊆ ⟦c⟧.
+      ⟬߭Γ ++ a :: b :: Δ⟭ ⊆ cl(⟦c⟧) -> ⟬߭Γ ++ b :: a :: Δ⟭ ⊆ cl(⟦c⟧).
     Proof.
     intros H.
     change (a::b::Δ) with ((a::b::nil)++Δ) in H.
@@ -377,10 +378,12 @@ Section Phase_Spaces.
     transitivity (⟬߭ Γ ⟭ ∘ (cl (⟬߭ a :: b :: nil ⟭) ∘ ⟬߭ Δ ⟭)).
     - apply composes_monotone; try reflexivity.
       apply composes_monotone; try reflexivity.
-      transitivity (⟦ b ⟧ ∘ ⟦ a ⟧); [ | transitivity (cl (⟦ a ⟧ ∘ ⟦ b ⟧))].
+      transitivity (⟦ b ⟧ ∘ cl (⟦ a ⟧)); [ | transitivity (cl (⟦ a ⟧ ∘ ⟦ b ⟧))].
       + apply composes_monotone; try reflexivity.
-        etransitivity; [ apply PScl_neutral_r_2 | ]; auto.
-      + apply PScl_commute; auto.
+        apply PScl_neutral_r_2.
+      + etransitivity; [ apply PScl_stable_r | ].
+        apply cl_le; auto.
+        apply PScl_commute; auto.
       + apply cl_le; auto.
         etransitivity; [ | apply PScl_stable_r ].
         apply composes_monotone; try reflexivity; auto.
@@ -390,7 +393,7 @@ Section Phase_Spaces.
       + apply cl_closed; auto.
     Qed.
 
-    Fact ill_perm_sound Γ Δ a : Γ ~[ipperm P] Δ -> ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭Δ⟭ ⊆ ⟦a⟧.
+    Fact ill_perm_sound Γ Δ a : Γ ~[ipperm P] Δ -> ⟬߭Γ⟭ ⊆ cl(⟦a⟧) -> ⟬߭Δ⟭ ⊆ cl(⟦a⟧).
     Proof.
     assert ({ipperm P = true} + {ipperm P = false}) as Hbool
       by (clear; destruct (ipperm P); [ left | right ]; reflexivity).
@@ -400,14 +403,15 @@ Section Phase_Spaces.
       induction 1 as [ | a Ga De H1 IH1 | | ] ; intros c; auto.
       + rewrite ? list_form_presem_cons.
         intros H; apply magicwand_l_adj_r; auto.
-        apply IH1 with (a := a -o c); simpl. 
-        apply magicwand_l_adj_l; auto.
+        etransitivity; [ | apply (@cl_magicwand_l_1 _ _ _ _ (composes PScompose)) ]; auto.
+        apply IH1 with (a := a -o c); simpl.
+        etransitivity; [ | apply cl_increase ]; auto.
       + apply ill_co_swap_sound with (Γ := nil) ; assumption.
     - rewrite Hbool in X; simpl in X; subst; assumption.
     Qed.
 
 (* TODO simplify ? *)
-    Fact ill_unit_l_sound Γ Δ a : ⟬߭Γ ++ Δ⟭ ⊆ ⟦a⟧ -> ⟬߭Γ ++ 𝝐 :: Δ⟭ ⊆ ⟦a⟧.
+    Fact ill_unit_l_sound Γ Δ a : ⟬߭Γ ++ Δ⟭ ⊆ cl(⟦a⟧) -> ⟬߭Γ ++ 𝝐 :: Δ⟭ ⊆ cl(⟦a⟧).
     Proof.
     intros H.
     apply list_form_presem_app_closed_1; auto.
@@ -424,15 +428,15 @@ Section Phase_Spaces.
         apply list_form_presem_app_closed_2; auto.
     Qed.
 
-    Fact ill_unit_r_sound : ⟬߭nil⟭ ⊆ ⟦𝝐⟧.
-    Proof. apply cl_increase. Qed.
+    Fact ill_unit_r_sound : ⟬߭nil⟭ ⊆ cl(⟦𝝐⟧).
+    Proof. etransitivity; apply cl_increase. Qed.
 
-    Fact ill_limp_l_sound Γ ϴ Δ a b c : ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭ϴ ++ b :: Δ⟭ ⊆ ⟦c⟧ -> ⟬߭ϴ ++ Γ ++ a -o b :: Δ⟭ ⊆ ⟦c⟧.
+    Fact ill_limp_l_sound Γ ϴ Δ a b c : ⟬߭Γ⟭ ⊆ cl(⟦a⟧) -> ⟬߭ϴ ++ b :: Δ⟭ ⊆ cl(⟦c⟧) -> ⟬߭ϴ ++ Γ ++ a -o b :: Δ⟭ ⊆ cl(⟦c⟧).
     Proof.
     intros H1 H2.
     apply list_form_presem_app_app_closed_1; auto.
     rewrite list_form_presem_cons.
-    transitivity (⟬߭ ϴ ⟭ ∘ cl((⟬߭ Γ ⟭ ∘ (⟦ a ⟧ ⊸ ⟦ b ⟧)) ∘ ⟬߭ Δ ⟭)).
+    transitivity (⟬߭ ϴ ⟭ ∘ cl((⟬߭ Γ ⟭ ∘ (⟦ a ⟧ ⊸ cl(⟦ b ⟧))) ∘ ⟬߭ Δ ⟭)).
     - apply composes_monotone; try reflexivity.
       apply PScl_associative_l.
     - apply list_form_presem_app_closed_2 in H2; auto.
@@ -444,21 +448,21 @@ Section Phase_Spaces.
       apply cl_le; auto.
       etransitivity; [ | apply PScl_stable_l ].
       apply composes_monotone; try reflexivity.
-      etransitivity; [ | apply cl_increase ].
       apply magicwand_l_adj_r; auto; try reflexivity.
+      etransitivity; [ apply (@cl_magicwand_l_3 _ _ _ _ (composes PScompose)) | ]; auto.
       apply (@magicwand_l_monotone _ _ _ (composes PScompose)); auto; reflexivity.
     Qed.
 
-    Fact ill_neg_l_sound Γ a : ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭Γ ++ ineg a :: nil⟭ ⊆ ⟦N⟧.
+    Fact ill_neg_l_sound Γ a : ⟬߭Γ⟭ ⊆ cl(⟦a⟧) -> ⟬߭Γ ++ ineg a :: nil⟭ ⊆ cl(⟦N⟧).
     Proof.
     intros H.
     replace (⟬߭ Γ ++ ineg a :: nil ⟭) with (⟬߭ nil ++ Γ ++ a -o N :: nil⟭)
       by (unfold list_form_presem; rewrite ? map_app; simpl; reflexivity).
     apply ill_limp_l_sound; auto.
-    etransitivity; [ apply PScl_neutral_r_2 | ]; auto.
+    apply PScl_neutral_r_2.
     Qed.
 
-    Fact ill_rimp_l_sound Γ ϴ Δ a b c :  ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭ϴ ++ b :: Δ⟭ ⊆ ⟦c⟧ -> ⟬߭ϴ ++ b o- a :: Γ ++ Δ⟭ ⊆ ⟦c⟧.
+    Fact ill_rimp_l_sound Γ ϴ Δ a b c : ⟬߭Γ⟭ ⊆ cl(⟦a⟧) -> ⟬߭ϴ ++ b :: Δ⟭ ⊆ cl(⟦c⟧) -> ⟬߭ϴ ++ b o- a :: Γ ++ Δ⟭ ⊆ cl(⟦c⟧).
     Proof.
     intros H1 H2.
     rewrite app_comm_cons.
@@ -472,29 +476,30 @@ Section Phase_Spaces.
     rewrite list_form_presem_cons.
     etransitivity; [ | apply PScl_stable_l ].
     apply composes_monotone; try reflexivity.
-    etransitivity; [ | apply cl_increase ].
     apply magicwand_r_adj_r; auto; try reflexivity.
-    apply (@magicwand_r_monotone _ _ _ (composes PScompose)); auto; reflexivity.
+    etransitivity; [ apply (@cl_magicwand_r_3 _ _ _ _ (composes PScompose)) | ]; auto.
+    apply (@magicwand_r_monotone _ _ _ (composes PScompose)); auto ;reflexivity.
     Qed.
 
-    Fact ill_gen_l_sound Γ a :  ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭igen a :: Γ⟭ ⊆ ⟦N⟧.
+    Fact ill_gen_l_sound Γ a :  ⟬߭Γ⟭ ⊆ cl(⟦a⟧) -> ⟬߭igen a :: Γ⟭ ⊆ cl(⟦N⟧).
     Proof.
     intros H.
     replace (⟬߭ igen a :: Γ ⟭) with (⟬߭ nil ++ N o- a :: Γ ++ nil⟭)
       by (unfold list_form_presem; simpl; rewrite app_nil_r; reflexivity).
     apply ill_rimp_l_sound; auto.
-    etransitivity; [ apply PScl_neutral_r_2 | ]; auto.
+    apply PScl_neutral_r_2.
     Qed.
 
-    Fact ill_limp_r_sound Γ a b : ⟬߭a :: Γ⟭ ⊆ ⟦b⟧ -> ⟬߭Γ⟭ ⊆ ⟦a⟧ ⊸ ⟦b⟧.
-    Proof. intro; apply magicwand_l_adj_l; auto. Qed.
+    Fact ill_limp_r_sound Γ a b : ⟬߭a :: Γ⟭ ⊆ cl(⟦b⟧) -> ⟬߭Γ⟭ ⊆ cl(⟦a⟧ ⊸ cl(⟦b⟧)).
+    Proof. intro; etransitivity; [ apply magicwand_l_adj_l | apply cl_increase ]; auto. Qed.
 
-    Fact ill_neg_r_sound Γ a : ⟬߭a :: Γ⟭ ⊆ ⟦N⟧ -> ⟬߭Γ⟭ ⊆ ⟦ineg a⟧.
+    Fact ill_neg_r_sound Γ a : ⟬߭a :: Γ⟭ ⊆ cl(⟦N⟧) -> ⟬߭Γ⟭ ⊆ cl(⟦ineg a⟧).
     Proof. simpl; change (v atN) with (⟦ivar atN⟧); apply ill_limp_r_sound; auto. Qed.
 
-    Fact ill_rimp_r_sound Γ a b : ⟬߭Γ ++ a :: nil⟭ ⊆ ⟦b⟧ -> ⟬߭Γ⟭ ⊆ ⟦b⟧ ⟜ ⟦a⟧.
+    Fact ill_rimp_r_sound Γ a b : ⟬߭Γ ++ a :: nil⟭ ⊆ cl(⟦b⟧) -> ⟬߭Γ⟭ ⊆ cl(cl(⟦b⟧) ⟜ ⟦a⟧).
     Proof.
     intros H.
+    etransitivity; [ | apply cl_increase ].
     apply magicwand_r_adj_l; auto.
     apply list_form_presem_app_closed_2 in H; auto.
     eapply cl_closed in H; auto.
@@ -504,57 +509,60 @@ Section Phase_Spaces.
     apply PScl_neutral_r_1.
     Qed.
 
-    Fact ill_gen_r_sound Γ a : ⟬߭Γ ++ a :: nil⟭ ⊆ ⟦N⟧ -> ⟬߭Γ⟭ ⊆ ⟦igen a⟧.
+    Fact ill_gen_r_sound Γ a : ⟬߭Γ ++ a :: nil⟭ ⊆ cl(⟦N⟧) -> ⟬߭Γ⟭ ⊆ cl(⟦igen a⟧).
     Proof. simpl; change (v atN) with (⟦ivar atN⟧); apply ill_rimp_r_sound; auto. Qed.
 
-    Fact ill_with_l1_sound Γ Δ a b c : ⟬߭Γ ++ a :: Δ⟭ ⊆ ⟦c⟧ -> ⟬߭Γ ++ a ﹠ b :: Δ⟭ ⊆ ⟦c⟧.
+    Fact ill_with_l1_sound Γ Δ a b c : ⟬߭Γ ++ a :: Δ⟭ ⊆ cl(⟦c⟧) -> ⟬߭Γ ++ a ﹠ b :: Δ⟭ ⊆ cl(⟦c⟧).
     Proof.
     intros H.
     apply list_form_presem_mono_cons_closed with a; auto.
     simpl; red; unfold glb; tauto.
     Qed.
 
-    Fact ill_with_l2_sound Γ Δ a b c : ⟬߭Γ ++ b :: Δ⟭ ⊆ ⟦c⟧ -> ⟬߭Γ ++ a ﹠ b :: Δ⟭ ⊆ ⟦c⟧.
+    Fact ill_with_l2_sound Γ Δ a b c : ⟬߭Γ ++ b :: Δ⟭ ⊆ cl(⟦c⟧) -> ⟬߭Γ ++ a ﹠ b :: Δ⟭ ⊆ cl(⟦c⟧).
     Proof.
     intros H.
     apply list_form_presem_mono_cons_closed with b; auto.
     simpl; red; unfold glb; tauto.
     Qed.
 
-    Fact ill_with_r_sound Γ a b : ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭Γ⟭ ⊆ ⟦b⟧ -> ⟬߭Γ⟭ ⊆ ⟦a﹠b⟧.
-    Proof. intros; simpl; red; unfold glb; auto. Qed.
+    Fact ill_with_r_sound Γ a b : ⟬߭Γ⟭ ⊆ cl(⟦a⟧) -> ⟬߭Γ⟭ ⊆ cl(⟦b⟧) -> ⟬߭Γ⟭ ⊆ cl(⟦a﹠b⟧).
+    Proof. intros H1 H2; (etransitivity; [ | apply cl_increase ]); split; auto. Qed.
 
-    Fact ill_bang_l_sound Γ Δ a b : ⟬߭Γ++a::Δ⟭ ⊆ ⟦b⟧ -> ⟬߭Γ++!a::Δ⟭ ⊆ ⟦b⟧.
+    Fact ill_bang_l_sound Γ Δ a b : ⟬߭Γ++a::Δ⟭ ⊆ cl(⟦b⟧) -> ⟬߭Γ++!a::Δ⟭ ⊆ cl(⟦b⟧).
     Proof.
     intros H.
     apply list_form_presem_mono_cons_closed with a; auto.
     apply store_dec; auto.
     Qed.
 
-    Fact ill_bang_r_sound Γ a : ⟬߭‼Γ⟭ ⊆ ⟦ a ⟧ -> ⟬߭‼Γ⟭ ⊆ ❗⟦a⟧.
+    Fact ill_bang_r_sound Γ a : ⟬߭‼Γ⟭ ⊆ cl(⟦ a ⟧) -> ⟬߭‼Γ⟭ ⊆ cl(❗cl(⟦a⟧)).
     Proof.
     intros H.
     apply le_cl; auto.
     etransitivity; [ apply list_form_presem_bang_1 | ].
+    etransitivity; [ | apply cl_increase ].
     apply store_der; auto.
     etransitivity; [ apply list_form_presem_bang_2 | ].
     apply cl_closed; auto.
     Qed.
 
-    Fact ill_weak_sound Γ Δ a b : ⟬߭Γ ++ Δ⟭ ⊆ ⟦b⟧ -> ⟬߭Γ ++ !a :: Δ⟭ ⊆ ⟦b⟧.
+    Fact ill_weak_sound Γ Δ a b : ⟬߭Γ ++ Δ⟭ ⊆ cl(⟦b⟧) -> ⟬߭Γ ++ !a :: Δ⟭ ⊆ cl(⟦b⟧).
     Proof.
     intros H.
     apply list_form_presem_mono_cons_closed with ione; auto.
-    - apply (@store_inc_unit _ PScompose); auto.
+    - etransitivity; [ | apply cl_increase ].
+      apply (@store_inc_unit _ PScompose); auto.
     - apply ill_unit_l_sound; assumption.
     Qed.
 
-    Fact ill_cntr_sound Γ Δ a b : ⟬߭Γ ++ !a :: !a :: Δ⟭ ⊆ ⟦b⟧ -> ⟬߭Γ ++ !a :: Δ⟭ ⊆ ⟦b⟧.
+    Fact ill_cntr_sound Γ Δ a b : ⟬߭Γ ++ !a :: !a :: Δ⟭ ⊆ cl(⟦b⟧) -> ⟬߭Γ ++ !a :: Δ⟭ ⊆ cl(⟦b⟧).
     Proof.
     intros H.
     change (!a::!a::Δ) with ((!a::!a::nil)++Δ) in H.
     apply list_form_presem_mono_cons_closed with ((!a) ⊗ (!a)); auto.
-    - eapply store_compose_idem; eauto.
+    - etransitivity; [ | apply cl_increase ].
+      eapply store_compose_idem; eauto.
     - apply list_form_presem_app_closed_1; auto.
       rewrite list_form_presem_cons; simpl.
       simpl in H.
@@ -568,7 +576,7 @@ Section Phase_Spaces.
         apply cl_closed; auto.
     Qed.
 
-    Fact ill_tensor_l_sound Γ Δ a b c : ⟬߭Γ ++ a :: b :: Δ⟭ ⊆ ⟦c⟧ -> ⟬߭Γ ++ a ⊗ b :: Δ⟭ ⊆ ⟦c⟧.
+    Fact ill_tensor_l_sound Γ Δ a b c : ⟬߭Γ ++ a :: b :: Δ⟭ ⊆ cl(⟦c⟧) -> ⟬߭Γ ++ a ⊗ b :: Δ⟭ ⊆ cl(⟦c⟧).
     Proof.
     intros H.
     change (a::b::Δ) with ((a::b::nil)++Δ) in H.
@@ -585,15 +593,17 @@ Section Phase_Spaces.
         apply cl_closed; auto.
     Qed.
 
-    Fact ill_tensor_r_sound Γ Δ a b : ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭Δ⟭ ⊆ ⟦b⟧ -> ⟬߭Γ ++ Δ⟭ ⊆ ⟦a⟧ ⊛ ⟦b⟧.
+    Fact ill_tensor_r_sound Γ Δ a b : ⟬߭Γ⟭ ⊆ cl(⟦a⟧) -> ⟬߭Δ⟭ ⊆ cl(⟦b⟧) -> ⟬߭Γ ++ Δ⟭ ⊆ cl(⟦a⟧ ⊛ ⟦b⟧).
     Proof.
     intros H1 H2.
     apply list_form_presem_app_closed_1; [ apply tensor_closed | ].
     etransitivity; [ eapply composes_monotone; eassumption | ].
+    etransitivity; [ apply cl_stable | ]; auto.
     apply cl_increase.
     Qed.
 
-    Fact ill_plus_l_sound Γ Δ a b c : ⟬߭Γ ++ a :: Δ⟭ ⊆ ⟦c⟧ -> ⟬߭Γ ++ b :: Δ⟭ ⊆ ⟦c⟧ -> ⟬߭Γ ++ a ⊕ b :: Δ⟭ ⊆ ⟦c⟧.
+    Fact ill_plus_l_sound Γ Δ a b c : ⟬߭Γ ++ a :: Δ⟭ ⊆ cl(⟦c⟧) -> ⟬߭Γ ++ b :: Δ⟭ ⊆ cl(⟦c⟧) ->
+       ⟬߭Γ ++ a ⊕ b :: Δ⟭ ⊆ cl(⟦c⟧).
     Proof.
     intros H1 H2.
     apply list_form_presem_app_closed_2 in H1; auto.
@@ -620,13 +630,13 @@ Section Phase_Spaces.
         etransitivity; [ | apply PScl_stable_r ]; reflexivity.
     Qed.
 
-    Fact ill_plus_r1_sound Γ a b : ⟬߭Γ⟭ ⊆ ⟦a⟧ -> ⟬߭Γ⟭ ⊆ ⟦a ⊕ b⟧.
-    Proof. intros H x Hx; apply H in Hx; apply lub_in_l; assumption. Qed.
+    Fact ill_plus_r1_sound Γ a b : ⟬߭Γ⟭ ⊆ cl(⟦a⟧) -> ⟬߭Γ⟭ ⊆ cl(⟦a ⊕ b⟧).
+    Proof. intros H; (etransitivity; [ apply H | ]); apply cl_monotone; apply lub_in_l. Qed.
 
-    Fact ill_plus_r2_sound Γ a b : ⟬߭Γ⟭ ⊆ ⟦b⟧ -> ⟬߭Γ⟭ ⊆ ⟦a ⊕ b⟧.
-    Proof. intros H x Hx; apply H in Hx; apply lub_in_r; assumption. Qed.
+    Fact ill_plus_r2_sound Γ a b : ⟬߭Γ⟭ ⊆ cl(⟦b⟧) -> ⟬߭Γ⟭ ⊆ cl(⟦a ⊕ b⟧).
+    Proof. intros H; (etransitivity; [ apply H | ]); apply cl_monotone; apply lub_in_r. Qed.
 
-    Fact ill_zero_l_sound Γ Δ a : ⟬߭Γ ++ 0 :: Δ⟭ ⊆ ⟦a⟧.
+    Fact ill_zero_l_sound Γ Δ a : ⟬߭Γ ++ 0 :: Δ⟭ ⊆ cl(⟦a⟧).
     Proof.
     apply list_form_presem_app_closed_1; auto.
     rewrite list_form_presem_cons; simpl.
@@ -638,8 +648,8 @@ Section Phase_Spaces.
     etransitivity; [ | apply cl_increase ]; reflexivity.
     Qed.
 
-    Fact ill_top_r_sound Γ : ⟬߭Γ⟭ ⊆ ⟦⟙⟧.
-    Proof. simpl; red; unfold top; auto. Qed.
+    Fact ill_top_r_sound Γ : ⟬߭Γ⟭ ⊆ cl(⟦⟙⟧).
+    Proof. etransitivity; [ | apply cl_increase ]; apply top_greatest. Qed.
 
     Notation "l '⊢' x" := (ill P l x) (at level 70, no associativity).
 
@@ -653,7 +663,7 @@ Section Phase_Spaces.
                  ill_zero_l_sound ill_top_r_sound 
                  ill_unit_l_sound ill_unit_r_sound.
 
-    Theorem ill_soundness Γ a : Γ ⊢ a -> ⟬߭Γ⟭  ⊆ ⟦a⟧.
+    Theorem ill_soundness Γ a : Γ ⊢ a -> ⟬߭Γ⟭  ⊆ cl(⟦a⟧).
     Proof.
     induction 1; try auto ; try now (simpl; auto).
     - revert p IHX; apply ill_perm_sound.

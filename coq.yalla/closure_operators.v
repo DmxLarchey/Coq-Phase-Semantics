@@ -361,6 +361,7 @@ Section ClosureMagma.
 
   Proposition cl_magicwand_r_3 x y : cl y ⟜ x ≤ cl y ⟜ cl x.
   Proof.
+  clear magicwand_l magicwand_l_adj_l magicwand_l_adj_r.
   apply magicwand_r_adj_l.
   etransitivity; [ apply cl_stable_r | ].
   apply cl_le, magicwand_r_adj_r; auto.
@@ -694,9 +695,6 @@ Section SubsetMagma.
 
   Variable compose : M -> M -> M.
 
-(*
-  Infix "•" := compose (at level 45, no associativity).
-*)
   Infix "⊆" := (@subset M) (at level 75, no associativity).
   Infix "≃" := (@eqset M) (at level 75, no associativity).
   Notation sg := (@eq _).
@@ -906,6 +904,15 @@ Section SubsetMagma.
 
   Hint Resolve store_unit.
 
+  Proposition store_comp_2 A B : ❗(A ⊓ B) ⊆ ❗A ⊛ ❗B.
+  Proof.
+  apply cl_le; trivial.
+  intros x (H1 & H2 & H3).
+  apply (@cl_monotone _ subset) with (sg x ∘ sg x).
+  - apply composes_monotone; intros z Heq; subst; apply (@cl_increase _ subset); auto.
+  - apply sub_J in H1; destruct H1; trivial.
+  Qed.
+
   Proposition store_comp A B : closed A -> closed B -> ❗A ⊛ ❗B ≃ ❗(A ⊓ B).
   Proof.
   intros HA HB; split.
@@ -923,11 +930,7 @@ Section SubsetMagma.
         apply (@cl_increase _ subset).
         revert H; apply composes_monotone; intros z [Hz1 Hz2]; try assumption.
         apply K_inc_unit; auto.
-  - apply cl_le; trivial.
-    intros x (H1 & H2 & H3).
-    apply (@cl_monotone _ subset) with (sg x ∘ sg x).
-    + apply composes_monotone; intros z Heq; subst; apply (@cl_increase _ subset); auto.
-    + apply sub_J in H1; destruct H1; trivial.
+  - apply store_comp_2.
   Qed.
 
   Definition ltensor := fold_right (fun x y => x ⊛ y) 1.
