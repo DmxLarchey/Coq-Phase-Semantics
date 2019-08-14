@@ -24,13 +24,10 @@ formulas.v
 ll_def.v
 ll_cut_at.v
 
-ill_cut_at.v
-
 utils_tac.v
 closure_operators.v
-phase_sem.v
-rules_algebra.v
-cut_elim.v
 orthogonality.v
+phase_sem.v
+cut_elim.v
 cphase_sem.v
 cokada.v

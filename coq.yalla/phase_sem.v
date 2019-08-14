@@ -7,6 +7,10 @@
 (*         CeCILL v2 FREE SOFTWARE LICENSE AGREEMENT          *)
 (**************************************************************)
 
+(*   Adapted by Olivier Laurent [**]                          *)
+(*                                                            *)
+(*                              [**] Affiliation LIP -- CNRS  *)
+
 
 Require Import List_Type Permutation_Type genperm_Type.
 
@@ -95,7 +99,7 @@ Section Phase_Spaces.
       | a ⊗ b  => ⟦a⟧ ⊛ ⟦b⟧
       | a ⊕ b  => ⟦a⟧ ⊔ ⟦b⟧
       | a & b  => cl(⟦a⟧) ⊓ cl(⟦b⟧)
-      | !a     => ❗(cl(⟦a⟧))
+      | !a     => ❗cl(⟦a⟧)
       end
     where "⟦ a ⟧" := (form_presem a).
 
@@ -105,7 +109,7 @@ Section Phase_Spaces.
     Fact list_form_presem_nil : ⟬߭nil⟭ = (sg PSunit).
     Proof. auto. Qed.
 
-    Fact list_form_presem_cons f l : ⟬߭f::l⟭  = ⟦f⟧ ∘ ⟬߭l⟭.
+    Fact list_form_presem_cons f l : ⟬߭f :: l⟭  = ⟦f⟧ ∘ ⟬߭l⟭.
     Proof. auto. Qed.
 
   End Formula_Interpretation.
@@ -312,7 +316,7 @@ Section Phase_Spaces.
 
   Section soundness.
 
-    Notation "l '⊢' x" := (ill P l x) (at level 70, no associativity).
+    Notation "l ⊢ x" := (ill P l x) (at level 70, no associativity).
 
     Fact ill_ax_sound a : ⟬߭a :: nil⟭  ⊆ cl (⟦a⟧).
     Proof. apply PScl_neutral_r_2. Qed.
@@ -321,16 +325,14 @@ Section Phase_Spaces.
     Proof.
     intros H1 H2.
     apply list_form_presem_app_app_closed_1; auto.
-    transitivity (⟬߭ Δ ⟭ ∘ (cl (⟦ a ⟧) ∘ ⟬߭  ϴ ⟭)).
-    - apply composes_monotone; try reflexivity.
-      apply composes_monotone; try reflexivity; auto.
-    - transitivity (cl (⟬߭ Δ ⟭ ∘ (⟦ a ⟧ ∘ ⟬߭ ϴ ⟭))).
-      + etransitivity; [ | apply PScl_stable_r ].
-        apply composes_monotone; try reflexivity.
-        apply PScl_stable_l.
-      + apply cl_le; auto.
-        rewrite <- list_form_presem_cons.
-        apply list_form_presem_app_closed_2; auto.
+    apply list_form_presem_app_closed_2 in H2; auto.
+    rewrite list_form_presem_cons in H2.
+    apply cl_le in H2; auto.
+    etransitivity; [ | apply H2 ].
+    etransitivity; [ | apply PScl_stable_r ].
+    apply composes_monotone; try reflexivity.
+    etransitivity; [ | apply PScl_stable_l ].
+    apply composes_monotone; try reflexivity; assumption.
     Qed.
 
     Fact ill_nc_swap_sound Γ Δ a b c : ⟬߭Γ++!a::!b::Δ⟭ ⊆ cl (⟦c⟧) -> ⟬߭Γ++!b::!a::Δ⟭ ⊆ cl (⟦c⟧).
@@ -651,7 +653,7 @@ Section Phase_Spaces.
     Fact ill_top_r_sound Γ : ⟬߭Γ⟭ ⊆ cl(⟦⟙⟧).
     Proof. etransitivity; [ | apply cl_increase ]; apply top_greatest. Qed.
 
-    Notation "l '⊢' x" := (ill P l x) (at level 70, no associativity).
+    Notation "l ⊢ x" := (ill P l x) (at level 70, no associativity).
 
     Hint Resolve ill_ax_sound
                  ill_limp_l_sound ill_limp_r_sound ill_rimp_l_sound ill_rimp_r_sound

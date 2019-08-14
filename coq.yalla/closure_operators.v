@@ -596,6 +596,7 @@ Section ClosureSubset.
   Context { M : Type }.
   Implicit Types A B : M -> Type.
 
+(* TODO try subset as Notation *)
   Definition subset A B := forall x, A x -> B x.
   Infix "⊆" := subset (at level 75, no associativity).
 
