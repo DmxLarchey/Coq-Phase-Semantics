@@ -4,7 +4,7 @@ Require Import closure_operators cphase_sem.
 
 Require Import ll_cut_at.
 
-Notation "X '⊆' Y" := (subset X Y) (at level 75, format "X  ⊆  Y", no associativity).
+Infix "⊆" := subset (at level 75, no associativity).
 
 Definition gax_at P := forall a, Forall_Type atomic (projT2 (pgax P) a).
 Definition gax_cut P := forall a b x l1 l2 l3 l4,
@@ -19,23 +19,17 @@ Global Instance CPS_ctx P : CPhaseSpace (pperm P) (pmix P).
 Proof.
 split with (list formula) (@app formula) (@nil formula) (ll P)
            (fun Γ => { Δ | Γ = map wn Δ }) (ex_app P).
-- apply monoid_associative_pole_l; intros; list_simpl; reflexivity.
-- apply monoid_associative_pole_r; intros; list_simpl; reflexivity.
-- apply monoid_associative_pole_ll; intros; list_simpl; reflexivity.
-- apply monoid_associative_pole_lr; intros; list_simpl; reflexivity.
-- apply monoid_neutral_pole_1; intros; list_simpl; reflexivity.
-- apply monoid_neutral_pole_2; intros; list_simpl; reflexivity.
-- apply monoid_neutral_pole_l_1; intros; list_simpl; reflexivity.
-- apply monoid_neutral_pole_l_2; intros; list_simpl; reflexivity.
-- apply monoid_neutral_pole_r_1; intros; list_simpl; reflexivity.
-- apply monoid_neutral_pole_r_2; intros; list_simpl; reflexivity.
+- apply m_pl_neutrality_1; intros l; list_simpl; reflexivity.
+- apply m_pl_neutrality_2; intros l; list_simpl; reflexivity.
+- apply m_pl_rel_associativity_ll; intros l1 l2 l3; list_simpl; reflexivity.
+- apply m_pl_rel_associativity_lr; intros l1 l2 l3; list_simpl; reflexivity.
 - simpl; red; red; intros y Hy; red in Hy; simpl.
   specialize Hy with nil; red in Hy.
   rewrite app_nil_r in Hy; apply Hy.
   exists nil; reflexivity.
 - red; intros x Hx; inversion Hx.
   inversion H; inversion H0; subst.
-  exists (x1 ++ x2); list_simpl; reflexivity.
+  exists (x0 ++ x1); list_simpl; reflexivity.
 - intros x Hx; inversion Hx; subst; split.
   + intros y Hy; red; red in Hy; red in Hy.
     apply wk_list_r.
@@ -62,7 +56,7 @@ split with (list formula) (@app formula) (@nil formula) (ll P)
       constructor.
     - inversion H; subst.
       destruct (IHn _ X0) as [L1 Hlen [Heq HF]]; subst.
-      exists (x :: L1); try split; try reflexivity.
+      exists (a :: L1); try split; try reflexivity.
       constructor; assumption. }
   apply mix_r ; [ apply Hmix | assumption ].
 Defined.
@@ -78,15 +72,20 @@ Section Okada.
 
   Instance CPSLL : CPhaseSpace (pperm P) (pmix P) := CPS_ctx P.
 
-  Infix "∘" := (MComposes CPSCompose) (at level 50, no associativity).
-  Notation dual := (ldual (R CPSCompose CPSPole)).
-  Notation "'⟦' A '⟧'" := (@Form_sem (pperm P) (pmix P) _ LLval A) (at level 49).
-  Notation "⟬߭  ll ⟭" := (@list_Form_presem (pperm P) (pmix P) _ LLval ll) (at level 49).
+  Infix "∘" := (composes CPScompose) (at level 50, no associativity).
+  Notation dual := (ldual (R CPScompose CPSPole)).
+  Notation "⟦ A ⟧" := (@form_presem (pperm P) (pmix P) _ LLval A) (at level 49).
+  Notation "⟬߭  l ⟭" := (@list_form_presem (pperm P) (pmix P) _ LLval l) (at level 49).
 
-  Hint Resolve (@CPSfact_pole _ _ CPSLL) (@CPScommute _ _ CPSLL)
+  Hint Resolve (@CPSpole_closed _ _ CPSLL) (@CPScommute _ _ CPSLL)
                CPSassociative_l CPSassociative_r
                CPSneutral_1 CPSneutral_2
-               CPSneutral_l_1 CPSneutral_l_2 CPSneutral_r_1 CPSneutral_r_2.
+               (@mstable_l _ _ _ _ CPScommute CPSassociative_l CPSassociative_r CPSneutral_1 CPSneutral_2)
+               (@mstable_r _ _ _ _ CPScommute CPSassociative_l CPSassociative_r CPSneutral_1 CPSneutral_2)
+               (@mneutral_l_1 _ _ _ _ CPScommute CPSassociative_l CPSneutral_1 CPSneutral_2)
+               (@mneutral_l_2 _ _ _ _ CPScommute CPSassociative_r CPSneutral_1 CPSneutral_2)
+               (@mneutral_r_1 _ _ _ _ CPScommute CPSassociative_r CPSneutral_1 CPSneutral_2)
+               (@mneutral_r_2 _ _ _ _ CPScommute CPSassociative_l CPSneutral_1 CPSneutral_2).
 
   Fact LLgax : forall a, ⟬߭  projT2 (pgax P) a ⟭ ⊆ CPSPole.
   Proof.
@@ -95,110 +94,141 @@ Section Okada.
   remember (projT2 (pgax P) a) as l; clear Heql a.
   enough (forall l, Forall_Type atomic l -> forall l0, ll P (l0 ++ l) -> sg l0 ∘ ⟬߭ l ⟭  ⊆ CPSPole) as IH.
   { specialize IH with l nil.
-    etransitivity; [ | apply CPSfact_pole ].
-    apply subset_cl.
-    etransitivity; [ apply (@neutral_l_1_g _ _ CPSUnit _ CPScommute) | ]; auto.
-    apply cl_subset.
-    etransitivity; [ apply stability_r | ]; auto.
-    apply cl_subset.
-    etransitivity; [ | apply cl_increase ].
-    etransitivity; [ | apply IH ]; auto.
-    apply MComposes_monotone; try reflexivity. }
+    etransitivity; [ | apply CPSpole_closed ].
+    apply subset_bidual.
+    etransitivity; [ apply mneutral_l_1 | ]; auto.
+    apply bidual_subset.
+    etransitivity; [ eapply mstable_r | ]; auto.
+    apply bidual_subset.
+    etransitivity; [ apply IH | apply bidual_increase ]; auto. }
   clear pi P_gax_at.
   induction l0; intros HF l1 pi; intros x Hx; inversion Hx; rewrite_all <- H.
   - inversion X.
     apply pi.
-  - inversion X; simpl.
-    eapply ex_r; [ | apply PCperm_Type_app_comm ]; rewrite <- app_assoc.
-    apply X0.
-    destruct a; try (exfalso; inversion HF; inversion H4; fail); subst; simpl.
-    + change (var a :: y0 ++ x0) with ((var a :: nil) ++ y0 ++ x0).
-      rewrite app_assoc; eapply ex_r; [ | apply PCperm_Type_app_comm ]; rewrite app_assoc.
-      specialize IHl0 with (x0 ++ var a :: nil).
-      apply IHl0.
-      * clear - HF; inversion HF; assumption.
-      * list_simpl; assumption.
-      * constructor; auto.
-    + intros y Hy; red.
-      rewrite <- app_assoc.
-      eapply ex_r; [ | apply PCperm_Type_app_comm ].
-      specialize IHl0 with (x0 ++ y).
-      apply IHl0.
-      * clear - HF; inversion HF; assumption.
-      * eapply ex_r; [ | apply PCperm_Type_app_comm ].
-        rewrite <- (app_nil_l _).
-        rewrite <- (app_nil_l _) in Hy.
-        eapply cut_at; eassumption.
-      * constructor; auto.
+  - rewrite list_form_presem_cons in X.
+    inversion X; simpl.
+    rewrite app_assoc.
+    inversion HF; subst.
+    apply (IHl0 H5 (a0 ++ a1)); [ | constructor; try reflexivity; auto ]; list_simpl.
+    destruct a; try (exfalso; inversion HF; inversion H4; fail); subst; simpl; simpl in X0.
+    + change a1 with (nil ++ a1); rewrite <- app_assoc.
+      apply (cut_at P_gax_cut _ _ _ _ _ pi).
+      assert (dual (dual (sg (var a :: nil))) ⊆ dual (sg (covar a :: nil))) as H
+        by (apply lmonot; intros z Hz y Hy; subst; apply ax_r).
+      apply H; auto.
+      revert X0; apply lmonot.
+      intros z Hz; unfold dual in Hz; specialize Hz with (var a :: nil).
+      change (var a :: z) with ((var a :: nil) ++ z); apply ex_app.
+      apply Hz; reflexivity.
+    + apply ex_app; list_simpl.
+      rewrite <- (app_nil_r a0).
+      apply (cut_at P_gax_cut a); [ | apply pi ].
+      apply ex_app; auto.
+  Unshelve. all:auto.
   Qed.
 
   Instance PMLL : CPhaseModel P.
-  Proof. split with CPSLL LLval.
-  intros X l H; simpl in H; red in H; red in H.
-  eapply ex_r ; [ apply (H (var X :: nil)) | ].
-  - intros l' pi; assumption.
-  - etransitivity; [ apply PCperm_Type_app_comm | ]; reflexivity.
-  - apply LLgax.
-  Defined.
-
+  Proof. split with CPSLL LLval; apply LLgax. Defined.
 
   Lemma Okada A : ⟦A⟧ ⊆ ↓A.
   Proof.
   induction A; intros l H; simpl in H; auto; try (red in H; red in H).
   - specialize H with (covar a :: nil).
     change (covar a :: l) with ((covar a :: nil) ++ l).
-    eapply ex_r; [ apply H | apply PCperm_Type_app_comm ].
+    apply ex_app; apply H.
     eapply ex_r; [ apply ax_r | apply PCperm_Type_swap ].
   - specialize H with (one :: nil).
     change (one :: l) with ((one :: nil) ++ l).
-    eapply ex_r; [ apply H | apply PCperm_Type_app_comm ].
+    apply ex_app; apply H.
     intros x Hx; inversion Hx.
     apply one_r.
   - apply bot_r; assumption.
   - specialize H with (tens A1 A2 :: nil).
     change (tens A1 A2 :: l) with ((tens A1 A2 :: nil) ++ l).
-    eapply ex_r; [ apply H | apply PCperm_Type_app_comm ].
+    apply ex_app; apply H.
     intros x Hx; inversion Hx.
     red; list_simpl; apply tens_r; auto.
   - apply parr_r.
     specialize H with ((A1 :: nil) ++ A2 :: nil).
     change (A1 :: A2 :: l) with (((A1 :: nil) ++ A2 :: nil) ++ l).
-    eapply ex_r; [ apply H | apply PCperm_Type_app_comm ].
+    apply ex_app; apply H.
     constructor; auto.
   - specialize H with (zero :: nil).
     change (zero :: l) with ((zero :: nil) ++ l).
-    eapply ex_r; [ apply H | apply PCperm_Type_app_comm ].
+    apply ex_app; apply H.
     intros x Hx; inversion Hx.
   - apply top_r.
   - specialize H with (aplus A1 A2 :: nil).
     change (aplus A1 A2 :: l) with ((aplus A1 A2 :: nil) ++ l).
-    eapply ex_r; [ apply H | apply PCperm_Type_app_comm ].
-    intros x Hx; inversion Hx.
-    + red; apply plus_r1; auto.
-    + red; apply plus_r2; auto.
-  - apply with_r; [ apply IHA1 | apply IHA2 ]; apply H.
+    apply ex_app; apply H.
+    intros x Hx; inversion Hx; red; [ apply plus_r1 | apply plus_r2 ]; auto.
+  - destruct H as [H1 H2] ; apply with_r.
+(* TODO simplify? *)
+    + apply (@cl_monotone _ _ (CL PMLL)) in IHA1.
+      apply IHA1 in H1.
+      change (A1 :: l) with ((A1 :: nil) ++ l).
+      assert (@cl _ _ (CL PMLL) (dual (sg (A1 :: nil))) l).
+      { intros x Hx; apply H1; revert Hx.
+        apply lmonot.
+        intros z Hz y Heq; subst.
+        apply ex_app; assumption. }
+      apply dual_is_closed in X.
+      unfold dual in X.
+      specialize X with (A1 :: nil).
+      unfold R in X.
+      assert (Y := X eq_refl); unfold CPSPole in Y; simpl in Y.
+      apply ex_app; assumption.
+    + apply (@cl_monotone _ _ (CL PMLL)) in IHA2.
+      apply IHA2 in H2.
+      change (A2 :: l) with ((A2 :: nil) ++ l).
+      assert (@cl _ _ (CL PMLL) (dual (sg (A2 :: nil))) l).
+      { intros x Hx; apply H2; revert Hx.
+        apply lmonot.
+        intros z Hz y Heq; subst.
+        apply ex_app; assumption. }
+      apply dual_is_closed in X.
+      unfold dual,R in X; specialize X with (A2 :: nil).
+      assert (Y := X eq_refl); unfold CPSPole in Y; simpl in Y.
+      apply ex_app; assumption.
   - specialize H with (oc A :: nil).
     change (oc A :: l) with ((oc A :: nil) ++ l).
-    eapply ex_r; [ apply H | apply PCperm_Type_app_comm ].
+    apply ex_app; apply H.
     intros x Hx; inversion Hx.
     inversion H0; subst.
     apply oc_r; auto.
+(* TODO simplify? *)
+    apply (@cl_monotone _ _ (CL PMLL)) in IHA.
+    apply IHA in X.
+    change (A :: ⁇ x0) with ((A :: nil) ++ ⁇ x0).
+    assert (@cl _ _ (CL PMLL) (dual (sg (A :: nil))) (⁇ x0)).
+    { intros z Hz; apply X; revert Hz.
+      apply lmonot.
+      intros t Ht y Heq; subst.
+      apply ex_app; assumption. }
+    apply dual_is_closed in X0.
+    unfold dual, R in X0; specialize X0 with (A :: nil).
+    assert (Y := X0 eq_refl); unfold CPSPole in Y; simpl in Y.
+    apply ex_app; assumption.
   - specialize H with (wn A :: nil).
     change (wn A :: l) with ((wn A :: nil) ++ l).
-    eapply ex_r; [ apply H | apply PCperm_Type_app_comm ].
+    apply ex_app; apply H.
     split.
     + exists (A :: nil); reflexivity.
     + intros x Hx; red; apply de_r; auto.
   Qed.
 
-  Lemma Okada_ctx l : ⟬߭  l ⟭ l.
+  Lemma Okada_ctx l : dual (dual (⟬߭  l ⟭))  l.
   Proof.
   induction l.
-  - rewrite list_Form_presem_nil; reflexivity.
-  - rewrite list_Form_presem_cons.
+  - apply bidual_increase.
+    rewrite list_form_presem_nil; reflexivity.
+  - rewrite list_form_presem_cons.
     change (a :: l) with ((a :: nil) ++ l).
+    eapply mstable; auto.
     constructor; auto.
+    apply form_sem_dual.
     apply Okada.
+  Unshelve. all: auto.
   Qed.
 
 End Okada.
@@ -215,20 +245,17 @@ Section Cut_Elim.
   Instance CPSLL_cf : CPhaseSpace (pperm P) (pmix P) := CPS_ctx (cutupd_pfrag P false).
 
   Instance PMLL_cf : CPhaseModel P.
-  Proof. split with CPSLL_cf LLval_cf.
-  intros X l H; simpl in H; red in H; red in H.
-  eapply ex_r ; [ apply (H (var X :: nil)) | ].
-  - intros l' pi; assumption.
-  - etransitivity; [ apply PCperm_Type_app_comm | ]; reflexivity.
-  - apply (@LLgax (cutupd_pfrag P false) P_gax_at P_gax_cut).
-  Defined.
+  Proof. split with CPSLL_cf LLval_cf; apply (@LLgax (cutupd_pfrag P false) P_gax_at P_gax_cut). Defined.
 
   Theorem ll_cut_elimination Γ : ll P Γ -> ll (cutupd_pfrag P false) Γ.
   Proof.
   intros pi.
   apply (ll_soundness PMLL_cf) in pi; auto.
-  simpl in pi; apply pi.
-  apply (@Okada_ctx (cutupd_pfrag P false)).
+  simpl in pi.
+  do 2 eapply lmonot in pi.
+  assert (HH := @pole_closed _ _ _ CPSPole CPScommute CPSneutral_1 CPSneutral_2 Γ); apply HH.
+  apply pi.
+  apply (@Okada_ctx (cutupd_pfrag P false)); assumption.
   Qed.
 
 End Cut_Elim.
