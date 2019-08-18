@@ -48,7 +48,6 @@ Section PhaseSpaces.
   Infix "⊓" := glb (at level 50, no associativity).
   Infix "⊔" := lub (at level 50, no associativity).
 
-  Infix "⊛" := (fun X Y => tensor (composes CPScompose) Y X) (at level 59).
   Infix "⅋" := (par CPScompose CPSPole) (at level 59).
   Notation "❗ A" := (bang CPSExp A) (at level 40, no associativity).
   Notation "❓ A" := (whynot CPScompose CPSPole CPSExp A) (at level 40, no associativity).
@@ -107,14 +106,14 @@ Section PhaseSpaces.
       match f with
       | var x => v x
       | covar x => dual (v x)
-      | one => @closure_operators.one _ _ CLPS (sg CPSunit)
+      | one => sg CPSunit
       | bot => CPSPole
       | formulas.zero => closure_operators.zero
       | formulas.top => closure_operators.top
-      | tens a b => ⟦a⟧ ⊛ ⟦b⟧
+      | tens a b => ⟦b⟧ ∘ ⟦a⟧
       | parr a b => ⟦a⟧ ⅋ ⟦b⟧
-      | aplus a b => ⟦a⟧ ⊔ ⟦b⟧
-      | awith a b => cl(⟦a⟧) ⊓ cl(⟦b⟧)
+      | aplus a b => ⟦a⟧ ∪ ⟦b⟧
+      | awith a b => cl(⟦a⟧) ∩ cl(⟦b⟧)
       | oc a => ❗cl(⟦a⟧)
       | wn a => ❓⟦a⟧
       end
@@ -138,17 +137,13 @@ Section PhaseSpaces.
     - apply bidual_increase.
     - reflexivity.
     - etransitivity; [ | apply bidual_increase ]; auto.
-      etransitivity; [ | apply pole_as_bot ]; auto.
-      eapply dual_is_closed.
+      apply pole_as_bot; auto.
     - apply lmonot.
-      etransitivity; [ | apply pole_as_bot ]; auto.
-      eapply dual_is_closed.
-    - apply lmonot.
-      apply bidual_subset.
+      apply pole_as_bot; auto.
+    - apply subset_bidual; apply lmonot; apply bidual_subset.
       etransitivity; [ | eapply mstable ]; auto.
-      apply composes_monotone; (etransitivity; [ apply cl_increase | apply lmonot]); auto.
-    - etransitivity; [ | apply bidual_increase ];auto.
-      apply bidual_subset.
+      apply composes_monotone; (etransitivity; [ apply bidual_increase | apply lmonot]); auto.
+    - apply bidual_subset.
       etransitivity; [ | eapply mstable ]; auto.
       apply composes_monotone; assumption.
     - etransitivity; [ | apply bidual_increase ]; auto.
@@ -157,14 +152,12 @@ Section PhaseSpaces.
       apply top_greatest.
     - etransitivity; [ | apply bidual_increase ]; auto.
       apply glb_in.
-      + etransitivity; [ | apply IHA1 ]; apply lmonot; apply (@lub_in_l _ CLPS).
-      + etransitivity; [ | apply IHA2 ]; apply lmonot; apply (@lub_in_r _ CLPS).
+      + etransitivity; [ | apply IHA1 ]; apply lmonot; intros ?; auto.
+      + etransitivity; [ | apply IHA2 ]; apply lmonot; intros ?; auto.
     - apply lmonot.
-      apply glb_in.
-      + apply lmonot; (etransitivity; [ apply IHA1 | ]); apply bidual_subset; auto.
-        apply (@lub_in_l _ CLPS).
-      + apply lmonot; (etransitivity; [ apply IHA2 | ]); apply bidual_subset; auto.
-        apply (@lub_in_r _ CLPS).
+      apply glb_in; apply subset_bidual; apply lmonot.
+      + etransitivity; [ apply IHA1 | ]; do 2 apply lmonot; intros ?; auto.
+      + etransitivity; [ apply IHA2 | ]; do 2 apply lmonot; intros ?; auto.
     - transitivity (dual (dual (❓ (dual (⟦ A ⟧))))); do 3 apply lmonot.
       + intros ? [] ; split; auto.
       + apply glb_in.
@@ -414,8 +407,7 @@ Section PhaseSpaces.
         etransitivity; [ | apply CPSpole_closed ].
         apply bidual_subset in H.
         etransitivity; [ | apply H ].
-        transitivity (dual (dual (sg CPSunit)) ∘ ⟬߭  l0 ⟭); [ | eapply mstable_l ]; auto.
-        apply composes_monotone; reflexivity.
+        apply bidual_increase.
     - rewrite app_comm_cons; apply list_form_presem_app_fact_1; auto.
       rewrite_all list_form_presem_cons.
       etransitivity; [ apply massociative_r | apply cl_closed ]; auto.
@@ -429,8 +421,7 @@ Section PhaseSpaces.
       assert (⟦ formulas.dual A ⟧ ∘ ⟦ formulas.dual B ⟧ ∘ ⟬߭ l0 ⟭ ⊆ CPSPole) as IHX2
         by (etransitivity; [ apply massociative_r | ]; auto; apply bidual_closed; auto ; assumption).
       apply bidual_closed in IHX2; auto.
-      etransitivity ; [ | apply IHX2 ].
-      eapply mstable_l; auto.
+      etransitivity ; [ apply bidual_increase | apply IHX2 ].
     - rewrite list_form_presem_cons; simpl.
       intros x Hx; inversion Hx; apply X; intros y Hy; inversion Hy.
     - rewrite_all list_form_presem_cons.
@@ -448,7 +439,7 @@ Section PhaseSpaces.
     - rewrite_all list_form_presem_cons.
       apply compose_adj_l in IHX1; apply compose_adj_l in IHX2; auto.
       apply compose_adj_r.
-      apply lub_out; auto.
+      intros x Hx; inversion Hx; auto.
     - rewrite_all list_form_presem_cons.
       apply pole_commute in IHX; auto.
       apply pole_commute; auto.

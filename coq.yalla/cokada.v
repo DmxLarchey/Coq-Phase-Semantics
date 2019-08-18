@@ -30,18 +30,14 @@ split with (list formula) (@app formula) (@nil formula) (ll P)
 - red; intros x Hx; inversion Hx.
   inversion H; inversion H0; subst.
   exists (x0 ++ x1); list_simpl; reflexivity.
-- intros x Hx; inversion Hx; subst; split.
-  + intros y Hy; red; red in Hy; red in Hy.
-    apply wk_list_r.
+- intros x Hx; inversion Hx; subst; split; intros y Hy; red; red in Hy; red in Hy.
+  + apply wk_list_r.
     specialize Hy with nil; rewrite app_nil_r in Hy.
     apply Hy; reflexivity.
-  + intros y Hy; red; red in Hy; red in Hy.
-    apply co_list_r.
+  + apply co_list_r.
     specialize Hy with (map wn x0 ++ map wn x0).
-    eapply ex_r; [ apply Hy | ].
-    * constructor; reflexivity.
-    * rewrite (app_assoc _ _ y).
-      apply PCperm_Type_app_comm.
+    rewrite app_assoc; apply ex_app, Hy.
+    constructor; reflexivity.
 - intros HP x y z H; red; red in H.
   eapply ex_r; [ apply H | ].
   rewrite HP; simpl.
@@ -50,9 +46,8 @@ split with (list formula) (@app formula) (@nil formula) (ll P)
 - intros n Hmix l H.
   assert ({ L : _ & length L = n & prod (l = concat L)
                                         (Forall_Type (ll P) L)}) as [L Hlen [Heq HF]]; subst.
-  { clear Hmix; revert l H; induction n; simpl; intros l H.
-    - subst.
-      exists nil; try split; try reflexivity.
+  { clear Hmix; revert l H; induction n; simpl; intros l H; subst.
+    - exists nil; try split; try reflexivity.
       constructor.
     - inversion H; subst.
       destruct (IHn _ X0) as [L1 Hlen [Heq HF]]; subst.
@@ -132,22 +127,13 @@ Section Okada.
 
   Lemma Okada A : ⟦A⟧ ⊆ ↓A.
   Proof.
-  induction A; intros l H; simpl in H; auto; try (red in H; red in H).
+  induction A; intros l H; simpl in H; auto; try (do 2 red in H); try now (subst; constructor; auto).
   - specialize H with (covar a :: nil).
     change (covar a :: l) with ((covar a :: nil) ++ l).
     apply ex_app; apply H.
     eapply ex_r; [ apply ax_r | apply PCperm_Type_swap ].
-  - specialize H with (one :: nil).
-    change (one :: l) with ((one :: nil) ++ l).
-    apply ex_app; apply H.
-    intros x Hx; inversion Hx.
-    apply one_r.
-  - apply bot_r; assumption.
-  - specialize H with (tens A1 A2 :: nil).
-    change (tens A1 A2 :: l) with ((tens A1 A2 :: nil) ++ l).
-    apply ex_app; apply H.
-    intros x Hx; inversion Hx.
-    red; list_simpl; apply tens_r; auto.
+  - inversion H; subst.
+    apply tens_r; auto.
   - apply parr_r.
     specialize H with ((A1 :: nil) ++ A2 :: nil).
     change (A1 :: A2 :: l) with (((A1 :: nil) ++ A2 :: nil) ++ l).
@@ -157,39 +143,29 @@ Section Okada.
     change (zero :: l) with ((zero :: nil) ++ l).
     apply ex_app; apply H.
     intros x Hx; inversion Hx.
-  - apply top_r.
-  - specialize H with (aplus A1 A2 :: nil).
-    change (aplus A1 A2 :: l) with ((aplus A1 A2 :: nil) ++ l).
-    apply ex_app; apply H.
-    intros x Hx; inversion Hx; red; [ apply plus_r1 | apply plus_r2 ]; auto.
+  - destruct H; [ apply plus_r1 | apply plus_r2 ]; auto.
   - destruct H as [H1 H2] ; apply with_r.
 (* TODO simplify? *)
     + apply (@cl_monotone _ _ (CL PMLL)) in IHA1.
       apply IHA1 in H1.
-      change (A1 :: l) with ((A1 :: nil) ++ l).
-      assert (@cl _ _ (CL PMLL) (dual (sg (A1 :: nil))) l).
-      { intros x Hx; apply H1; revert Hx.
+      assert (dual (sg (A1 :: nil)) l) as H.
+      { eapply dual_is_closed.
+        intros x Hx; apply H1; revert Hx.
         apply lmonot.
         intros z Hz y Heq; subst.
         apply ex_app; assumption. }
-      apply dual_is_closed in X.
-      unfold dual in X.
-      specialize X with (A1 :: nil).
-      unfold R in X.
-      assert (Y := X eq_refl); unfold CPSPole in Y; simpl in Y.
-      apply ex_app; assumption.
+      change (A1 :: l) with ((A1 :: nil) ++ l).
+      apply ex_app, H; reflexivity.
     + apply (@cl_monotone _ _ (CL PMLL)) in IHA2.
       apply IHA2 in H2.
-      change (A2 :: l) with ((A2 :: nil) ++ l).
-      assert (@cl _ _ (CL PMLL) (dual (sg (A2 :: nil))) l).
-      { intros x Hx; apply H2; revert Hx.
+      assert (dual (sg (A2 :: nil)) l) as  H.
+      { eapply dual_is_closed.
+        intros x Hx; apply H2; revert Hx.
         apply lmonot.
         intros z Hz y Heq; subst.
         apply ex_app; assumption. }
-      apply dual_is_closed in X.
-      unfold dual,R in X; specialize X with (A2 :: nil).
-      assert (Y := X eq_refl); unfold CPSPole in Y; simpl in Y.
-      apply ex_app; assumption.
+      change (A2 :: l) with ((A2 :: nil) ++ l).
+      apply ex_app, H; reflexivity.
   - specialize H with (oc A :: nil).
     change (oc A :: l) with ((oc A :: nil) ++ l).
     apply ex_app; apply H.
@@ -199,25 +175,24 @@ Section Okada.
 (* TODO simplify? *)
     apply (@cl_monotone _ _ (CL PMLL)) in IHA.
     apply IHA in X.
-    change (A :: ⁇ x0) with ((A :: nil) ++ ⁇ x0).
-    assert (@cl _ _ (CL PMLL) (dual (sg (A :: nil))) (⁇ x0)).
-    { intros z Hz; apply X; revert Hz.
+    assert (dual (sg (A :: nil)) (⁇ x0)) as H'.
+    { eapply dual_is_closed.
+      intros z Hz; apply X; revert Hz.
       apply lmonot.
       intros t Ht y Heq; subst.
       apply ex_app; assumption. }
-    apply dual_is_closed in X0.
-    unfold dual, R in X0; specialize X0 with (A :: nil).
-    assert (Y := X0 eq_refl); unfold CPSPole in Y; simpl in Y.
-    apply ex_app; assumption.
+    change (A :: ⁇ x0) with ((A :: nil) ++ ⁇ x0).
+    apply ex_app, H'; reflexivity.
   - specialize H with (wn A :: nil).
     change (wn A :: l) with ((wn A :: nil) ++ l).
     apply ex_app; apply H.
     split.
     + exists (A :: nil); reflexivity.
     + intros x Hx; red; apply de_r; auto.
+  Unshelve. all: auto.
   Qed.
 
-  Lemma Okada_ctx l : dual (dual (⟬߭  l ⟭))  l.
+  Lemma Okada_ctx l : dual (dual (⟬߭  l ⟭)) l.
   Proof.
   induction l.
   - apply bidual_increase.

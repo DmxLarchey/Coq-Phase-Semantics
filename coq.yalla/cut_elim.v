@@ -151,7 +151,7 @@ Section SyntacticModel.
   intro; rewrite <- app_nil_end; auto.
   Qed.
 
-  Hint Resolve dc_closed.
+  Hint Resolve subset_preorder dc_closed.
 
   Definition ILLval P := (fun X Γ => ( Γ = ivar X :: nil )
                                + {a |  Γ = fst (projT2 (ipgax P) a) /\ ivar X = snd (projT2 (ipgax P) a) })%type.
@@ -222,9 +222,13 @@ Section SyntacticModel.
   Notation v := PMval.
   Notation "⟦ A ⟧" := (form_presem PS_ctx (ILLval P) A) (at level 49).
 
+  Hint Resolve (@PScl_stable_l _ PMPS) (@PScl_stable_r _ PMPS)
+               magicwand_l_adj_l magicwand_l_adj_r magicwand_r_adj_l magicwand_r_adj_r.
+
   Section Okada_Lemma.
 
     Notation ILLcl_closed := (@cl_closed _ _ _ CL_ctx).
+    Notation ILLcl_increase := (@cl_increase _ _ CL_ctx).
 
     Lemma Okada_var_1 X : sg (ivar X :: nil) ⊆ ⟦ivar X⟧.
     Proof. intros x Hx; subst; left; reflexivity. Qed.
@@ -237,7 +241,7 @@ Section SyntacticModel.
       apply gax_ir.
     Qed.
 
-    Lemma Okada_formula A : ((sg (A :: nil) ⊆ ⟦A⟧) * (⟦A⟧ ⊆ ↓A))%type.
+    Lemma Okada_formula A : ((sg (A :: nil) ⊆ cl(⟦A⟧)) * (⟦A⟧ ⊆ ↓A))%type.
     Proof.
     induction A; simpl;
       try (destruct IHA as [IHA01 IHA02]);
@@ -246,32 +250,41 @@ Section SyntacticModel.
      (split; [ |
       try (try (apply ILLcl_closed; auto);
            intros x Hx; inversion Hx; subst; constructor; auto; fail)]).
-    - apply Okada_var_1.
+    - etransitivity; [ apply Okada_var_1 | apply ILLcl_increase ].
     - apply Okada_var_2.
     - unfold ldual, rdual, ctx_orth.
       intros x Hx [[de1 de2] A] Hy; subst; simpl.
       constructor.
       specialize Hy with nil; apply Hy; auto.
-    - unfold ldual, rdual, ctx_orth.
-      intros x Hx [[de1 de2] A] Hy; subst; simpl.
-      constructor.
-      specialize Hy with ((A1 :: nil) ++ A2 :: nil); apply Hy; auto.
-      constructor; auto.
+    - transitivity (cl (cl (⟦ A1 ⟧) ∘ cl(⟦ A2 ⟧))).
+      + transitivity (cl_ctx (sg (A1 :: nil) ∘ sg (A2 :: nil))).
+        * unfold cl_ctx; simpl; unfold rdual, ctx_orth.
+          intros x Hx [[de1 de2] A] Hy; subst.
+          constructor.
+          specialize Hy with ((A1 :: nil) ++ A2 :: nil); apply Hy; auto.
+          split; auto.
+        * apply cl_monotone.
+          apply composes_monotone; assumption.
+      + apply (@cl_le _ _ _ CL_ctx).
+        apply cl_stable; auto.
     - unfold magicwand_r.
+      etransitivity; [ | apply ILLcl_increase ].
       intros x Hx y Hy; subst.
       inversion Hy; subst.
       enough (sg (A2 o- A1 :: b) ⊆ cl(⟦A2⟧)) as Hi by (apply Hi; reflexivity).
-      apply cl_monotone in IHA21; auto.
+      apply cl_le in IHA21; auto.
       etransitivity; [ | apply IHA21 ].
       intros x Hx; subst.
       unfold cl; simpl; unfold ldual, rdual, ctx_orth.
       intros [[si1 si2] C] H; simpl.
       apply lpam_ilr; auto.
       specialize H with (A2 :: nil); apply H; auto.
-    - intros x Hx; constructor.
+    - etransitivity; [ eapply (@cl_magicwand_r_3 _ _ _ CL_ctx) | ]; eauto.
+      intros x Hx; constructor.
       apply ILLcl_closed in IHA22; auto.
       apply IHA22, Hx; constructor; auto.
     - unfold magicwand_r.
+      etransitivity; [ | apply ILLcl_increase ].
       intros x Hx y Hy; subst.
       inversion Hy; subst.
       enough (sg (igen A :: b) ⊆ cl(⟦N⟧)) as Hi by (apply Hi; reflexivity).
@@ -290,26 +303,30 @@ Section SyntacticModel.
       apply gen_ilr.
       apply IHA02; auto.
 *)
-    - intros x Hx; constructor.
+    - etransitivity; [ eapply (@cl_magicwand_r_3 _ _ _ CL_ctx) | ]; eauto.
+      intros x Hx; constructor.
       assert (IHN := @Okada_var_2 atN).
       apply ILLcl_closed in IHN; auto.
       apply IHN, Hx; constructor; auto.
     - unfold magicwand_l.
+      etransitivity; [ | apply ILLcl_increase ].
       intros x Hx y Hy; subst.
       inversion Hy; subst.
       enough (sg (a ++ A1 -o A2 :: nil) ⊆ cl(⟦A2⟧)) as Hi by (apply Hi; reflexivity).
-      apply cl_monotone in IHA21; auto.
+      apply cl_le in IHA21; auto.
       etransitivity; [ | apply IHA21 ].
       intros x Hx; subst.
       unfold cl; simpl; unfold ldual, rdual, ctx_orth.
       intros [[si1 si2] C] H; list_simpl.
       apply lmap_ilr; auto.
       specialize H with (A2 :: nil); apply H; auto.
-    - intros x Hx; constructor.
+    - etransitivity; [ eapply (@cl_magicwand_l_3 _ _ _ CL_ctx) | ]; eauto.
+      intros x Hx; constructor.
       apply ILLcl_closed in IHA22; auto.
       apply IHA22, Hx.
       change (A1 :: x) with ((A1 :: nil) ++ x); constructor; auto.
     - unfold magicwand_l.
+      etransitivity; [ | apply ILLcl_increase ].
       intros x Hx y Hy; subst.
       inversion Hy; subst.
       enough (sg (a ++ ineg A :: nil) ⊆ cl(⟦N⟧)) as Hi by (apply Hi; reflexivity).
@@ -328,21 +345,24 @@ Section SyntacticModel.
       apply neg_ilr.
       apply IHA02; auto.
 *)
-    - intros x Hx; constructor.
+    - etransitivity; [ eapply (@cl_magicwand_l_3 _ _ _ CL_ctx) | ]; eauto.
+      intros x Hx; constructor.
       assert (IHN := @Okada_var_2 atN).
       apply ILLcl_closed in IHN; auto.
       apply IHN, Hx.
       change (A :: x) with ((A :: nil) ++ x); constructor; auto.
-    - apply top_greatest.
-    - apply glb_in.
-      + apply cl_monotone in IHA11; auto.
+    - etransitivity; [ | apply ILLcl_increase ].
+      apply top_greatest.
+    - etransitivity; [ | apply ILLcl_increase ].
+      apply glb_in.
+      + apply cl_le in IHA11; auto.
         etransitivity; [ | apply IHA11 ].
         intros x Hx; subst.
         unfold cl; simpl; unfold ldual, rdual, ctx_orth.
         intros [[si1 si2] C] H; simpl.
         apply with_ilr1.
         specialize H with (A1 :: nil); apply H; auto.
-      + apply cl_monotone in IHA21; auto.
+      + apply cl_le in IHA21; auto.
         etransitivity; [ | apply IHA21 ].
         intros x Hx; subst.
         unfold cl; simpl; unfold ldual, rdual, ctx_orth.
@@ -360,18 +380,26 @@ Section SyntacticModel.
     - unfold ldual, rdual, ctx_orth.
       intros x Hx [[de1 de2] A] Hy; subst; simpl.
       constructor.
-    - unfold ldual, rdual, ctx_orth.
-      intros x Hx [[de1 de2] A] Hy; subst; simpl.
-      constructor.
-      + specialize Hy with (A1 :: nil); apply Hy; auto.
-      + specialize Hy with (A2 :: nil); apply Hy; auto.
-    - unfold ldual, rdual, ctx_orth.
+    - transitivity (lub (cl (⟦ A1 ⟧)) (cl(⟦ A2 ⟧))).
+      + intros x Hx [[de1 de2] A] Hy; subst; simpl.
+        unfold rdual, ctx_orth, lub in Hy.
+        constructor.
+        * specialize Hy with (A1 :: nil); apply Hy; auto.
+        * specialize Hy with (A2 :: nil); apply Hy; auto.
+      + apply lub_out; auto.
+        * apply (@cl_idempotent _ _ CL_ctx).
+        * apply (@cl_monotone _ _ CL_ctx).
+          intros x; auto.
+        * apply (@cl_monotone _ _ CL_ctx).
+          intros x; auto.
+    - etransitivity; [ | apply ILLcl_increase ].
+      unfold ldual, rdual, ctx_orth.
       intros x Hx [[de1 de2] B] Hy; subst; simpl.
       specialize Hy with (!A :: nil); apply Hy; auto.
       split.
       + exists (A :: nil); reflexivity.
       + enough (sg (!A :: nil) ⊆ cl(⟦A⟧)) as Hoc by (apply Hoc; reflexivity).
-        apply cl_monotone in IHA01; auto.
+        apply cl_le in IHA01; auto.
         etransitivity; [ | apply IHA01 ].
         intros x Hx; subst.
         unfold cl; simpl; unfold ldual, rdual, ctx_orth.
@@ -392,11 +420,13 @@ Section SyntacticModel.
 
     (* We lift the result to contexts, ie list of formulas *)
 
-    Lemma Okada_ctx Γ: ⟬߭Γ⟭  Γ.
+    Lemma Okada_ctx Γ: cl (⟬߭Γ⟭)  Γ.
     Proof.
-    induction Γ as [ | A ga Hga ]; unfold list_form_presem; simpl; auto.
-    change (A :: ga) with ((A :: nil) ++ ga); constructor; auto.
-    apply Okada_formula; auto.
+    induction Γ as [ | A ga Hga ]; unfold list_form_presem; simpl.
+    - apply ILLcl_increase; reflexivity.
+    - apply (@cl_stable _ _ _ CL_ctx); auto.
+      change (A :: ga) with ((A :: nil) ++ ga); constructor; auto.
+      apply Okada_formula; auto.
     Qed.
 
   End Okada_Lemma.
@@ -423,9 +453,14 @@ Section cut_admissibility.
     intros pi.
     apply (ill_soundness PMILL_cfat) in pi; auto.
     assert (gax_noN_l (cutupd_ipfrag P false)) as HgaxN_cf by assumption.
-    assert (HO := snd (Okada_formula HgaxN_cf A)).
+    assert (gax_at_l (cutupd_ipfrag P false)) as Hgax_at_l_cf by assumption.
+    assert (gax_at_r (cutupd_ipfrag P false)) as Hgax_at_r_cf by assumption.
+    assert (gax_cut (cutupd_ipfrag P false)) as Hgax_cut_cf by assumption.
+    assert (HO := snd (Okada_formula HgaxN_cf Hgax_at_l_cf Hgax_at_r_cf Hgax_cut_cf A)).
     apply (@cl_closed _ _ _ PSCL) in HO; [ | apply dc_closed ].
+    apply cl_le in pi.
     apply HO, pi, Okada_ctx; auto.
+    apply subset_preorder.
   Qed.
 
 End cut_admissibility.

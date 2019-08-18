@@ -90,15 +90,15 @@ Section Phase_Spaces.
       match f with
       | 0     => zero
       | ⟙             => top
-      | 𝝐              => @one _ _ CL0 (sg PSunit)
+      | 𝝐              => sg PSunit
       | £ x    => v x
       | a -o b => ⟦a⟧ ⊸ cl(⟦b⟧)
       | ineg a => ⟦a⟧ ⊸ cl(v atN)
       | b o- a => cl(⟦b⟧) ⟜ ⟦a⟧
       | igen a => cl(v atN) ⟜ ⟦a⟧
-      | a ⊗ b  => ⟦a⟧ ⊛ ⟦b⟧
-      | a ⊕ b  => ⟦a⟧ ⊔ ⟦b⟧
-      | a & b  => cl(⟦a⟧) ⊓ cl(⟦b⟧)
+      | a ⊗ b  => ⟦a⟧ ∘ ⟦b⟧
+      | a ⊕ b  => ⟦a⟧ ∪ ⟦b⟧
+      | a & b  => cl(⟦a⟧) ∩ cl(⟦b⟧)
       | !a     => ❗cl(⟦a⟧)
       end
     where "⟦ a ⟧" := (form_presem a).
@@ -420,6 +420,7 @@ Section Phase_Spaces.
     rewrite list_form_presem_cons; simpl; unfold one.
     transitivity (⟬߭ Γ ⟭ ∘ (cl (sg PSunit ∘ ⟬߭ Δ ⟭))).
     - apply composes_monotone; try reflexivity; auto.
+      apply cl_increase.
     - etransitivity; [ apply PScl_stable_r | ].
       apply cl_closed; auto.
       transitivity (⟬߭ Γ ⟭ ∘ cl (⟬߭ Δ ⟭)).
@@ -431,7 +432,7 @@ Section Phase_Spaces.
     Qed.
 
     Fact ill_unit_r_sound : ⟬߭nil⟭ ⊆ cl(⟦𝝐⟧).
-    Proof. etransitivity; apply cl_increase. Qed.
+    Proof. apply cl_increase. Qed.
 
     Fact ill_limp_l_sound Γ ϴ Δ a b c : ⟬߭Γ⟭ ⊆ cl(⟦a⟧) -> ⟬߭ϴ ++ b :: Δ⟭ ⊆ cl(⟦c⟧) -> ⟬߭ϴ ++ Γ ++ a -o b :: Δ⟭ ⊆ cl(⟦c⟧).
     Proof.
@@ -553,8 +554,7 @@ Section Phase_Spaces.
     Proof.
     intros H.
     apply list_form_presem_mono_cons_closed with ione; auto.
-    - etransitivity; [ | apply cl_increase ].
-      apply (@store_inc_unit _ PScompose); auto.
+    - apply (@store_inc_unit _ PScompose); auto.
     - apply ill_unit_l_sound; assumption.
     Qed.
 
@@ -563,8 +563,7 @@ Section Phase_Spaces.
     intros H.
     change (!a::!a::Δ) with ((!a::!a::nil)++Δ) in H.
     apply list_form_presem_mono_cons_closed with ((!a) ⊗ (!a)); auto.
-    - etransitivity; [ | apply cl_increase ].
-      eapply store_compose_idem; eauto.
+    - eapply store_compose_idem; eauto.
     - apply list_form_presem_app_closed_1; auto.
       rewrite list_form_presem_cons; simpl.
       simpl in H.
@@ -572,8 +571,7 @@ Section Phase_Spaces.
       rewrite 2 list_form_presem_cons in H.
       transitivity (⟬߭ Γ ⟭ ∘ cl (⟦ ! a ⟧ ∘ (⟦ ! a ⟧ ∘ ⟬߭ Δ ⟭))).
       + apply composes_monotone; try reflexivity.
-        etransitivity; [ apply PScl_stable_l | ].
-        apply cl_le; auto.
+        apply PScl_associative_r.
       + etransitivity; [ apply PScl_stable_r | ].
         apply cl_closed; auto.
     Qed.
@@ -589,19 +587,17 @@ Section Phase_Spaces.
       rewrite 2 list_form_presem_cons in H.
       transitivity (⟬߭ Γ ⟭ ∘ cl (⟦ a ⟧ ∘ (⟦ b ⟧ ∘ ⟬߭ Δ ⟭))).
       + apply composes_monotone; try reflexivity.
-        etransitivity; [ apply PScl_stable_l | ].
-        apply cl_le; auto.
+        apply PScl_associative_r.
       + etransitivity; [ apply PScl_stable_r | ].
         apply cl_closed; auto.
     Qed.
 
-    Fact ill_tensor_r_sound Γ Δ a b : ⟬߭Γ⟭ ⊆ cl(⟦a⟧) -> ⟬߭Δ⟭ ⊆ cl(⟦b⟧) -> ⟬߭Γ ++ Δ⟭ ⊆ cl(⟦a⟧ ⊛ ⟦b⟧).
+    Fact ill_tensor_r_sound Γ Δ a b : ⟬߭Γ⟭ ⊆ cl(⟦a⟧) -> ⟬߭Δ⟭ ⊆ cl(⟦b⟧) -> ⟬߭Γ ++ Δ⟭ ⊆ cl(⟦a⟧ ∘ ⟦b⟧).
     Proof.
     intros H1 H2.
     apply list_form_presem_app_closed_1; [ apply tensor_closed | ].
     etransitivity; [ eapply composes_monotone; eassumption | ].
-    etransitivity; [ apply cl_stable | ]; auto.
-    apply cl_increase.
+    apply cl_stable; auto.
     Qed.
 
     Fact ill_plus_l_sound Γ Δ a b c : ⟬߭Γ ++ a :: Δ⟭ ⊆ cl(⟦c⟧) -> ⟬߭Γ ++ b :: Δ⟭ ⊆ cl(⟦c⟧) ->
@@ -621,6 +617,7 @@ Section Phase_Spaces.
       etransitivity; [ | apply tensor_lub_distrib_l]; auto.
       etransitivity; [ | apply cl_increase ].
       apply composes_monotone; try reflexivity.
+      apply cl_increase.
     - apply lub_out; auto.
       + eapply cl_closed in H1; auto.
         etransitivity; [ | apply H1 ].
@@ -633,10 +630,9 @@ Section Phase_Spaces.
     Qed.
 
     Fact ill_plus_r1_sound Γ a b : ⟬߭Γ⟭ ⊆ cl(⟦a⟧) -> ⟬߭Γ⟭ ⊆ cl(⟦a ⊕ b⟧).
-    Proof. intros H; (etransitivity; [ apply H | ]); apply cl_monotone; apply lub_in_l. Qed.
-
+    Proof. intros H; (etransitivity; [ apply H | ]); apply cl_monotone; left; assumption. Qed.
     Fact ill_plus_r2_sound Γ a b : ⟬߭Γ⟭ ⊆ cl(⟦b⟧) -> ⟬߭Γ⟭ ⊆ cl(⟦a ⊕ b⟧).
-    Proof. intros H; (etransitivity; [ apply H | ]); apply cl_monotone; apply lub_in_r. Qed.
+    Proof. intros H; (etransitivity; [ apply H | ]); apply cl_monotone; right; assumption. Qed.
 
     Fact ill_zero_l_sound Γ Δ a : ⟬߭Γ ++ 0 :: Δ⟭ ⊆ cl(⟦a⟧).
     Proof.
