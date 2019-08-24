@@ -3,16 +3,9 @@ Require Import List_Type Permutation_Type_more.
 Require Import ll_def.
 Require Import closure_operators.
 
-Notation "⁇ x" := (map wn x) (at level 52).
-
-Infix "⊆" := subset (at level 75, no associativity).
-Infix "≃" := eqset (at level 75, no associativity).
-Notation sg := (@eq _).
-Notation "A ∩ B" := (fun z => A z * B z : Type)%type (at level 50, format "A  ∩  B", left associativity).
-Notation "A ∪ B" := (fun z => A z + B z : Type)%type (at level 50, format "A  ∪  B", left associativity).
+Import SetNotations.
 
 Set Implicit Arguments.
-
 
 
 
@@ -541,17 +534,17 @@ Section MonicMagmaOrthogonality.
         [ apply (@stable_l _ _ _ _ compose) | apply (@stable_r _ _ _ _ (fun x y => compose y x)) ]; auto.
   Qed.
 
-  Notation "x ⊓ y" := (glb x y) (at level 50, no associativity).
-  Notation "x ⊔ y" := (lub x y) (at level 50, no associativity).
+  Infix "⊓" := glb (at level 50, no associativity).
+  Infix "⊔" := lub (at level 50, no associativity).
 
   Variable K : M -> Type.
-  Hypothesis sub_monoid_1 : sub_monoid_hyp_1 unit K.
-  Hypothesis sub_monoid_2 : sub_monoid_hyp_2 compose K.
-  Hypothesis sub_J : sub_J_hyp compose unit K.
+  Hypothesis sub_monoid_1 : pwr_sub_monoid_hyp_1 unit K.
+  Hypothesis sub_monoid_2 : pwr_sub_monoid_hyp_2 compose K.
+  Hypothesis sub_J : pwr_sub_J_hyp compose unit K.
 
-  Notation "❗ A" := (bang K A) (at level 40, no associativity).
+  Notation "❗ A" := (bang glb K A) (at level 40, no associativity).
 
-  Definition whynot X := dual (K ∩ (dual X)).
+  Definition whynot X := dual (K ⊓ (dual X)).
   Notation "❓ A" := (whynot A) (at level 40, no associativity).
 
   Lemma bang_as_whynot X : closed X -> ❗X ≃ dual (❓ dual X).

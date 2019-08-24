@@ -18,6 +18,9 @@ Require Export closure_operators.
 
 Require Import ill_def.
 
+Import SetNotations.
+
+
 Notation " x '~[' b ']' y " := (PEperm_Type b x y) (at level 70, format "x  ~[ b ]  y").
 
 Notation "⟙" := (itop).
@@ -42,12 +45,6 @@ Set Implicit Arguments.
 
 Section Phase_Spaces.
 
-  Infix "⊆" := subset (at level 75, no associativity).
-  Infix "≃" := eqset (at level 75, no associativity).
-  Notation "A ∩ B" := (fun z => A z * B z : Type)%type (at level 50, format "A  ∩  B", left associativity).
-  Notation "A ∪ B" := (fun z => A z + B z : Type)%type (at level 50, format "A  ∪  B", left associativity).
-  Notation sg := (@eq _).
-
   Class PhaseSpace (b : bool) := {
     Web : Type;
     PScompose : Web -> Web -> Web;
@@ -62,11 +59,10 @@ Section Phase_Spaces.
     PScl_neutral_l_2 : @cl_neutrality_l_2 _ _ PSCL (composes PScompose) (sg PSunit);
     PScl_neutral_r_1 : @cl_neutrality_r_1 _ _ PSCL (composes PScompose) (sg PSunit);
     PScl_neutral_r_2 : @cl_neutrality_r_2 _ _ PSCL (composes PScompose) (sg PSunit);
-    PSsub_monoid_1 : @sub_monoid_hyp_1 _ PSCL PSunit PSExp;
-    PSsub_monoid_2 : sub_monoid_hyp_2 PScompose PSExp;
-    PSsub_J : @sub_J_hyp _ PScompose PSCL PSunit PSExp;
-    PScl_commute : b = true -> @cl_commutativity _ _ PSCL (composes PScompose)
-  }.
+    PSsub_monoid_1 : @pwr_sub_monoid_hyp_1 _ PSCL PSunit PSExp;
+    PSsub_monoid_2 : pwr_sub_monoid_hyp_2 PScompose PSExp;
+    PSsub_J : @pwr_sub_J_hyp _ PSCL PScompose PSunit PSExp;
+    PScl_commute : b = true -> @cl_commutativity _ _ PSCL (composes PScompose) }.
 
   (* Interpretation of Linear Logic *)
 
@@ -76,16 +72,16 @@ Section Phase_Spaces.
   Infix "⊛" := (tensor (composes PScompose)) (at level 59).
   Infix "⊓" := glb (at level 50, no associativity).
   Infix "⊔" := lub (at level 50, no associativity).
-  Notation "❗ A" := (bang PSExp A) (at level 40, no associativity).
+  Notation "❗ A" := (bang glb PSExp A) (at level 40, no associativity).
 
   Section Formula_Interpretation.
 
-    Reserved Notation "'⟦' A '⟧'" (at level 49).
     Variable perm_bool : bool.
     Variable PS : PhaseSpace perm_bool.
     Variable v : IAtom -> Web -> Type.
     Instance CL0 : ClosureOp := PSCL.
 
+    Reserved Notation "⟦ A ⟧" (at level 49).
     Fixpoint form_presem f :=
       match f with
       | 0     => zero
@@ -106,7 +102,7 @@ Section Phase_Spaces.
     Definition list_form_presem l := fold_right (composes PScompose) (sg PSunit) (map form_presem l).
     Notation "⟬߭  l ⟭" := (list_form_presem l) (at level 49).
 
-    Fact list_form_presem_nil : ⟬߭nil⟭ = (sg PSunit).
+    Fact list_form_presem_nil : ⟬߭nil⟭ = sg PSunit.
     Proof. auto. Qed.
 
     Fact list_form_presem_cons f l : ⟬߭f :: l⟭  = ⟦f⟧ ∘ ⟬߭l⟭.
@@ -118,8 +114,7 @@ Section Phase_Spaces.
     PMPS : PhaseSpace (ipperm P);
     PMval : IAtom -> Web -> Type;
     PMgax : forall a, list_form_presem PMPS PMval (fst (projT2 (ipgax P) a))
-                    ⊆ @cl _ _ PSCL (form_presem PMPS PMval (snd (projT2 (ipgax P) a)))
-  }.
+                    ⊆ @cl _ _ PSCL (form_presem PMPS PMval (snd (projT2 (ipgax P) a))) }.
 
   Context { P : ipfrag }.
   Variable PM : PhaseModel P.
@@ -135,11 +130,6 @@ Section Phase_Spaces.
   Hint Resolve (@composes_monotone _ PScompose).
   Hint Resolve (@subset_preorder Web).
   Hint Resolve  magicwand_l_adj_l magicwand_l_adj_r magicwand_r_adj_l magicwand_r_adj_r.
-(*
-               cl_associative_l composes_associative_2 composes_commute_1
-               composes_neutral_l_1 composes_neutral_l_2 composes_neutral_r_1 composes_neutral_r_2.
-*)
-
 
   Infix "∘" := (composes PScompose) (at level 50, no associativity).
 
@@ -148,9 +138,9 @@ Section Phase_Spaces.
   Notation PMform_presem := (form_presem PMPS PMval).
   Notation PMlist_form_presem := (list_form_presem PMPS PMval).
   Notation "⟦ A ⟧" := (PMform_presem A) (at level 49).
-  Notation "⟬߭  l ⟭" := (PMlist_form_presem l) (at level 49).
+  Notation "⟬߭ l ⟭" := (PMlist_form_presem l) (at level 49).
 
-  Fact list_form_presem_app_1 l m : cl (⟬߭  l ++ m ⟭) ⊆ cl (⟬߭  l ⟭ ∘ ⟬߭  m ⟭).
+  Fact list_form_presem_app_1 l m : cl (⟬߭ l ++ m ⟭) ⊆ cl (⟬߭  l ⟭ ∘ ⟬߭  m ⟭).
   Proof.
   induction l as [ | f l IHl ]; simpl app; auto.
   - etransitivity; [ apply PScl_neutral_l_1 | ]; auto.
@@ -252,19 +242,29 @@ Section Phase_Spaces.
       apply cl_closed; auto.
   Qed.
 
+  Notation lcap := (@fold_right (Web -> Type) _ glb top).
+
+  Hint Resolve glb_in glb_out_l glb_out_r top_greatest.
+
   Fact list_form_presem_bang_1 l : cl (⟬߭‼l⟭) ⊆ ❗ (lcap (map (fun x => cl (⟦ x ⟧)) l)).
   Proof.
   induction l.
   - simpl; rewrite list_form_presem_nil.
     apply store_unit_1; auto.
+    apply sub_monoid_1, PSsub_monoid_1.
   - simpl; rewrite list_form_presem_cons.
     apply cl_le; auto.
     transitivity (⟦ ! a ⟧ ∘ cl (❗ lcap (map (fun x => cl (⟦ x ⟧)) l))).
     + apply composes_monotone; try reflexivity.
       etransitivity; [ | etransitivity; [apply IHl | ] ]; auto; apply cl_increase.
     + etransitivity; [ apply PScl_stable_r | ]; simpl.
-      etransitivity; [ refine (fst (@store_comp _ PScompose _ _ _ PSunit _ _ _ _ _ _ _ _ _)) | ]; auto.
-      * apply mglb_closed.
+      etransitivity;
+        [ refine (fst (@store_comp _ _ _ _ (composes PScompose) _ _ _ (sg PSunit) _ _ _ _ _ _ _ _ _ _ _ _ _ _))
+        | ]; auto.
+      * apply sub_monoid_2, PSsub_monoid_2.
+      * apply (@sub_J_1 _ _ PScompose PSunit), PSsub_J.
+      * apply (@sub_J_2 _ _ PScompose PSunit), PSsub_J.
+      * apply lmglb_closed; auto.
         clear IHl; induction l; simpl; auto.
       * reflexivity.
   Qed.
@@ -297,13 +297,13 @@ Section Phase_Spaces.
   induction l.
   - simpl; rewrite list_form_presem_nil.
     eapply store_unit_2; eauto.
+    apply (@sub_J_1 _ _ PScompose PSunit), PSsub_J.
   - simpl; rewrite list_form_presem_cons.
     transitivity (cl (⟦ ! a ⟧ ∘ ❗ lcap (map (fun x => cl (⟦ x ⟧)) l))).
     + simpl.
-      etransitivity; [ | refine (@store_comp_2 _ PScompose _ PSunit _ _ _ _) ]; auto.
-      clear IHl; induction l; simpl; auto;
-        apply store_monotone;
-        intros x [Ha Ht]; split; auto.
+      etransitivity; [ | refine (@store_comp_2 _ _ _ _ (composes PScompose) _ _ _ _ _ _ _ _ _) ]; auto.
+      * clear IHl; induction l; simpl; auto; apply store_monotone; auto.
+      * apply (@sub_J_2 _ _ PScompose PSunit), PSsub_J.
     + apply cl_le; auto.
       etransitivity; [ | apply PScl_stable_r ].
       apply composes_monotone; try reflexivity; auto.
@@ -348,8 +348,9 @@ Section Phase_Spaces.
       etransitivity; [ apply cl_increase | ].
       etransitivity; [ apply list_form_presem_bang_1 | ].
       transitivity (❗ lcap (map (fun x => cl (⟦ x ⟧)) (a :: b :: nil))).
-      +  apply store_monotone.
-         simpl; split; tauto.
+      + apply store_monotone; auto.
+        simpl; apply glb_in; auto.
+        transitivity (cl (⟦ a ⟧) ⊓ top); auto.
       + etransitivity; [ apply list_form_presem_bang_2 | ]; reflexivity.
     - transitivity (cl (⟬߭ Γ ⟭ ∘ (⟬߭ !a :: !b :: nil ⟭ ∘ ⟬߭ Δ ⟭)));
         [ transitivity (⟬߭ Γ ⟭ ∘ cl (⟬߭ !a :: !b :: nil ⟭ ∘ ⟬߭ Δ ⟭)) | ]; auto.
@@ -554,7 +555,8 @@ Section Phase_Spaces.
     Proof.
     intros H.
     apply list_form_presem_mono_cons_closed with ione; auto.
-    - apply (@store_inc_unit _ PScompose); auto.
+    - simpl; apply (@store_inc_unit); auto.
+      apply (@sub_J_1 _ _ PScompose PSunit), PSsub_J.
     - apply ill_unit_l_sound; assumption.
     Qed.
 
@@ -564,6 +566,7 @@ Section Phase_Spaces.
     change (!a::!a::Δ) with ((!a::!a::nil)++Δ) in H.
     apply list_form_presem_mono_cons_closed with ((!a) ⊗ (!a)); auto.
     - eapply store_compose_idem; eauto.
+      apply (@sub_J_2 _ _ PScompose PSunit), PSsub_J.
     - apply list_form_presem_app_closed_1; auto.
       rewrite list_form_presem_cons; simpl.
       simpl in H.
@@ -648,8 +651,6 @@ Section Phase_Spaces.
 
     Fact ill_top_r_sound Γ : ⟬߭Γ⟭ ⊆ cl(⟦⟙⟧).
     Proof. etransitivity; [ | apply cl_increase ]; apply top_greatest. Qed.
-
-    Notation "l ⊢ x" := (ill P l x) (at level 70, no associativity).
 
     Hint Resolve ill_ax_sound
                  ill_limp_l_sound ill_limp_r_sound ill_rimp_l_sound ill_rimp_r_sound

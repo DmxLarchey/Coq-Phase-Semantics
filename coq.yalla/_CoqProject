@@ -24,7 +24,6 @@ formulas.v
 ll_def.v
 ll_cut_at.v
 
-utils_tac.v
 closure_operators.v
 orthogonality.v
 phase_sem.v

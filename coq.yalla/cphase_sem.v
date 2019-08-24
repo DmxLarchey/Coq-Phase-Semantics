@@ -5,14 +5,13 @@ Require Export orthogonality.
 
 Require Import ll_def.
 
+Import SetNotations.
+Notation "⁇ l" := (map wn l) (at level 53).
+
+
 Set Implicit Arguments.
 
 Section PhaseSpaces.
-
-  Infix "⊆" := subset (at level 75, no associativity).
-  Infix "≃" := eqset (at level 75, no associativity).
-  Notation "A ∩ B" := (fun z => A z * B z : Type)%type (at level 50, format "A  ∩  B", left associativity).
-  Notation "A ∪ B" := (fun z => A z + B z : Type)%type (at level 50, format "A  ∪  B", left associativity).
 
   Fixpoint mcomposes {M} n c e x : M -> Type :=
     match n with
@@ -33,12 +32,11 @@ Section PhaseSpaces.
     CPSneutral_2 : pl_neutrality_2 CPScompose CPSunit CPSPole;
     CPSassociative_l : rel_associativity_ll (cps_orth CPScompose CPSPole) CPScompose;
     CPSassociative_r : rel_associativity_lr (cps_orth CPScompose CPSPole) CPScompose;
-    CPSsub_monoid_1 : @sub_monoid_hyp_1 _ (bidualCL CPScommute) CPSunit CPSExp;
-    CPSsub_monoid_2 : sub_monoid_hyp_2 CPScompose CPSExp;
-    CPSsub_J : @sub_J_hyp _ CPScompose (bidualCL CPScommute) CPSunit CPSExp;
+    CPSsub_monoid_1 : @pwr_sub_monoid_hyp_1 _ (bidualCL CPScommute) CPSunit CPSExp;
+    CPSsub_monoid_2 : pwr_sub_monoid_hyp_2 CPScompose CPSExp;
+    CPSsub_J : @pwr_sub_J_hyp _ (bidualCL CPScommute) CPScompose CPSunit CPSExp;
     CPSfcommute : bp = true -> pl_fcommutativity CPScompose CPSPole;
-    CPSmix : forall n, bm n = true -> mcomposes n CPScompose CPSunit CPSPole ⊆ CPSPole
-  }.
+    CPSmix : forall n, bm n = true -> mcomposes n CPScompose CPSunit CPSPole ⊆ CPSPole }.
 
   Notation CPSorth := (cps_orth CPScompose CPSPole).
   Notation dual := (@ldual _ _ CPSorth).
@@ -49,7 +47,7 @@ Section PhaseSpaces.
   Infix "⊔" := lub (at level 50, no associativity).
 
   Infix "⅋" := (par CPScompose CPSPole) (at level 59).
-  Notation "❗ A" := (bang CPSExp A) (at level 40, no associativity).
+  Notation "❗ A" := (bang glb CPSExp A) (at level 40, no associativity).
   Notation "❓ A" := (whynot CPScompose CPSPole CPSExp A) (at level 40, no associativity).
 
   Section Formula_Interpretation.
@@ -66,7 +64,7 @@ Section PhaseSpaces.
     Infix "∘" := (composes CPScompose) (at level 50, no associativity).
     Notation closed := (fun X => dual (dual X) ⊆ X).
 
-    Hint Resolve subset_preorder.
+    Hint Resolve subset_preorder glb_in glb_out_l glb_out_r.
     Hint Resolve (@dual_is_closed _ _ CPScommute)
                  (@cl_increase _ _ CLPS)
                  CPScommute CPSassociative_l CPSassociative_r CPSneutral_1 CPSneutral_2.
@@ -165,9 +163,9 @@ Section PhaseSpaces.
         * etransitivity; [ apply glb_out_r | ].
           etransitivity; [ apply bidual_increase | apply lmonot ]; auto.
     - do 2 apply lmonot.
-      etransitivity; [ | apply (@store_monotone _ CLPS) ]; auto.
+      etransitivity; [ | apply (@store_monotone _ _ _ CLPS) ]; auto.
       etransitivity; [ apply bidual_increase | ].
-      apply (@store_monotone _ CLPS).
+      apply (@store_monotone _ _ _ CLPS); auto.
       etransitivity; [ apply IHA | ]; auto.
     Unshelve. all: auto.
     Qed.
@@ -199,7 +197,7 @@ Section PhaseSpaces.
     Notation "⟦ A ⟧" := (@form_presem (pperm P) (pmix P) _ CPMval A) (at level 49).
     Notation "⟬߭  l ⟭" := (@list_form_presem (pperm P) (pmix P) _ CPMval l) (at level 49).
 
-    Hint Resolve subset_preorder.
+    Hint Resolve subset_preorder glb_in glb_out_l glb_out_r top_greatest.
     Hint Resolve (@dual_is_closed _ _ CPScommute)
                  (@cl_increase _ _ CL) (@CPSpole_closed _ _ PS)
                  CPScommute CPSassociative_l CPSassociative_r CPSneutral_1 CPSneutral_2.
@@ -279,22 +277,28 @@ Section PhaseSpaces.
     etransitivity; [ eassumption | apply bidual_increase ].
     Qed.
 
+    Notation lcap := (@fold_right (CWeb -> Type) _ glb closure_operators.top).
+
     Fact list_form_presem_bang_1 l : cl (⟬߭⁇l⟭) ⊆ ❗ (lcap (map (fun x => cl (⟦ formulas.dual x ⟧)) l)).
     Proof.
     induction l.
     - simpl; rewrite list_form_presem_nil.
       transitivity (@closure_operators.one _ _ CL (sg CPSunit)); [ reflexivity | ].
-      apply (@store_unit_1 _ CL _ CPSExp); auto.
-      apply CPSsub_monoid_1.
+      apply (@store_unit_1 _ _ _ CL); auto.
+      apply sub_monoid_1, CPSsub_monoid_1.
     - simpl; rewrite list_form_presem_cons.
       apply bidual_subset; auto.
       transitivity (⟦ oc (formulas.dual a) ⟧ ∘ cl (❗ lcap (map (fun x => cl (⟦ formulas.dual x ⟧)) l))).
       + apply composes_monotone; try reflexivity.
         etransitivity; [ | etransitivity; [apply IHl | ] ]; auto; apply bidual_increase.
-      + etransitivity; [ eapply mstable_r | ]; auto; simpl.
-        etransitivity; [ refine (fst (@store_comp _ CPScompose _ _ _ CPSunit _ _ _ _ _ _ _ _ _)) | ]; auto.
-        * apply CPSsub_J.
-        * apply mglb_closed.
+      + etransitivity; [ eapply mstable_r | ]; auto; simpl form_presem.
+        etransitivity;
+          [ refine (fst (@store_comp _ _ _ CL (composes CPScompose) _ _ _ (sg CPSunit) _ _ _ _ _ _ _ _ _ _ _ _ _ _))
+          | ]; auto.
+        * apply sub_monoid_2, CPSsub_monoid_2.
+        * apply (@sub_J_1 _ _ CPScompose CPSunit), CPSsub_J.
+        * apply (@sub_J_2 _ _ CPScompose CPSunit), CPSsub_J.
+        * apply lmglb_closed; auto.
           clear IHl; induction l; simpl; auto.
           constructor; auto.
           apply bidual_idempotent.
@@ -305,14 +309,15 @@ Section PhaseSpaces.
     Proof.
     induction l.
     - simpl; rewrite list_form_presem_nil.
-      apply (@store_unit_2 _ CPScompose CL _ CPSExp); auto.
-      apply CPSsub_J.
+      apply (@store_unit_2 _ _ _ CL); auto.
+      apply (@sub_J_1 _ _ CPScompose CPSunit), CPSsub_J.
     - simpl; rewrite list_form_presem_cons.
       transitivity (cl (⟦ oc (formulas.dual a) ⟧ ∘ ❗ lcap (map (fun x => cl (⟦ formulas.dual x ⟧)) l))).
       + simpl.
-        etransitivity; [ | refine (@store_comp_2 _ CPScompose _ CPSunit _ _ _ _) ]; auto ; [ | apply CPSsub_J ].
-        clear IHl; induction l; simpl; auto;
-          intros x Hx; apply mlbidualcl; auto; apply mlbidualcl in Hx; auto.
+        etransitivity; [ | refine (@store_comp_2 _ _ _ CL (composes CPScompose) _ _ _ _ _ _ _ _ _) ]; auto.
+        * clear IHl; induction l; simpl; auto;
+            intros x Hx; apply mlbidualcl; auto; apply mlbidualcl in Hx; auto.
+        * apply (@sub_J_2 _ _ CPScompose CPSunit), CPSsub_J.
       + apply bidual_subset; auto.
         etransitivity; [ | eapply mstable_r ]; auto.
         apply composes_monotone; try reflexivity; auto.
@@ -370,7 +375,7 @@ Section PhaseSpaces.
       apply subset_bidual.
       etransitivity; [ | apply list_form_presem_bang_2 ].
       etransitivity; [ apply list_form_presem_bang_1 | ].
-      apply store_monotone.
+      apply store_monotone; auto.
       symmetry in p.
       intros x.
       apply (@Permutation_Type_morph_transp _ (fun l => lcap (map (fun A => cl (⟦ formulas.dual A ⟧)) l) x)); auto.
@@ -447,7 +452,7 @@ Section PhaseSpaces.
       simpl; unfold whynot.
       apply subset_bidual.
       etransitivity; [ apply list_form_presem_bang_1 | ].
-      apply (@store_der _ CL); auto.
+      apply (@store_der _ _ _ CL); auto.
       transitivity (cl (⟬߭ ⁇ l0 ⟭)) ; [ | apply bidual_closed; auto; eapply dual_is_closed ].
       apply list_form_presem_bang_2.
     - rewrite_all list_form_presem_cons.
@@ -462,7 +467,7 @@ Section PhaseSpaces.
         simpl; do 2 apply lmonot.
         intros x Hx; inversion Hx.
         apply CPSsub_J in X0.
-        apply J_inc_unit in X0; assumption.
+        apply X0.
       + etransitivity; [ eapply mstable_l | ]; auto.
         apply bidual_subset; eapply mneutral_l_2; auto.
     - rewrite_all list_form_presem_cons.
@@ -470,9 +475,9 @@ Section PhaseSpaces.
       + etransitivity; [ | eapply mstable_l ]; auto.
         apply composes_monotone; try reflexivity.
         change (formulas.dual (wn A)) with (oc (formulas.dual A)).
-        apply store_compose_idem with CPSunit; auto.
-        * apply CPSsub_J.
-        * apply bidual_idempotent.
+        apply store_compose_idem; auto.
+        * apply composes_monotone.
+        * apply (@sub_J_2 _ _ CPScompose CPSunit), CPSsub_J.
       + apply bidual_closed in IHX; auto.
         etransitivity ; [ | apply IHX ].
         apply bidual_subset.

@@ -4,7 +4,7 @@ Require Import closure_operators cphase_sem.
 
 Require Import ll_cut_at.
 
-Infix "⊆" := subset (at level 75, no associativity).
+Import SetNotations.
 
 Definition gax_at P := forall a, Forall_Type atomic (projT2 (pgax P) a).
 Definition gax_cut P := forall a b x l1 l2 l3 l4,
