@@ -24,9 +24,12 @@ formulas.v
 ll_def.v
 ll_cut_at.v
 
+tl_def.v
+
 closure_operators.v
 orthogonality.v
 phase_sem.v
 cut_elim.v
 cphase_sem.v
 cokada.v
+tphase_sem.v
