@@ -145,51 +145,36 @@ Section Okada.
     intros x Hx; inversion Hx.
   - destruct H; [ apply plus_r1 | apply plus_r2 ]; auto.
   - destruct H as [H1 H2] ; apply with_r.
-(* TODO simplify? *)
-    + apply (@cl_monotone _ _ (CL PMLL)) in IHA1.
-      apply IHA1 in H1.
-      assert (dual (sg (A1 :: nil)) l) as H.
-      { eapply dual_is_closed.
-        intros x Hx; apply H1; revert Hx.
-        apply lmonot.
-        intros z Hz y Heq; subst.
-        apply ex_app; assumption. }
-      change (A1 :: l) with ((A1 :: nil) ++ l).
-      apply ex_app, H; reflexivity.
-    + apply (@cl_monotone _ _ (CL PMLL)) in IHA2.
-      apply IHA2 in H2.
-      assert (dual (sg (A2 :: nil)) l) as  H.
-      { eapply dual_is_closed.
-        intros x Hx; apply H2; revert Hx.
-        apply lmonot.
-        intros z Hz y Heq; subst.
-        apply ex_app; assumption. }
-      change (A2 :: l) with ((A2 :: nil) ++ l).
-      apply ex_app, H; reflexivity.
+    + apply (@cl_monotone _ _ (CL PMLL) _ _ IHA1) in H1.
+      enough (dual (sg (A1 :: nil)) l) as H
+        by (change (A1 :: l) with ((A1 :: nil) ++ l); apply ex_app, H; reflexivity).
+      eapply dual_is_closed.
+      revert H1; apply (@cl_monotone _ _ (CL PMLL)).
+      intros l' pi; unfold dual; list_simpl; intros y Hy; subst; apply ex_app; auto.
+    + apply (@cl_monotone _ _ (CL PMLL) _ _ IHA2) in H2.
+      enough (dual (sg (A2 :: nil)) l) as H
+        by (change (A2 :: l) with ((A2 :: nil) ++ l); apply ex_app, H; reflexivity).
+      eapply dual_is_closed.
+      revert H2; apply (@cl_monotone _ _ (CL PMLL)).
+      intros l' pi; unfold dual; list_simpl; intros y Hy; subst; apply ex_app; auto.
   - specialize H with (oc A :: nil).
     change (oc A :: l) with ((oc A :: nil) ++ l).
     apply ex_app; apply H.
     intros x Hx; inversion Hx.
     inversion H0; subst.
     apply oc_r; auto.
-(* TODO simplify? *)
-    apply (@cl_monotone _ _ (CL PMLL)) in IHA.
-    apply IHA in X.
-    assert (dual (sg (A :: nil)) (⁇ x0)) as H'.
-    { eapply dual_is_closed.
-      intros z Hz; apply X; revert Hz.
-      apply lmonot.
-      intros t Ht y Heq; subst.
-      apply ex_app; assumption. }
-    change (A :: ⁇ x0) with ((A :: nil) ++ ⁇ x0).
-    apply ex_app, H'; reflexivity.
+    apply (@cl_monotone _ _ (CL PMLL) _ _ IHA) in X.
+    enough (dual (sg (A :: nil)) (⁇ x0)) as H'
+      by (change (A :: ⁇ x0) with ((A :: nil) ++ ⁇ x0); apply ex_app, H'; reflexivity).
+    eapply dual_is_closed.
+    revert X; apply (@cl_monotone _ _ (CL PMLL)).
+    intros l' pi; unfold dual; list_simpl; intros y Hy; subst; apply ex_app; auto.
   - specialize H with (wn A :: nil).
     change (wn A :: l) with ((wn A :: nil) ++ l).
     apply ex_app; apply H.
     split.
     + exists (A :: nil); reflexivity.
     + intros x Hx; red; apply de_r; auto.
-  Unshelve. all: auto.
   Qed.
 
   Lemma Okada_ctx l : dual (dual (⟬߭  l ⟭)) l.

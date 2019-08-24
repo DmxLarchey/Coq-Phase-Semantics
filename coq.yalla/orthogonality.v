@@ -8,7 +8,6 @@ Import SetNotations.
 Set Implicit Arguments.
 
 
-
 Section SetOrthogonality.
 
   Context {A B : Type}.
@@ -173,12 +172,13 @@ Section MagmaOrthogonality.
 
   Variable adj_compose_l : A -> B -> B.
   Variable adj_compose_r : A -> B -> B.
-(* TODO notations black lolypop *)
+  Infix "⤞" := adj_compose_l (at level 51).
+  Infix "⤝" := adj_compose_r (at level 53).
 
-  Definition rel_associativity_l_l := forall x y z, R x (adj_compose_l y z) -> R (x • y) z.
-  Definition rel_associativity_l_r := forall x y z, R (x • y) z -> R x (adj_compose_l y z).
-  Definition rel_associativity_r_l := forall x y z, R y (adj_compose_r x z) -> R (x • y) z.
-  Definition rel_associativity_r_r := forall x y z, R (x • y) z -> R y (adj_compose_r x z).
+  Definition rel_associativity_l_l := forall x y z, R y (x ⤞ z) -> R (x • y) z.
+  Definition rel_associativity_l_r := forall x y z, R (x • y) z -> R y (x ⤞ z).
+  Definition rel_associativity_r_l := forall x y z, R x (y ⤝ z) -> R (x • y) z.
+  Definition rel_associativity_r_r := forall x y z, R (x • y) z -> R x (y ⤝ z).
   Definition rel_associativity_ll := forall x y z t, R ((x • y) • z) t -> R (x • (y • z)) t.
   Definition rel_associativity_lr := forall x y z t, R (x • (y • z)) t -> R ((x • y) • z) t.
   Definition rel_neutrality_l_1 := forall x z, R (𝟏 • x) z -> R x z.
@@ -219,9 +219,9 @@ Section MagmaOrthogonality.
   Proof.
   intros X Y _ [x y Hx Hy].
   intros a Ha.
-  apply rel_associative_l_l.
+  apply rel_associative_r_l.
   revert x Hx; apply (rtridual_eq _ X) ; intros x Hx.
-  apply rel_associative_l_r.
+  apply rel_associative_r_r.
   apply Ha.
   constructor; assumption.
   Qed.
@@ -230,9 +230,9 @@ Section MagmaOrthogonality.
   Proof.
   intros X Y _ [x y Hx Hy].
   intros a Ha.
-  apply rel_associative_r_l.
+  apply rel_associative_l_l.
   revert y Hy; apply (rtridual_eq _ Y); intros y Hy.
-  apply rel_associative_r_r.
+  apply rel_associative_l_r.
   apply Ha.
   constructor; assumption.
   Qed.
@@ -344,27 +344,7 @@ Section MonicMagmaOrthogonality.
   Hypothesis pl_neutral_1 : pl_neutrality_1.
   Hypothesis pl_neutral_2 : pl_neutrality_2.
 
-  Lemma pl_rel_associative_l_l : rel_associativity_l_l R compose compose.
-  Proof.
-  intros x y z; unfold R; intros H.
-  apply pl_neutral_1.
-  apply rel_commute.
-  apply rel_associative_r.
-  apply rel_commute.
-  apply pl_neutral_2; assumption.
-  Qed.
-
-  Lemma pl_rel_associative_l_r : rel_associativity_l_r R compose compose.
-  Proof.
-  intros x y z; unfold R; intros H.
-  apply pl_neutral_1.
-  apply rel_commute.
-  apply rel_associative_l.
-  apply rel_commute.
-  apply pl_neutral_2; assumption.
-  Qed.
-
-  Lemma pl_rel_associative_r_l : rel_associativity_r_l R compose (fun x y => compose y x).
+  Lemma pl_rel_associative_l_l : rel_associativity_l_l R compose (fun x y => compose y x).
   Proof.
   intros x y z; unfold R; intros H.
   apply rel_commute.
@@ -376,7 +356,7 @@ Section MonicMagmaOrthogonality.
   apply rel_commute ; assumption.
   Qed.
 
-  Lemma pl_rel_associative_r_r : rel_associativity_r_r R compose (fun x y => compose y x).
+  Lemma pl_rel_associative_l_r : rel_associativity_l_r R compose (fun x y => compose y x).
   Proof.
   intros x y z; unfold R; intros H.
   apply rel_commute.
@@ -386,23 +366,43 @@ Section MonicMagmaOrthogonality.
   apply rel_commute.
   apply pl_neutral_2.
   apply rel_commute ; assumption.
+  Qed.
+
+  Lemma pl_rel_associative_r_l : rel_associativity_r_l R compose compose.
+  Proof.
+  intros x y z; unfold R; intros H.
+  apply pl_neutral_1.
+  apply rel_commute.
+  apply rel_associative_r.
+  apply rel_commute.
+  apply pl_neutral_2; assumption.
+  Qed.
+
+  Lemma pl_rel_associative_r_r : rel_associativity_r_r R compose compose.
+  Proof.
+  intros x y z; unfold R; intros H.
+  apply pl_neutral_1.
+  apply rel_commute.
+  apply rel_associative_l.
+  apply rel_commute.
+  apply pl_neutral_2; assumption.
   Qed.
 
   Lemma pl_rel_neutrality_l_1 : rel_neutrality_l_1 R compose unit.
   Proof.
   intros x y H.
-  apply pl_rel_associative_l_r, rel_commute in H.
+  apply pl_rel_associative_r_r, rel_commute in H.
   apply pl_neutral_1, rel_commute ; assumption.
   Qed.
 
   Lemma pl_rel_neutrality_l_2 : rel_neutrality_l_2 R compose unit.
-  Proof. intros x y H; apply pl_rel_associative_l_l, pl_neutral_2; assumption. Qed.
+  Proof. intros x y H; apply pl_rel_associative_r_l, pl_neutral_2; assumption. Qed.
 
   Lemma pl_rel_neutrality_r_1 : rel_neutrality_r_1 R compose unit.
-  Proof. intros x y H; apply pl_rel_associative_r_r, pl_neutral_1, rel_commute in H; assumption. Qed.
+  Proof. intros x y H; apply pl_rel_associative_l_r, pl_neutral_1, rel_commute in H; assumption. Qed.
 
   Lemma pl_rel_neutrality_r_2 : rel_neutrality_r_2 R compose unit.
-  Proof. intros x y H; apply pl_rel_associative_r_l, pl_neutral_2, rel_commute; assumption. Qed.
+  Proof. intros x y H; apply pl_rel_associative_l_l, pl_neutral_2, rel_commute; assumption. Qed.
 
   Instance mbidualCL : @ClosureOp _ (@subset M) := bidualCL rel_commute.
 
@@ -534,9 +534,6 @@ Section MonicMagmaOrthogonality.
         [ apply (@stable_l _ _ _ _ compose) | apply (@stable_r _ _ _ _ (fun x y => compose y x)) ]; auto.
   Qed.
 
-  Infix "⊓" := glb (at level 50, no associativity).
-  Infix "⊔" := lub (at level 50, no associativity).
-
   Variable K : M -> Type.
   Hypothesis sub_monoid_1 : pwr_sub_monoid_hyp_1 unit K.
   Hypothesis sub_monoid_2 : pwr_sub_monoid_hyp_2 compose K.
@@ -544,7 +541,7 @@ Section MonicMagmaOrthogonality.
 
   Notation "❗ A" := (bang glb K A) (at level 40, no associativity).
 
-  Definition whynot X := dual (K ⊓ (dual X)).
+  Definition whynot X := dual (glb K (dual X)).
   Notation "❓ A" := (whynot A) (at level 40, no associativity).
 
   Lemma bang_as_whynot X : closed X -> ❗X ≃ dual (❓ dual X).

@@ -202,16 +202,16 @@ Section PhaseSpaces.
                  (@cl_increase _ _ CL) (@CPSpole_closed _ _ PS)
                  CPScommute CPSassociative_l CPSassociative_r CPSneutral_1 CPSneutral_2.
 
-    Lemma CPSassociative_l_l : rel_associativity_l_l CPSorth CPScompose CPScompose.
+    Lemma CPSassociative_l_l : rel_associativity_l_l CPSorth CPScompose (fun x y => CPScompose y x).
     Proof. eapply pl_rel_associative_l_l; auto. Qed.
 
-    Lemma CPSassociative_l_r : rel_associativity_l_r CPSorth CPScompose CPScompose.
+    Lemma CPSassociative_l_r : rel_associativity_l_r CPSorth CPScompose (fun x y => CPScompose y x).
     Proof. eapply pl_rel_associative_l_r; auto. Qed.
 
-    Lemma CPSassociative_r_l : rel_associativity_r_l CPSorth CPScompose (fun x y => CPScompose y x).
+    Lemma CPSassociative_r_l : rel_associativity_r_l CPSorth CPScompose CPScompose.
     Proof. eapply pl_rel_associative_r_l; auto. Qed.
 
-    Lemma CPSassociative_r_r : rel_associativity_r_r CPSorth CPScompose (fun x y => CPScompose y x).
+    Lemma CPSassociative_r_r : rel_associativity_r_r CPSorth CPScompose CPScompose.
     Proof. eapply pl_rel_associative_r_r; auto. Qed.
 
     Hint Resolve CPSassociative_l_l CPSassociative_l_r CPSassociative_r_l CPSassociative_r_r
@@ -349,9 +349,9 @@ Section PhaseSpaces.
         apply list_form_presem_app_fact_2 in Hp; auto.
         apply list_form_presem_app_fact_1; auto.
         intros x Hx; inversion Hx; inversion X0; inversion X2.
-        apply CPScommute; apply CPSassociative_l; apply CPSassociative_l_l.
+        apply CPScommute; apply CPSassociative_l; apply CPSassociative_r_l.
         apply CPSfcommute ; [ rewrite Heq, HP; reflexivity | ].
-        apply CPSassociative_l_r; apply CPSassociative_r; apply CPScommute.
+        apply CPSassociative_r_r; apply CPSassociative_r; apply CPScommute.
         apply Hp.
         do 3 (constructor; auto).
       + inversion p; subst.

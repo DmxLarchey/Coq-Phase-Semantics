@@ -36,7 +36,6 @@ Notation "! x" := (ioc x) (at level 53).
 Definition ill_lbang := map ioc.
 Notation "‼ x" := (ill_lbang x) (at level 53).
 Notation "£" := ivar.
-Notation "∅" := nil (only parsing).
 
 
 
@@ -213,15 +212,18 @@ Section Phase_Spaces.
     apply list_form_presem_app_closed_2; auto.
   Qed.
 
-  Fact list_form_presem_mono_app_closed l m1 m2 n X : closed X -> ⟬߭m1⟭ ⊆ ⟬߭m2⟭  ->
+  Fact list_form_presem_mono_app_closed l m1 m2 n X : closed X -> ⟬߭m1⟭ ⊆ cl(⟬߭m2⟭)  ->
      ⟬߭l ++ m2 ++ n⟭ ⊆ X -> ⟬߭l ++ m1 ++ n⟭ ⊆ X.
   Proof.
   intros Hc Hi H.
   apply list_form_presem_app_app_closed_1; auto.
   apply list_form_presem_app_app_closed_2 in H; auto.
-  etransitivity; [ | apply H ].
-  apply composes_monotone; try reflexivity.
-  apply composes_monotone; try reflexivity; auto.
+  transitivity (⟬߭ l ⟭ ∘ cl(⟬߭ m2 ⟭ ∘ ⟬߭ n ⟭)).
+  - apply composes_monotone; try reflexivity.
+    etransitivity; [ | apply PScl_stable_l ].
+    apply composes_monotone; try reflexivity; auto.
+  - etransitivity; [ apply PScl_stable_r | ].
+    apply cl_closed; auto.
   Qed.
 
   Fact list_form_presem_mono_cons_closed l a b m X : closed X -> ⟦a⟧ ⊆ cl(⟦b⟧) ->
@@ -268,29 +270,6 @@ Section Phase_Spaces.
         clear IHl; induction l; simpl; auto.
       * reflexivity.
   Qed.
-
-(*
-  Fact list_form_presem_bang_2 l : ❗ (lcap (map PMform_presem l)) ⊆ cl (⟬߭‼l⟭).
-  Proof.
-  induction l.
-  - simpl; rewrite list_form_presem_nil.
-    eapply store_unit_2; eauto.
-  - simpl; rewrite list_form_presem_cons.
-    transitivity (cl (⟦ ! a ⟧ ∘ ❗ lcap (map PMform_presem l))).
-    + simpl.
-      etransitivity; [ | refine (@store_comp_2 _ PScompose _ PSunit _ _ _ _) ]; auto.
-      clear IHl; induction l; simpl; auto.
-      * apply store_monotone.
-        intros x [Ha Ht]; split; auto.
-        apply (@cl_increase _ _ CL); auto.
-      * apply store_monotone.
-        intros x [Ha Ht]; split; auto.
-        apply (@cl_increase _ _ CL); auto.
-    + apply cl_le; auto.
-      etransitivity; [ | apply PScl_stable_r ].
-      apply composes_monotone; try reflexivity; auto.
-  Qed.
-*)
 
   Fact list_form_presem_bang_2 l : ❗ (lcap (map (fun x => cl (⟦ x ⟧)) l)) ⊆ cl (⟬߭‼l⟭).
   Proof.
@@ -413,23 +392,13 @@ Section Phase_Spaces.
     - rewrite Hbool in X; simpl in X; subst; assumption.
     Qed.
 
-(* TODO simplify ? *)
     Fact ill_unit_l_sound Γ Δ a : ⟬߭Γ ++ Δ⟭ ⊆ cl(⟦a⟧) -> ⟬߭Γ ++ 𝝐 :: Δ⟭ ⊆ cl(⟦a⟧).
     Proof.
     intros H.
-    apply list_form_presem_app_closed_1; auto.
-    rewrite list_form_presem_cons; simpl; unfold one.
-    transitivity (⟬߭ Γ ⟭ ∘ (cl (sg PSunit ∘ ⟬߭ Δ ⟭))).
-    - apply composes_monotone; try reflexivity; auto.
-      apply cl_increase.
-    - etransitivity; [ apply PScl_stable_r | ].
-      apply cl_closed; auto.
-      transitivity (⟬߭ Γ ⟭ ∘ cl (⟬߭ Δ ⟭)).
-      + apply composes_monotone; try reflexivity.
-        apply PScl_neutral_l_2.
-      + etransitivity; [ apply PScl_stable_r | ].
-        apply cl_closed; auto.
-        apply list_form_presem_app_closed_2; auto.
+    rewrite <- (app_nil_l Δ) in H.
+    change (𝝐 :: Δ) with ((𝝐 :: nil) ++ Δ).
+    apply list_form_presem_mono_app_closed with nil; auto; unfold list_form_presem; simpl.
+    apply PScl_neutral_l_2.
     Qed.
 
     Fact ill_unit_r_sound : ⟬߭nil⟭ ⊆ cl(⟦𝝐⟧).

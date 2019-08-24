@@ -728,7 +728,7 @@ Section ClosureMagma.
 
   Proposition ltensor_store l : Forall_Type closed l -> ltensor (map bang l) ≃ ❗(lmglb l).
   Proof.
-  unfold ltensor, lmglb.
+  unfold lmglb.
   induction 1; simpl; auto.
   transitivity (❗ x ⊛ ❗(lmglb l)).
   - apply tensor_congruent; auto; reflexivity.
@@ -1008,9 +1008,11 @@ Module SetNotations.
 
   Infix "⊆" := subset (at level 75, no associativity).
   Infix "≃" := eqset (at level 75, no associativity).
+  Notation sg := (@eq _ : _ -> _ -> Type).
   Infix "∩" := (fun A B z => A z * B z : Type)%type (at level 50, left associativity).
   Infix "∪" := (fun A B z => A z + B z : Type)%type (at level 50, left associativity).
-  Notation sg := (@eq _ : _ -> _ -> Type).
+  Notation "∅" := ((fun _ => False) : _ -> Type).
+  Notation fullset := ((fun _  => True) : _ -> Type).
 
 End SetNotations.
 

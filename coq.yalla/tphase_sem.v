@@ -23,17 +23,15 @@ Import SetNotations.
 
 Notation " x '~[' b ']' y " := (PEperm_Type b x y) (at level 70, format "x  ~[ b ]  y").
 
-Notation "0" := (tzero).
-Notation 𝝐 := (tone).
-Infix "⊗" := (ttens) (at level 50).
-Infix "⊕" := (tplus) (at level 50).
+Notation "0" := tzero.
+Notation 𝝐 := tone.
+Infix "⊗" := ttens (at level 50).
+Infix "⊕" := tplus (at level 50).
+Notation "¬" := tneg.
 Notation "! x" := (toc x) (at level 53).
 Definition tl_lbang := map toc.
 Notation "‼ x" := (tl_lbang x) (at level 53).
 Notation "£" := tvar.
-Notation "∅" := nil (only parsing).
-(* TODO negation for tneg *)
-
 
 
 Set Implicit Arguments.
@@ -81,7 +79,7 @@ Section Phase_Spaces.
       | 0     => zero
       | 𝝐              => sg PSunit
       | £ x    => v x
-      | tneg a => ⟦a⟧ ⊸ cl pole
+      | ¬ a => ⟦a⟧ ⊸ cl pole
       | a ⊗ b  => ⟦a⟧ ∘ ⟦b⟧
       | a ⊕ b  => ⟦a⟧ ∪ ⟦b⟧
       | !a     => ❗cl(⟦a⟧)
@@ -404,12 +402,12 @@ Section Phase_Spaces.
     Fact tl_unit_r_sound : ⟬߭nil⟭ ⊆ cl(⟦𝝐⟧).
     Proof. apply cl_increase. Qed.
 
-    Fact tl_neg_l_sound Γ a : ⟬߭Γ⟭ ⊆ cl(⟦a⟧) -> ⟬߭Γ ++ tneg a :: nil⟭ ⊆ cl PMpole.
+    Fact tl_neg_l_sound Γ a : ⟬߭Γ⟭ ⊆ cl(⟦a⟧) -> ⟬߭Γ ++ ¬ a :: nil⟭ ⊆ cl PMpole.
     Proof.
     intros H.
     apply list_form_presem_app_closed_1; auto.
     rewrite list_form_presem_cons.
-    transitivity (cl(⟬߭ Γ ⟭ ∘ ⟦ tneg a ⟧)).
+    transitivity (cl(⟬߭ Γ ⟭ ∘ ⟦ ¬ a ⟧)).
     - etransitivity; [ | apply PScl_stable_r ].
       apply composes_monotone; try reflexivity.
       apply PScl_neutral_r_2.
@@ -422,7 +420,7 @@ Section Phase_Spaces.
       apply magicwand_l_adj_r; reflexivity.
     Qed.
 
-    Fact tl_neg_r_sound Γ a : ⟬߭a :: Γ⟭ ⊆ cl PMpole -> ⟬߭Γ⟭ ⊆ cl(⟦tneg a⟧).
+    Fact tl_neg_r_sound Γ a : ⟬߭a :: Γ⟭ ⊆ cl PMpole -> ⟬߭Γ⟭ ⊆ cl(⟦¬ a⟧).
     Proof. intro; etransitivity; [ apply magicwand_l_adj_l | apply cl_increase ]; auto. Qed.
 
     Fact tl_bang_l_sound Γ Δ a X : ⟬߭Γ++a::Δ⟭ ⊆ cl X -> ⟬߭Γ++!a::Δ⟭ ⊆ cl X.

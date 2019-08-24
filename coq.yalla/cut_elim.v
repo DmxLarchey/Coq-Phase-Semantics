@@ -17,12 +17,10 @@ Require Import orthogonality phase_sem.
 
 Require Import ill_def.
 
+Import SetNotations.
+
 Set Implicit Arguments.
 
-Infix "⊆" := subset (at level 75, no associativity).
-Notation "A ∩ B" := (fun z => A z * B z : Type)%type (at level 50, format "A  ∩  B", left associativity).
-Notation "A ∪ B" := (fun z => A z + B z : Type)%type (at level 50, format "A  ∪  B", left associativity).
-Notation sg := (@eq _).
 
 Lemma P_perm : forall P Γ Δ A, PEperm_Type (ipperm P) Γ Δ -> ill P Γ A -> ill P Δ A.
 Proof. intros; eapply ex_ir; eassumption. Qed.
@@ -64,17 +62,17 @@ Section SyntacticModel.
   Instance CL_ctx : ClosureOp := (@lclosure _ _ ctx_orth).
   Notation cl_ctx := (@cl _ _ CL_ctx).
 
-  Lemma rel_associative_l_l : rel_associativity_l_l ctx_orth ctx_compose adj_l.
-  Proof. intros X Y [[X1 Y1] A]; unfold ctx_orth; rewrite <- app_assoc; auto. Qed.
-
-  Lemma rel_associative_l_r : rel_associativity_l_r ctx_orth ctx_compose adj_l.
-  Proof. intros X Y [[X1 Y1] A]; unfold ctx_orth; rewrite <- app_assoc; auto. Qed.
-
-  Lemma rel_associative_r_l : rel_associativity_r_l ctx_orth ctx_compose adj_r.
+  Lemma rel_associative_l_l : rel_associativity_l_l ctx_orth ctx_compose adj_r.
   Proof. intros X Y [[X1 Y1] A]; unfold ctx_orth; rewrite <- ? app_assoc; auto. Qed.
 
-  Lemma rel_associative_r_r : rel_associativity_r_r ctx_orth ctx_compose adj_r.
+  Lemma rel_associative_l_r : rel_associativity_l_r ctx_orth ctx_compose adj_r.
   Proof. intros X Y [[X1 Y1] A]; unfold ctx_orth; rewrite <- ? app_assoc; auto. Qed.
+
+  Lemma rel_associative_r_l : rel_associativity_r_l ctx_orth ctx_compose adj_l.
+  Proof. intros X Y [[X1 Y1] A]; unfold ctx_orth; rewrite <- app_assoc; auto. Qed.
+
+  Lemma rel_associative_r_r : rel_associativity_r_r ctx_orth ctx_compose adj_l.
+  Proof. intros X Y [[X1 Y1] A]; unfold ctx_orth; rewrite <- app_assoc; auto. Qed.
 
   Fact cl_comm : ipperm P = true -> @cl_commutativity _ _ CL_ctx (composes ctx_compose).
   Proof.
@@ -90,11 +88,11 @@ Section SyntacticModel.
   apply Permutation_Type_app_swap.
   Qed.
 
-  Notation J := (fun Γ => cl_ctx (sg ∅) Γ * cl_ctx (sg Γ ∘ sg Γ) Γ)%type.
+  Notation J := (fun Γ => cl_ctx (sg nil) Γ * cl_ctx (sg Γ ∘ sg Γ) Γ)%type.
   Notation K := (fun Γ => { Δ | Γ = ‼Δ }).
 
-  Local Fact sub_monoid_1 : cl_ctx K ∅.
-  Proof. intros [[ga de] A] H; change de with (nil ++ de); apply H; exists ∅; auto. Qed.
+  Local Fact sub_monoid_1 : cl_ctx K nil.
+  Proof. intros [[ga de] A] H; change de with (nil ++ de); apply H; exists nil; auto. Qed.
 
   Local Fact sub_monoid_2 : K ∘ K ⊆ K.
   Proof.
@@ -126,8 +124,8 @@ Section SyntacticModel.
     PScompose := (@app iformula);
     PSunit := nil;
     PSExp := K;
-    PScl_stable_l := stable_l rel_associative_l_l rel_associative_l_r;
-    PScl_stable_r := stable_r rel_associative_r_l rel_associative_r_r;
+    PScl_stable_l := stable_l rel_associative_r_l rel_associative_r_r;
+    PScl_stable_r := stable_r rel_associative_l_l rel_associative_l_r;
     PScl_associative_l := associative_l (m_rel_associativity_ll _ (@app_assoc _));
     PScl_associative_r := associative_r (m_rel_associativity_lr _ (@app_assoc _));
     PScl_neutral_l_1 := neutral_l_1 (m_rel_neutrality_l_1 _ (@app_nil_l _));
@@ -269,40 +267,21 @@ Section SyntacticModel.
         apply cl_stable; auto.
     - unfold magicwand_r.
       etransitivity; [ | apply ILLcl_increase ].
-      intros x Hx y Hy; subst.
-      inversion Hy; subst.
-      enough (sg (A2 o- A1 :: b) ⊆ cl(⟦A2⟧)) as Hi by (apply Hi; reflexivity).
-      apply cl_le in IHA21; auto.
-      etransitivity; [ | apply IHA21 ].
-      intros x Hx; subst.
-      unfold cl; simpl; unfold ldual, rdual, ctx_orth.
-      intros [[si1 si2] C] H; simpl.
+      intros x Hx y Hy [[G D] B] Hz; inversion Hy; subst; simpl.
       apply lpam_ilr; auto.
-      specialize H with (A2 :: nil); apply H; auto.
+      assert (rdual ctx_orth (cl_ctx (⟦ A2 ⟧)) (G, D, B)) as Hz2
+        by (apply (fst (rtridual_eq ctx_orth _)); apply Hz).
+      change (A2 :: D) with ((A2 :: nil) ++ D); apply Hz2; auto.
     - etransitivity; [ eapply (@cl_magicwand_r_3 _ _ _ CL_ctx) | ]; eauto.
       intros x Hx; constructor.
       apply ILLcl_closed in IHA22; auto.
       apply IHA22, Hx; constructor; auto.
     - unfold magicwand_r.
       etransitivity; [ | apply ILLcl_increase ].
-      intros x Hx y Hy; subst.
-      inversion Hy; subst.
-      enough (sg (igen A :: b) ⊆ cl(⟦N⟧)) as Hi by (apply Hi; reflexivity).
-      assert (IHN := @Okada_var_1 atN).
-      apply cl_monotone in IHN; auto.
-      etransitivity; [ | apply IHN ].
-      intros x Hx; subst.
-      unfold cl; simpl; unfold ldual, rdual, ctx_orth.
-      intros [[si1 si2] C] H; simpl.
+      intros x Hx y Hy [[G D] B] Hz; inversion Hy; subst; simpl.
       apply gen_pam_rule; auto.
-      specialize H with (N :: nil); apply H; auto.
-(* TODO simplify ???
-      unfold magicwand_r.
-      intros x Hx y Hy; subst.
-      inversion Hy; subst; simpl.
-      apply gen_ilr.
-      apply IHA02; auto.
-*)
+      change (N :: D) with ((N :: nil) ++ D); apply Hz.
+      apply (@Okada_var_1 atN); auto.
     - etransitivity; [ eapply (@cl_magicwand_r_3 _ _ _ CL_ctx) | ]; eauto.
       intros x Hx; constructor.
       assert (IHN := @Okada_var_2 atN).
@@ -310,16 +289,11 @@ Section SyntacticModel.
       apply IHN, Hx; constructor; auto.
     - unfold magicwand_l.
       etransitivity; [ | apply ILLcl_increase ].
-      intros x Hx y Hy; subst.
-      inversion Hy; subst.
-      enough (sg (a ++ A1 -o A2 :: nil) ⊆ cl(⟦A2⟧)) as Hi by (apply Hi; reflexivity).
-      apply cl_le in IHA21; auto.
-      etransitivity; [ | apply IHA21 ].
-      intros x Hx; subst.
-      unfold cl; simpl; unfold ldual, rdual, ctx_orth.
-      intros [[si1 si2] C] H; list_simpl.
-      apply lmap_ilr; auto.
-      specialize H with (A2 :: nil); apply H; auto.
+      intros x Hx y Hy [[G D] B] Hz; inversion Hy; subst; simpl.
+      rewrite <- ? app_assoc; apply lmap_ilr; auto.
+      assert (rdual ctx_orth (cl_ctx (⟦ A2 ⟧)) (G, D, B)) as Hz2
+        by (apply (fst (rtridual_eq ctx_orth _)); apply Hz).
+      change (A2 :: D) with ((A2 :: nil) ++ D); apply Hz2; auto.
     - etransitivity; [ eapply (@cl_magicwand_l_3 _ _ _ CL_ctx) | ]; eauto.
       intros x Hx; constructor.
       apply ILLcl_closed in IHA22; auto.
@@ -327,24 +301,10 @@ Section SyntacticModel.
       change (A1 :: x) with ((A1 :: nil) ++ x); constructor; auto.
     - unfold magicwand_l.
       etransitivity; [ | apply ILLcl_increase ].
-      intros x Hx y Hy; subst.
-      inversion Hy; subst.
-      enough (sg (a ++ ineg A :: nil) ⊆ cl(⟦N⟧)) as Hi by (apply Hi; reflexivity).
-      assert (IHN := @Okada_var_1 atN).
-      apply cl_monotone in IHN; auto.
-      etransitivity; [ | apply IHN ].
-      intros x Hx; subst.
-      unfold cl; simpl; unfold ldual, rdual, ctx_orth.
-      intros [[si1 si2] C] H; list_simpl.
-      apply neg_map_rule; auto.
-      specialize H with (N :: nil); apply H; auto.
-(* TODO simplify ???
-      unfold magicwand_l.
-      intros x Hx y Hy; subst.
-      inversion Hy; subst; simpl.
-      apply neg_ilr.
-      apply IHA02; auto.
-*)
+      intros x Hx y Hy [[G D] B] Hz; inversion Hy; subst; simpl.
+      rewrite <- ? app_assoc; apply neg_map_rule; auto.
+      change (N :: D) with ((N :: nil) ++ D); apply Hz.
+      apply (@Okada_var_1 atN); auto.
     - etransitivity; [ eapply (@cl_magicwand_l_3 _ _ _ CL_ctx) | ]; eauto.
       intros x Hx; constructor.
       assert (IHN := @Okada_var_2 atN).
