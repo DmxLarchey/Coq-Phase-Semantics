@@ -11,13 +11,16 @@
 (*                                                            *)
 (*                              [**] Affiliation LIP -- CNRS  *)
 
-Require Import List_more List_Type Permutation_Type genperm_Type.
+Require Import List_more List_Type_more Permutation_Type genperm_Type.
 
-Require Import orthogonality phase_sem.
+Require Import orthogonality log_phase_sem.
 
 Require Import ill_def.
 
 Import SetNotations.
+Definition ill_lbang := map ioc.
+Notation "‼ x" := (ill_lbang x) (at level 53).
+
 
 Set Implicit Arguments.
 
@@ -88,11 +91,10 @@ Section SyntacticModel.
   apply Permutation_Type_app_swap.
   Qed.
 
-  Notation J := (fun Γ => cl_ctx (sg nil) Γ * cl_ctx (sg Γ ∘ sg Γ) Γ)%type.
   Notation K := (fun Γ => { Δ | Γ = ‼Δ }).
 
-  Local Fact sub_monoid_1 : cl_ctx K nil.
-  Proof. intros [[ga de] A] H; change de with (nil ++ de); apply H; exists nil; auto. Qed.
+  Local Fact str_sub_monoid_1 : K nil.
+  Proof. exists nil; reflexivity. Qed.
 
   Local Fact sub_monoid_2 : K ∘ K ⊆ K.
   Proof.
@@ -105,7 +107,8 @@ Section SyntacticModel.
   rewrite map_app; reflexivity.
   Qed.
 
-  Local Fact sub_J_1 : K ⊆ J.
+  Notation J := (fun Γ => cl_ctx (sg nil) Γ * cl_ctx (sg Γ ∘ sg Γ) Γ)%type.
+  Local Fact sub_J : K ⊆ J.
   Proof.
   intros ga H; inversion H; subst; split; unfold cl_ctx; simpl; unfold ldual, rdual, ctx_orth;
     intros [[de1 de2] A] H1.
@@ -118,23 +121,30 @@ Section SyntacticModel.
     apply H1; constructor; reflexivity.
   Qed.
 
-  Instance PS_ctx : PhaseSpace (ipperm P) :=
+  Local Fact sub_monoid_distr : @sub_monoid_distr_hyp _ subset (composes (@app iformula)) glb K.
+  Proof.
+  apply pwr_str_sub_monoid_distr.
+  intros G D [S HS].
+  unfold ill_lbang in HS.
+  decomp_map_Type HS; subst; simpl.
+  split; [ exists l0 | exists l1 ]; reflexivity.
+  Qed.
+
+  Instance PS_ctx : MPhaseSpace (ipperm P) :=
   { Web := list iformula;
-    PSCL := CL_ctx;
     PScompose := (@app iformula);
     PSunit := nil;
-    PSExp := K;
+    PS_associative := (@app_assoc _);
+    PS_neutral_l := (@app_nil_l _);
+    PS_neutral_r := (@app_nil_r _);
+    PSCL := CL_ctx;
     PScl_stable_l := stable_l rel_associative_r_l rel_associative_r_r;
     PScl_stable_r := stable_r rel_associative_l_l rel_associative_l_r;
-    PScl_associative_l := associative_l (m_rel_associativity_ll _ (@app_assoc _));
-    PScl_associative_r := associative_r (m_rel_associativity_lr _ (@app_assoc _));
-    PScl_neutral_l_1 := neutral_l_1 (m_rel_neutrality_l_1 _ (@app_nil_l _));
-    PScl_neutral_l_2 := neutral_l_2 (m_rel_neutrality_l_2 _ (@app_nil_l _));
-    PScl_neutral_r_1 := neutral_r_1 (m_rel_neutrality_r_1 _ (@app_nil_r _));
-    PScl_neutral_r_2 := neutral_r_2 (m_rel_neutrality_r_2 _ (@app_nil_r _));
-    PSsub_monoid_1 := sub_monoid_1;
+    PSExp := K;
+    PSsub_monoid_1 := str_sub_monoid_1;
     PSsub_monoid_2 := sub_monoid_2;
-    PSsub_J := sub_J_1;
+    PSsub_J := sub_J;
+    PSsub_monoid_distr := sub_monoid_distr;
     PScl_commute := cl_comm }.
 
   Notation "↓" := (fun A Γ => Γ ⊢ A [P]).
@@ -210,7 +220,7 @@ Section SyntacticModel.
       etransitivity; eassumption.
   Qed.
 
-  Instance PMILL : PhaseModel P := {
+  Instance PMILL : MPhaseModel P := {
     PMPS := PS_ctx;
     PMval := ILLval P;
     PMgax := ILLgax }.
@@ -403,7 +413,7 @@ Section cut_admissibility.
   Hypothesis P_gax_cut : gax_cut P.
 
   (* Coercion: the phase model relying on cut-free provability over P is a phase model for P *)
-  Instance PMILL_cfat : PhaseModel P := {
+  Instance PMILL_cfat : MPhaseModel P := {
     PMPS := PS_ctx (cutupd_ipfrag P false);
     PMval := ILLval (cutupd_ipfrag P false);
     PMgax := @ILLgax (cutupd_ipfrag P false) P_gax_at_l P_gax_at_r P_gax_cut }.

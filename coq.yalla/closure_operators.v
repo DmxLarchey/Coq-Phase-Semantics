@@ -641,7 +641,11 @@ Section ClosureMagma.
   Hypothesis sub_J_1 : sub_J_hyp_1.
   Hypothesis sub_J_2 : sub_J_hyp_2.
 
-  Proposition k_compose x y : (k ⊓ x) • (k ⊓ y) ≤ k ⊓ (x • y).
+  Notation "♯ x" := (k ⊓ x) (at level 40, no associativity).
+  Definition bang x := cl (♯x).
+  Notation "❗ " := bang (at level 40, no associativity).
+
+  Proposition k_compose x y : ♯x • ♯y ≤ ♯(x • y).
   Proof.
   apply mglb_in.
   - etransitivity ; [ | apply sub_monoid_2 ].
@@ -649,20 +653,25 @@ Section ClosureMagma.
   - apply compose_monotone; auto.
   Qed.
 
-  Definition bang A := cl (k ⊓ A).
-
-  Notation "❗ A" := (bang A) (at level 40, no associativity).
+  Fact pre_store_inc_unit A : ♯A ≤ 1.
+  Proof. transitivity k; auto. Qed.
 
   Fact store_inc_unit A : ❗ A ≤ 1.
-  Proof. transitivity (cl k); [ apply cl_monotone | apply cl_le]; auto. Qed.
+  Proof. apply cl_le; auto; apply pre_store_inc_unit. Qed.
 
   Hint Resolve store_inc_unit.
 
   Proposition store_closed x : closed (❗x).
   Proof. simpl; apply cl_idempotent. Qed.
 
+  Proposition pre_store_dec x : ♯x ≤ x.
+  Proof. auto. Qed.
+
   Proposition store_dec x : closed x -> ❗x ≤ x.
-  Proof. intros ?; transitivity (cl x); try apply cl_monotone; auto. Qed.
+  Proof. intros ?; transitivity (cl x); auto; apply cl_monotone; apply pre_store_dec. Qed.
+
+  Global Instance pre_store_monotone : Proper (R ==> R) (fun x => ♯x).
+  Proof. intros ? ? ?; auto. Qed.
 
   Global Instance store_monotone : Proper (R ==> R) bang.
   Proof. intros ? ? ?; apply cl_monotone; auto. Qed.
@@ -672,10 +681,14 @@ Section ClosureMagma.
   Global Instance store_congruence : Proper (eqrel R ==> eqrel R) bang.
   Proof. intros ? ? [? ?]; split; auto. Qed.
 
-  Proposition store_der x y : closed y -> ❗x ≤ y -> ❗x ≤ ❗y.
+  Proposition pre_store_der x y : ♯x ≤ y -> ♯x ≤ ♯y.
+  Proof. intros H; apply mglb_in; auto. Qed.
+
+  Proposition store_der x y : ❗x ≤ y -> ❗x ≤ ❗y.
   Proof.
-  unfold bang; intros H1 H2; apply cl_monotone; apply mglb_in; auto.
-  etransitivity; [ | apply H2 ]; auto.
+  intros H; apply cl_monotone.
+  apply pre_store_der.
+  etransitivity; [ | apply H ]; apply cl_increase.
   Qed.
 
   Proposition store_unit_1 : 1 ≤ ❗mtop.
@@ -691,13 +704,36 @@ Section ClosureMagma.
 
   Hint Resolve store_unit.
 
+
+  Proposition pre_store_compose_idem x : ♯x ≤ ♯x ⊛ ♯x.
+  Proof. apply sub_J_2; auto. Qed.
+
+  Proposition store_compose_idem x : ❗x ≤ ❗x ⊛ ❗x.
+  Proof.
+  apply cl_le; auto; etransitivity; [ apply pre_store_compose_idem | ].
+  apply tensor_monotone; apply cl_increase.
+  Qed.
+
+  Proposition pre_store_comp_1 x y : ♯(cl x) • ♯(cl y) ≤ ♯(cl x ⊓ cl y).
+  Proof.
+  apply mglb_in; [ | apply mglb_in ].
+  - etransitivity; [ | apply sub_monoid_2].
+    apply compose_monotone; auto.
+  - etransitivity; [ | apply tensor_unit_r_2 ]; auto.
+    etransitivity; [ | apply cl_increase ].
+    apply compose_monotone; auto.
+    etransitivity; [ apply mglb_out_l | apply sub_J_1 ].
+  - etransitivity; [ | apply tensor_unit_l_2 ]; auto.
+    etransitivity; [ | apply cl_increase ].
+    apply compose_monotone; auto.
+    etransitivity; [ apply mglb_out_l | apply sub_J_1 ].
+  Qed.
+
   Proposition store_comp_2 x y : ❗(x ⊓ y) ≤ ❗x ⊛ ❗y.
   Proof.
   apply cl_le; trivial.
-  transitivity (cl ((k ⊓ (x ⊓ y)) • (k ⊓ (x ⊓ y)))).
-  - apply sub_J_2; auto.
-  - apply cl_monotone.
-    apply compose_monotone; (etransitivity; [ | apply cl_increase ]); auto.
+  etransitivity; [ apply pre_store_compose_idem | ]; apply tensor_monotone;
+   (etransitivity; [ | apply cl_increase ]; auto).
   Qed.
 
   Proposition store_comp x y : closed x -> closed y -> ❗x ⊛ ❗y ≃ ❗(x ⊓ y).
@@ -706,22 +742,11 @@ Section ClosureMagma.
   - transitivity (cl ((k ⊓ x) • (k ⊓ y))).
     + apply cl_le; trivial; apply cl_stable; auto.
     + apply cl_monotone.
-      apply mglb_in; [ | apply mglb_in ].
-      * etransitivity; [ | apply sub_monoid_2].
-        apply compose_monotone; auto.
-      * etransitivity; [ | apply tensor_unit_r_2 ]; auto.
-        etransitivity; [ | apply cl_increase ].
-        apply compose_monotone; auto.
-        etransitivity; [ apply mglb_out_l | apply sub_J_1 ].
-      * etransitivity; [ | apply tensor_unit_l_2 ]; auto.
-        etransitivity; [ | apply cl_increase ].
-        apply compose_monotone; auto.
-        etransitivity; [ apply mglb_out_l | apply sub_J_1 ].
+      etransitivity; [ | etransitivity; [ apply pre_store_comp_1 | ]].
+      * apply compose_monotone; apply pre_store_monotone; apply cl_increase.
+      * apply pre_store_monotone; auto.
   - apply store_comp_2.
   Qed.
-
-  Proposition store_compose_idem x : ❗x ≤ ❗x ⊛ ❗x.
-  Proof. transitivity (❗(x ⊓ x)); [ apply store_monotone | apply store_comp_2 ]; auto. Qed.
 
 
   Notation ltensor := (fold_right (fun x y => x ⊛ y) 1).
@@ -758,6 +783,22 @@ Section ClosureMagma.
   - transitivity (cl(❗(cl a) • (❗ (lmglb (map cl l))))).
     + etransitivity; [ | apply store_comp_2 ]; auto.
     + apply cl_le; auto.
+  Qed.
+
+  Definition str_sub_monoid_hyp_1 := 𝟏 ≤ k.
+  Definition sub_monoid_distr_hyp := forall x y, ♯(x • y) ≤ ♯x • ♯y.
+
+  Lemma sub_monoid_hyp_1_str : str_sub_monoid_hyp_1 -> sub_monoid_hyp_1.
+  Proof. clear sub_monoid_1; intros H; unfold sub_monoid_hyp_1; transitivity k; auto. Qed.
+
+  Hypothesis str_sub_monoid_1 : str_sub_monoid_hyp_1.
+  Hypothesis sub_monoid_distr : sub_monoid_distr_hyp.
+
+  Fact lcompose_pre_store l : lcompose (map (fun x => ♯x) l) ≃ ♯(lcompose l).
+  Proof.
+  induction l; split; simpl; auto; try (destruct IHl as [IHl1 IHl2]).
+  - etransitivity; [ | apply k_compose ]; apply compose_monotone; auto.
+  - etransitivity; [ apply sub_monoid_distr | ]; apply compose_monotone; auto.
   Qed.
 
 End ClosureMagma.
@@ -980,15 +1021,13 @@ Section ClosureSubsetMagma.
 
   Variable K : M -> Type.
 
-  Definition pwr_sub_monoid_hyp_1 := ((cl K) unit).
-  Definition pwr_sub_monoid_hyp_2 := (K ∘ K ⊆ K).
-  Definition pwr_sub_J_hyp := (K ⊆ J).
+  Definition pwr_sub_monoid_hyp_1 := (cl K) unit.
+  Definition pwr_sub_J_hyp := K ⊆ J.
+  Definition pwr_str_sub_monoid_hyp_1 := K unit.
+  Definition pwr_str_sub_monoid_distr_hyp := forall x y, K (compose x y)-> ((K x) * (K y))%type.
 
   Proposition sub_monoid_1 : pwr_sub_monoid_hyp_1 -> @sub_monoid_hyp_1 _ subset CL (sg unit) K.
   Proof. intros Hpwr x Hx; rewrite <- Hx; assumption. Qed.
-
-  Proposition sub_monoid_2 : pwr_sub_monoid_hyp_2 -> @sub_monoid_hyp_2 _ subset composes K.
-  Proof. auto. Qed.
 
   Proposition sub_J_1 : pwr_sub_J_hyp -> @sub_J_hyp_1 _ subset CL (sg unit) K.
   Proof. intros Hpwr x Hx; apply J_inv; auto. Qed.
@@ -999,6 +1038,17 @@ Section ClosureSubsetMagma.
   assert ((sg x ⊛ sg x) x) as Hsg by (apply J_inv, Hpwr; auto).
   assert ((sg x ∘ sg x) ⊆ X ∘ X) as Hc by (intros z Hz; inversion Hz; subst; constructor; auto).
   apply (@cl_monotone _ subset CL) in Hc; apply Hc; auto.
+  Qed.
+
+  Proposition str_sub_monoid_1 : pwr_str_sub_monoid_hyp_1 -> @str_sub_monoid_hyp_1 _ subset (sg unit) K.
+  Proof. intros Hpwr x Hx; rewrite <- Hx; assumption. Qed.
+
+  Proposition pwr_str_sub_monoid_distr :
+    pwr_str_sub_monoid_distr_hyp -> @sub_monoid_distr_hyp _ subset composes glb K.
+  Proof.
+  intros Hd X Y x Hx; inversion Hx; inversion X1; subst.
+  apply Hd in X0; destruct X0 as [Ha Hb].
+  constructor; split; auto.
   Qed.
 
 End ClosureSubsetMagma.

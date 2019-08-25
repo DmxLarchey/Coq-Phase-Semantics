@@ -53,7 +53,7 @@ Section Phase_Spaces.
     PScl_neutral_r_1 : @cl_neutrality_r_1 _ _ PSCL (composes PScompose) (sg PSunit);
     PScl_neutral_r_2 : @cl_neutrality_r_2 _ _ PSCL (composes PScompose) (sg PSunit);
     PSsub_monoid_1 : @pwr_sub_monoid_hyp_1 _ PSCL PSunit PSExp;
-    PSsub_monoid_2 : pwr_sub_monoid_hyp_2 PScompose PSExp;
+    PSsub_monoid_2 : @sub_monoid_hyp_2 _ subset (composes PScompose) PSExp;
     PSsub_J : @pwr_sub_J_hyp _ PSCL PScompose PSunit PSExp;
     PScl_commute : b = true -> @cl_commutativity _ _ PSCL (composes PScompose)
   }.
@@ -253,7 +253,6 @@ Section Phase_Spaces.
       etransitivity;
         [ refine (fst (@store_comp _ _ _ _ (composes PScompose) _ _ _ (sg PSunit) _ _ _ _ _ _ _ _ _ _ _ _ _ _))
         | ]; auto.
-      * apply sub_monoid_2, PSsub_monoid_2.
       * apply (@sub_J_1 _ _ PScompose PSunit), PSsub_J.
       * apply (@sub_J_2 _ _ PScompose PSunit), PSsub_J.
       * apply lmglb_closed; auto.

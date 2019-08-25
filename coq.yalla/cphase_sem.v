@@ -33,7 +33,7 @@ Section PhaseSpaces.
     CPSassociative_l : rel_associativity_ll (cps_orth CPScompose CPSPole) CPScompose;
     CPSassociative_r : rel_associativity_lr (cps_orth CPScompose CPSPole) CPScompose;
     CPSsub_monoid_1 : @pwr_sub_monoid_hyp_1 _ (bidualCL CPScommute) CPSunit CPSExp;
-    CPSsub_monoid_2 : pwr_sub_monoid_hyp_2 CPScompose CPSExp;
+    CPSsub_monoid_2 : @sub_monoid_hyp_2 _ subset (composes CPScompose) CPSExp;
     CPSsub_J : @pwr_sub_J_hyp _ (bidualCL CPScommute) CPScompose CPSunit CPSExp;
     CPSfcommute : bp = true -> pl_fcommutativity CPScompose CPSPole;
     CPSmix : forall n, bm n = true -> mcomposes n CPScompose CPSunit CPSPole ⊆ CPSPole }.
@@ -295,7 +295,6 @@ Section PhaseSpaces.
         etransitivity;
           [ refine (fst (@store_comp _ _ _ CL (composes CPScompose) _ _ _ (sg CPSunit) _ _ _ _ _ _ _ _ _ _ _ _ _ _))
           | ]; auto.
-        * apply sub_monoid_2, CPSsub_monoid_2.
         * apply (@sub_J_1 _ _ CPScompose CPSunit), CPSsub_J.
         * apply (@sub_J_2 _ _ CPScompose CPSunit), CPSsub_J.
         * apply lmglb_closed; auto.

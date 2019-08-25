@@ -173,7 +173,7 @@ Section MagmaOrthogonality.
   Variable adj_compose_l : A -> B -> B.
   Variable adj_compose_r : A -> B -> B.
   Infix "⤞" := adj_compose_l (at level 51).
-  Infix "⤝" := adj_compose_r (at level 53).
+  Infix "⤝" := adj_compose_r (at level 52).
 
   Definition rel_associativity_l_l := forall x y z, R y (x ⤞ z) -> R (x • y) z.
   Definition rel_associativity_l_r := forall x y z, R (x • y) z -> R y (x ⤞ z).
@@ -535,9 +535,6 @@ Section MonicMagmaOrthogonality.
   Qed.
 
   Variable K : M -> Type.
-  Hypothesis sub_monoid_1 : pwr_sub_monoid_hyp_1 unit K.
-  Hypothesis sub_monoid_2 : pwr_sub_monoid_hyp_2 compose K.
-  Hypothesis sub_J : pwr_sub_J_hyp compose unit K.
 
   Notation "❗ A" := (bang glb K A) (at level 40, no associativity).
 
