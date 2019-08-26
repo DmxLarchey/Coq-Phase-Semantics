@@ -85,9 +85,13 @@ Section PhaseSpaces.
     Hint Resolve (@cl_idempotent _ _ PSCL).
     Hint Resolve (@PScl_stable_l _ PS) (@PScl_stable_r _ PS)
                  (@PS_associative _ PS) (@PS_neutral_l _ PS) (@PS_neutral_r _ PS)
-                 (@PSsub_monoid_1 _ PS) (@PSsub_monoid_2 _ PS) (@PSsub_J _ PS).
+                 (@PSsub_monoid_1 _ PS) (@PSsub_monoid_2 _ PS) (@PSsub_J _ PS) (@PSsub_monoid_distr _ PS)
+                 (str_sub_monoid_1 _ (@PSsub_monoid_1 _ PS)).
     Hint Resolve  magicwand_l_adj_l magicwand_l_adj_r magicwand_r_adj_l magicwand_r_adj_r.
-
+    Hint Resolve glb_in glb_out_l glb_out_r top_greatest.
+    Hint Resolve (m_pwr_cl_neutrality_l_1 (@PS_neutral_l _ PS)) (m_pwr_cl_neutrality_l_2 (@PS_neutral_l _ PS))
+                 (m_pwr_cl_neutrality_r_1 (@PS_neutral_r _ PS)) (m_pwr_cl_neutrality_r_2 (@PS_neutral_r _ PS)).
+    Hint Resolve (@sub_J_1 _ _ _ _ _ PSsub_J) (@sub_J_2 _ _ _ _ _ PSsub_J).
 
     Fact list_compose_app l1 l2 : list_compose (l1 ++ l2) ≃ list_compose l1 ∘ list_compose l2.
     Proof.
@@ -125,15 +129,10 @@ Section PhaseSpaces.
 
     Notation lcap := (@fold_right (Web -> Type) _ glb top).
 
-    Hint Resolve glb_in glb_out_l glb_out_r top_greatest
-                 (m_pwr_cl_neutrality_l_2 (@PS_neutral_l _ PS)) (m_pwr_cl_neutrality_r_2 (@PS_neutral_r _ PS)).
-
     Fact list_compose_bang l : □ (list_compose (map (fun x => ❗(□x)) l)) ≃ ❗ (lcap (map □ l)).
     Proof.
     eapply lcompose_store; eauto.
-    - apply sub_monoid_hyp_1_str, str_sub_monoid_1, PSsub_monoid_1; auto.
-    - apply (@sub_J_1 _ _ PScompose PSunit), PSsub_J.
-    - apply (@sub_J_2 _ _ PScompose PSunit), PSsub_J.
+    apply sub_monoid_hyp_1_str, str_sub_monoid_1, PSsub_monoid_1; auto.
     Qed.
 
     Lemma sem_monad_r l x : l ⊧  x -> l ⊧ □x.
@@ -153,20 +152,20 @@ Section PhaseSpaces.
     etransitivity; [ | apply list_compose_app ]; auto.
     Qed.
 
-    Lemma sem_monad_list_l l1 l2 l x :
-      l1 ++ l ++ l2 ⊧ □x -> list_compose l1 ∘ (□(list_compose l) ∘ list_compose l2) ⊆ □x.
+(*
+    Lemma sem_monad_list_l l x : l ⊧ □x -> map (fun z => □z) l ⊧ □x.
     Proof.
-    intros H.
-    assert (list_compose l1 ∘ (list_compose l ∘ list_compose l2) ⊆ □ x) as H'.
-    { etransitivity; [ | apply H ].
-      etransitivity; [ | apply list_compose_app ].
-      apply composes_monotone; auto.
-      apply list_compose_app. }
-    apply cl_le in H'; auto.
-    etransitivity; [ | apply H' ].
-    etransitivity; [ | apply PScl_stable_r ].
-    apply composes_monotone; auto.
+    change l with (nil ++ l).
+    rewrite map_app.
+    change (map (fun z : Web -> Type => □ z) nil) with (@nil (Web -> Type)).
+    remember nil as l0; clear Heql0.
+    revert l0; induction l; intros l0 H; auto; simpl.
+    replace (l0 ++ □ a :: map (fun z : Web -> Type => □ z) l)
+       with ((l0 ++ □ a :: nil) ++ map (fun z : Web -> Type => □ z) l) by (list_simpl; reflexivity).
+    apply IHl; list_simpl.
+    apply sem_monad_l; assumption.
     Qed.
+*)
 
     Fact sem_ax x : x :: nil ⊧ x.
     Proof. apply (m_pwr_neutrality_r (@PS_neutral_r _ PS)). Qed.
@@ -179,51 +178,6 @@ Section PhaseSpaces.
     etransitivity; [ apply H1 | ]; auto.
     apply (m_pwr_neutrality_r (@PS_neutral_r _ PS)).
     Qed.
-
-    Fact sem_swap (HPerm: perm_bool = true) Γ Δ x y z : Γ ++ x :: y :: Δ ⊧ □z -> Γ ++ y :: x :: Δ ⊧ □z.
-    Proof.
-    intros H.
-    change (x::y::Δ) with ((x::y::nil)++Δ) in H.
-    change (y::x::Δ) with ((y::x::nil)++Δ).
-    apply sem_monad_list_l in H.
-    etransitivity; [ | apply H ].
-    etransitivity; [ apply list_compose_app | ].
-    apply composes_monotone; auto.
-    etransitivity; [ apply list_compose_app | ].
-    apply composes_monotone; auto; simpl.
-    etransitivity; [ apply (m_pwr_associativity (@PS_associative _ PS)) | ].
-    etransitivity; [ | apply cl_monotone, (m_pwr_associativity (@PS_associative _ PS)) ].
-    etransitivity; [ | apply PScl_stable_l ].
-    apply composes_monotone; auto.
-    apply PScl_commute; auto.
-    Qed.
-
-    Fact sem_perm Γ Δ x : perm_bool = true -> Permutation_Type Γ Δ -> Γ ⊧ □x -> Δ ⊧ □x.
-    Proof.
-    intros Hb HP; revert x; induction HP as [ | a Ga De H1 IH1 | | ] ; intros c; auto.
-      + intros H; simpl; apply magicwand_l_adj_r; auto.
-        etransitivity; [ | apply (@cl_magicwand_l_1 _ _ _ _ (composes PScompose)) ]; auto.
-        apply IH1.
-        etransitivity; [ | apply cl_increase ]; auto.
-      + apply sem_swap with (Γ := nil) ; assumption.
-    Qed.
-
-(* TODO Universe inconsistency in log_cut_elim: even just the statement creates inconsistency
-    Fact sem_perm_0 b Γ Δ x : perm_bool = b -> Γ ~[b] Δ -> Γ ⊧ □x -> Δ ⊧ □x.
-    Proof.
-    destruct b; intros Hbool HP; revert x.
-    - induction HP as [ | a Ga De H1 IH1 | | ] ; intros c; auto.
-      + intros H; simpl; apply magicwand_l_adj_r; auto.
-        etransitivity; [ | apply (@cl_magicwand_l_1 _ _ _ _ (composes PScompose)) ]; auto.
-        apply IH1.
-        etransitivity; [ | apply cl_increase ]; auto.
-      + apply sem_swap with (Γ := nil) ; assumption.
-    - simpl in HP; rewrite HP; tauto.
-    Qed.
-
-    Fact sem_perm Γ Δ x : Γ ~[perm_bool] Δ -> Γ ⊧ □x -> Δ ⊧ □x.
-    Proof. intros HP; apply sem_perm_0 with perm_bool; auto. Qed.
-*)
 
     Fact sem_tens_l Γ Δ x y z : Γ ++ x :: y :: Δ ⊧ z -> Γ ++ x ∘ y :: Δ ⊧ z.
     Proof.
@@ -333,86 +287,93 @@ Section PhaseSpaces.
     intros z HF; inversion HF.
     Qed.
 
-(* TODO try to remove some □: in the rules or in the definition of ❗ *)
-    Fact sem_bang_l Γ Δ x y : Γ ++ □x :: Δ ⊧ y -> Γ ++ ❗(□x) :: Δ ⊧ y.
+    Fact sem_swap (HPerm: perm_bool = true) Γ Δ x y z : Γ ++ x :: y :: Δ ⊧ □z -> Γ ++ y :: x :: Δ ⊧ □z.
     Proof.
     intros H.
-    apply list_compose_monot_cons with (□x); auto.
-    apply store_dec; auto.
-    Qed.
-
-    Fact sem_weak Γ Δ x y : Γ ++ □(sg PSunit) :: Δ ⊧ y -> Γ ++ ❗x :: Δ ⊧ y.
-    Proof.
-    intros H.
-    apply list_compose_monot_cons with (□(sg PSunit)); auto.
-    apply store_inc_unit; auto.
-    apply (@sub_J_1 _ _ PScompose PSunit), PSsub_J.
-    Qed.
-
-    Fact sem_cntr Γ Δ x y : Γ ++ ❗x :: ❗x :: Δ ⊧ □y -> Γ ++ ❗x :: Δ ⊧ □y.
-    Proof.
-    intros H.
-    change (❗x::❗x::Δ) with ((❗x::❗x::nil)++Δ) in H.
-    change (❗x::Δ) with ((❗x::nil)++Δ).
-    apply sem_monad_list_l in H.
-    etransitivity; [ | apply H ].
-    etransitivity; [ apply list_compose_app | ].
-    apply composes_monotone; auto.
-    etransitivity; [ apply list_compose_app | ].
-    apply composes_monotone; auto; simpl.
-    transitivity (❗x); [ apply (m_pwr_neutrality_r (@PS_neutral_r _ PS)) | ].
-    etransitivity; [ |    apply cl_monotone, (m_pwr_associativity (@PS_associative _ PS)) ].
-    etransitivity ; [ | apply cl_monotone, (m_pwr_neutrality_r (@PS_neutral_r _ PS)) ].
-    eapply store_compose_idem; eauto.
-    apply (@sub_J_2 _ _ PScompose PSunit), PSsub_J.
-    Qed.
-
-    Fact sem_bang_r Γ x : map (fun z => ❗(□z)) Γ ⊧ □x -> map (fun z => ❗(□z)) Γ ⊧ ❗(□x).
-    Proof.
-    intros H.
-    apply le_cl; auto.
-    etransitivity; [ apply list_compose_bang | ].
-    etransitivity; [ | apply store_der ]; auto.
-    etransitivity; [ apply list_compose_bang | ].
-    apply cl_closed; auto.
-    Qed.
-
-    Fact sem_oc_swap Γ Δ x y z : Γ ++ ❗(□x) :: ❗(□y) :: Δ ⊧ □z -> Γ ++ ❗(□y) :: ❗(□x) :: Δ ⊧ □z.
-    Proof.
-    intros H.
-    change (❗(□x)::❗(□y)::Δ) with ((❗(□x)::❗(□y)::nil)++Δ) in H.
-    change (❗(□y)::❗(□x)::Δ) with ((❗(□y)::❗(□x)::nil)++Δ).
-    apply sem_monad_list_l in H.
-    etransitivity; [ | apply H ].
-    etransitivity; [ apply list_compose_app | ].
-    apply composes_monotone; auto.
-    etransitivity; [ apply list_compose_app | ].
-    apply composes_monotone; auto; simpl.
+    change (y::x::Δ) with ((y::x::nil)++Δ).
+    apply sem_tens_l, sem_monad_l in H.
+    change (□(x ∘ y) :: Δ) with ((□(x ∘ y) :: nil) ++ Δ) in H.
+    apply list_compose_monot_app with ((□(x ∘ y) :: nil)); auto; simpl.
     etransitivity; [ apply (m_pwr_associativity (@PS_associative _ PS)) | ].
-    etransitivity; [ | apply cl_monotone, (m_pwr_associativity (@PS_associative _ PS)) ].
-    etransitivity; [ | apply PScl_stable_l ].
     apply composes_monotone; auto.
-    etransitivity; [ | apply (@store_comp_2 _ _ _ PSCL) ]; auto;
-      [ | apply (@sub_J_2 _ _ PScompose PSunit), PSsub_J ].
-    transitivity (❗(glb (□y) (□x))).
-    - etransitivity; [ | eapply (@store_comp _ _ _ PSCL (composes PScompose) _ _ _ (sg PSunit)) ]; auto.
-      + etransitivity; [ | apply cl_increase ]; auto.
-      + apply (@sub_J_1 _ _ PScompose PSunit), PSsub_J.
-      + apply (@sub_J_2 _ _ PScompose PSunit), PSsub_J.
-    - apply store_monotone; auto.
-    Unshelve. all: auto.
+    apply PScl_commute; auto.
     Qed.
 
-    Fact sem_oc_perm Γ Δ ϴ ϴ' x : Permutation_Type ϴ ϴ' ->
-      Γ ++ map (fun z => ❗(□z)) ϴ ++ Δ ⊧ □x -> Γ ++ map (fun z => ❗(□z)) ϴ' ++ Δ ⊧ □x.
+    Fact sem_perm (HPerm: perm_bool = true) Γ Δ x : Permutation_Type Γ Δ -> Γ ⊧ □x -> Δ ⊧ □x.
+    Proof.
+    intros HP; revert x; induction HP as [ | a Ga De H1 IH1 | | ] ; intros c; auto.
+      + intros H; simpl; apply magicwand_l_adj_r; auto.
+        etransitivity; [ | apply (@cl_magicwand_l_1 _ _ _ _ (composes PScompose)) ]; auto.
+        apply IH1.
+        etransitivity; [ | apply cl_increase ]; auto.
+      + apply sem_swap with (Γ := nil) ; assumption.
+    Qed.
+
+(* TODO Universe inconsistency in log_cut_elim: even just the statement creates inconsistency
+    Fact sem_perm_0 b Γ Δ x : perm_bool = b -> Γ ~[b] Δ -> Γ ⊧ □x -> Δ ⊧ □x.
+    Proof.
+    destruct b; intros Hbool HP; revert x.
+    - induction HP as [ | a Ga De H1 IH1 | | ] ; intros c; auto.
+      + intros H; simpl; apply magicwand_l_adj_r; auto.
+        etransitivity; [ | apply (@cl_magicwand_l_1 _ _ _ _ (composes PScompose)) ]; auto.
+        apply IH1.
+        etransitivity; [ | apply cl_increase ]; auto.
+      + apply sem_swap with (Γ := nil) ; assumption.
+    - simpl in HP; rewrite HP; tauto.
+    Qed.
+
+    Fact sem_perm Γ Δ x : Γ ~[perm_bool] Δ -> Γ ⊧ □x -> Δ ⊧ □x.
+    Proof. intros HP; apply sem_perm_0 with perm_bool; auto. Qed.
+*)
+
+    Fact sem_prebang_l Γ Δ x y : Γ ++ x :: Δ ⊧ y -> Γ ++ ♯x :: Δ ⊧ y.
+    Proof. intros ?; apply list_compose_monot_cons with x; auto. Qed.
+
+    Fact sem_prebang_r Γ x : map (fun z => ♯z) Γ ⊧ x -> map (fun z => ♯z) Γ ⊧ ♯x.
+    Proof.
+    intros H.
+    etransitivity; [ apply (@lcompose_pre_store _ _ subset_preorder) | ]; auto.
+    apply pre_store_der; auto.
+    etransitivity; [ apply (@lcompose_pre_store _ _ subset_preorder) | ]; auto.
+    Qed.
+
+    Fact sem_prebang_weak Γ Δ x y : Γ ++ Δ ⊧ □y -> Γ ++ ♯x :: Δ ⊧ □y.
+    Proof.
+    intros H.
+    apply sem_one_l, sem_monad_l in H.
+    apply list_compose_monot_cons with (□(sg PSunit)); auto.
+    apply pre_store_inc_unit; auto.
+    Qed.
+
+    Fact sem_prebang_cntr Γ Δ x y : Γ ++ ♯x :: ♯x :: Δ ⊧ □y -> Γ ++ ♯x :: Δ ⊧ □y.
+    Proof.
+    intros H.
+    apply sem_tens_l, sem_monad_l in H.
+    apply list_compose_monot_cons with (□ (♯ x ∘ ♯ x)); auto.
+    apply (@sub_J_2 _ _ _ _ _ PSsub_J); auto.
+    Qed.
+
+    Fact sem_prebang_swap Γ Δ x y z : Γ ++ ♯x :: ♯y :: Δ ⊧ □z -> Γ ++ ♯y :: ♯x :: Δ ⊧ □z.
+    Proof.
+    intros H.
+    change (♯y::♯x::Δ) with ((♯y::♯x::nil)++Δ).
+    apply sem_tens_l, sem_monad_l in H.
+    change (□(♯x ∘ ♯y) :: Δ) with ((□(♯x ∘ ♯y) :: nil) ++ Δ) in H.
+    apply list_compose_monot_app with ((□(♯x ∘ ♯y) :: nil)); auto; simpl.
+    etransitivity; [ apply (m_pwr_associativity (@PS_associative _ PS)) | ].
+    apply composes_monotone; auto.
+    eapply pre_store_commute; auto.
+    Qed.
+
+    Fact sem_prebang_perm Γ Δ ϴ ϴ' x : Permutation_Type ϴ ϴ' ->
+      Γ ++ map (fun z => ♯z) ϴ ++ Δ ⊧ □x -> Γ ++ map (fun z => ♯z) ϴ' ++ Δ ⊧ □x.
     Proof.
     intros HP; revert Γ Δ; induction HP as [ | a Ga De H1 IH1 | | ] ; intros Γ Δ H; auto.
     - simpl.
-      change ((❗) (□ a) :: map (fun z : Web -> Type => (❗) (□ z)) De ++ Δ)
-        with (((❗) (□ a) :: nil) ++ map (fun z : Web -> Type => (❗) (□ z)) De ++ Δ).
-      rewrite app_assoc.
-      apply IH1; list_simpl; auto.
-    - apply sem_oc_swap; auto.
+      change (♯a :: map (fun z : Web -> Type => ♯z) De ++ Δ)
+        with ((♯a :: nil) ++ map (fun z : Web -> Type => ♯z) De ++ Δ).
+      rewrite app_assoc; apply IH1; list_simpl; auto.
+    - apply sem_prebang_swap; auto.
     Qed.
 
   End MonadicInterpretation.
@@ -441,7 +402,7 @@ Section PhaseSpaces.
       | a ⊗ b  => ⟦a⟧ ∘ ⟦b⟧
       | a ⊕ b  => ⟦a⟧ ∪ ⟦b⟧
       | a ﹠ b  => □(⟦a⟧) ∩ □(⟦b⟧)
-      | !a     => ❗(□(⟦a⟧))
+      | !a     => ♯□(⟦a⟧)
       end
     where "⟦ a ⟧" := (form_presem a).
 
@@ -466,13 +427,15 @@ Section PhaseSpaces.
 
   Hint Resolve  magicwand_l_adj_l magicwand_l_adj_r magicwand_r_adj_l magicwand_r_adj_r.
   Hint Resolve (@sem_monad_l _ PMPS).
-  Hint Resolve (@sem_one_r _ PMPS) (@sem_one_l _ PMPS) (@sem_tens_r _ PMPS) (@sem_tens_l _ PMPS)
+  Hint Resolve (@sem_ax _ PMPS)
+               (@sem_one_r _ PMPS) (@sem_one_l _ PMPS) (@sem_tens_r _ PMPS) (@sem_tens_l _ PMPS)
                (@sem_rimp_r _ PMPS) (@sem_rimp_l _ PMPS) (@sem_limp_r _ PMPS) (@sem_limp_l _ PMPS)
                (@sem_with_r _ PMPS) (@sem_with_l1 _ PMPS) (@sem_with_l2 _ PMPS)
                (@sem_plus_l _ PMPS) (@sem_zero_l _ PMPS)
-               (@sem_bang_r _ PMPS) (@sem_bang_l _ PMPS) (@sem_weak _ PMPS) (@sem_cntr _ PMPS).
+               (@sem_prebang_r _ PMPS) (@sem_prebang_l _ PMPS)
+               (@sem_prebang_weak _ PMPS) (@sem_prebang_cntr _ PMPS).
 
-  Lemma int_ioc_list l : map Int (map ioc l) = map (fun z => ❗(□z)) (map Int l).
+  Lemma int_ioc_list l : map Int (map ioc l) = map (fun z => ♯(□z)) (map Int l).
   Proof. induction l; auto; simpl; rewrite IHl; auto. Qed.
 
   Theorem ill_soundness Γ a : Γ ⊢ a -> map Int Γ ⊧ □(Int a).
@@ -483,7 +446,7 @@ Section PhaseSpaces.
     (try rewrite int_ioc_list); (try rewrite int_ioc_list in IHpi);
     (try now (apply (@sem_monad_r _ PMPS); simpl; auto));
     (try now (simpl; auto)).
-  - apply (@sem_monad_r _ PMPS), sem_ax.
+  - apply sem_monad_r, sem_ax.
   - assert ({ipperm P = true} + {ipperm P = false}) as Hbool
       by (clear; destruct (ipperm P); [ left | right ]; reflexivity).
     destruct Hbool as [Hbool | Hbool]; intros; rewrite Hbool in p.
@@ -491,35 +454,68 @@ Section PhaseSpaces.
       apply Permutation_Type_map; assumption.
     + rewrite <- p; auto.
 (* TODO cf Universe inconsistency in sem_perm_0
- eapply (@sem_perm _ PMPS); try eassumption.
+    eapply (@sem_perm _ PMPS); try eassumption.
     apply PEperm_Type_map; assumption.
 *)
-  - apply sem_oc_perm with (map Int lw); auto.
+  - rewrite map_map; rewrite map_map in IHpi.
+    replace (map (fun x => ♯□(Int x)) lw')
+       with (map (fun t => ♯t) (map (fun x => (□(Int x))) lw'))
+      by (rewrite map_map; reflexivity).
+    apply sem_prebang_perm with (map (fun x => (□(Int x))) lw); [ | rewrite ? map_map]; auto.
     apply Permutation_Type_map; assumption.
-  - transitivity (□ (□(Int A) ∘ □(Int B))); auto.
-    + apply (@sem_monad_r _ PMPS); auto.
-(* TODO use rules *)
-    + apply cl_le; [ apply subset_preorder | ]; simpl.
-      apply cl_stable; [ apply subset_preorder | apply PScl_stable_l | apply PScl_stable_r ].
-  - simpl; apply list_compose_monot_cons with (□ (Int B) ⟜ □ (Int A)); auto.
-    + eapply (@magicwand_r_eq_1 _ _ subset_preorder PSCL (composes PScompose) _ _ (magicwand_r PScompose)); auto.
-    + rewrite map_app; auto.
-  - rewrite <- (app_nil_l (map _ _)) ; apply list_compose_monot_cons with (□ (PMval atN) ⟜ □ (Int A)).
-    + eapply (@magicwand_r_eq_1 _ _ subset_preorder PSCL (composes PScompose) _ _ (magicwand_r PScompose)); auto.
-    + rewrite <- (app_nil_r _); rewrite <- ? app_assoc.
-      apply sem_rimp_l, sem_monad_l, (@sem_monad_r _ PMPS); list_simpl; auto.
-      apply (m_pwr_neutrality_r (@PS_neutral_r _ PMPS)).
-  - simpl; rewrite app_assoc; apply list_compose_monot_cons with (□ (Int A) ⊸ □ (Int B)); list_simpl; auto.
-    eapply (@magicwand_l_eq_1 _ _ subset_preorder PSCL (composes PScompose) _ _ (magicwand_l PScompose)); auto.
-  - apply list_compose_monot_cons with (□ (Int A) ⊸ □ (PMval atN)); list_simpl.
-    + eapply (@magicwand_l_eq_1 _ _ subset_preorder PSCL (composes PScompose) _ _ (magicwand_l PScompose)); auto.
-    + rewrite <- (app_nil_l _); apply sem_limp_l, sem_monad_l; auto.
-      apply sem_monad_r, (m_pwr_neutrality_r (@PS_neutral_r _ PMPS)).
-  - etransitivity; [ apply IHpi | apply cl_monotone ]; intros z Hz; simpl; auto.
-  - etransitivity; [ apply IHpi | apply cl_monotone ]; intros z Hz; simpl; auto.
+  - rewrite <- (app_nil_r _); rewrite <- (app_nil_l _).
+    apply sem_cut with (□ (□(Int A) ∘ □(Int B))); simpl Int.
+    + apply sem_monad_r; auto.
+    + apply sem_monad_l, sem_tens_l, sem_monad_l; rewrite app_nil_l.
+      change (Int A :: □ (Int B) :: nil) with ((Int A :: nil) ++ □ (Int B) :: nil).
+      apply sem_monad_l, sem_monad_r, sem_tens_r; auto.
+  - simpl; rewrite map_app.
+    change (□(Int B) ⟜ Int A :: map Int l0 ++ map Int l2)
+      with ((□(Int B) ⟜ Int A :: nil) ++ map Int l0 ++ map Int l2).
+    apply sem_cut with (□(Int B) ⟜ □(Int A)); auto.
+    apply sem_rimp_r, sem_monad_l.
+    change ((□(Int B) ⟜ Int A :: nil) ++ Int A :: nil)
+      with (nil ++ (□(Int B) ⟜ Int A) :: (Int A :: nil) ++ nil).
+    apply sem_rimp_l; auto.
+    apply sem_monad_l, sem_monad_r; rewrite app_nil_l; auto.
+  - change (map Int (igen A :: l))
+      with (nil ++ (□(PMval atN) ⟜ Int A :: nil) ++ map Int l).
+    apply sem_cut with (□(PMval atN) ⟜ □(Int A)); auto.
+    + apply sem_rimp_r, sem_monad_l.
+      change ((□(PMval atN) ⟜ Int A :: nil) ++ Int A :: nil)
+        with (nil ++ (□(PMval atN) ⟜ Int A) :: (Int A :: nil) ++ nil).
+      apply sem_rimp_l; auto.
+      apply sem_monad_l, sem_monad_r; rewrite app_nil_l; auto.
+    + rewrite <- (app_nil_r _); rewrite <- app_assoc; rewrite <- app_comm_cons.
+      apply sem_rimp_l; try rewrite app_nil_l; auto.
+  - simpl; rewrite app_assoc.
+    change (Int A ⊸ □(Int B) :: map Int l2)
+      with ((Int A ⊸ □(Int B) :: nil) ++ map Int l2).
+    apply sem_cut with (□(Int A) ⊸ □(Int B)); auto.
+    + apply sem_limp_r.
+      rewrite <- (app_nil_l _); apply sem_monad_l.
+      change (Int A :: Int A ⊸ □(Int B) :: nil)
+        with ((Int A :: nil) ++ Int A ⊸ □(Int B) :: nil).
+      apply sem_limp_l; try rewrite app_nil_l; auto.
+    + rewrite <- ? app_assoc; apply sem_limp_l; auto.
+  - simpl; rewrite <- (app_nil_r _); rewrite <- app_assoc.
+    apply sem_cut with (□(Int A) ⊸ □(PMval atN)); auto.
+    + apply sem_limp_r.
+      rewrite <- (app_nil_l _); apply sem_monad_l.
+      change (Int A :: Int A ⊸ □(PMval atN) :: nil)
+        with ((Int A :: nil) ++ Int A ⊸ □(PMval atN) :: nil).
+      apply sem_limp_l; try rewrite app_nil_l; auto.
+    + rewrite <- (app_nil_l _); apply sem_limp_l; try rewrite app_nil_l; auto.
+  - rewrite <- (app_nil_r _); rewrite <- (app_nil_l _).
+    apply sem_cut with (□(Int A)); auto.
+    apply sem_monad_l, sem_monad_r, sem_plus_r1; rewrite app_nil_l; auto.
+  - rewrite <- (app_nil_r _); rewrite <- (app_nil_l _).
+    apply sem_cut with (□(Int A)); auto.
+    apply sem_monad_l, sem_monad_r, sem_plus_r2; rewrite app_nil_l; auto.
+  - rewrite map_map in IHpi; rewrite map_map; rewrite <- map_map; simpl.
+    apply sem_monad_r, sem_prebang_r; rewrite map_map; auto.
   - apply sem_cut with (□ (Int A)); auto.
   - apply PMgax.
-  Unshelve. all: try apply PScl_stable_l; try apply PScl_stable_r.
   Qed.
 
 End PhaseSpaces.

@@ -81,14 +81,11 @@ Section SyntacticModel.
   Proof.
   intros Hb Γ Δ ga H.
   inversion H; subst.
-  unfold cl_ctx; simpl; unfold ldual, rdual, ctx_orth.
-  intros [[ga de] A] H1.
+  unfold cl_ctx; simpl; unfold ldual, rdual, ctx_orth; intros [[ga de] A] H1.
   specialize H1 with (b ++ a).
   eapply P_perm; [ | apply H1; constructor; assumption ].
   rewrite Hb; simpl.
-  apply Permutation_Type_app_head.
-  apply Permutation_Type_app_tail.
-  apply Permutation_Type_app_swap.
+  apply Permutation_Type_app_head, Permutation_Type_app_tail, Permutation_Type_app_swap.
   Qed.
 
   Notation K := (fun Γ => { Δ | Γ = ‼Δ }).
@@ -98,13 +95,11 @@ Section SyntacticModel.
 
   Local Fact sub_monoid_2 : K ∘ K ⊆ K.
   Proof.
-  intros ga H.
-  inversion H.
+  intros ga H; inversion H.
   destruct H0 as [de1 Heq1]; subst.
   destruct H1 as [de2 Heq2]; subst.
   exists (de1 ++ de2).
-  unfold ill_lbang.
-  rewrite map_app; reflexivity.
+  unfold ill_lbang; rewrite map_app; reflexivity.
   Qed.
 
   Notation J := (fun Γ => cl_ctx (sg nil) Γ * cl_ctx (sg Γ ∘ sg Γ) Γ)%type.
@@ -151,8 +146,7 @@ Section SyntacticModel.
 
   Fact dc_closed A : cl (↓A) ⊆ ↓A.
   Proof.
-  intros ga Hga; red in Hga.
-  simpl in Hga; unfold ldual, rdual, ctx_orth in Hga.
+  intros ga Hga; simpl in Hga; unfold ldual, rdual, ctx_orth in Hga.
   replace ga with (nil++ga++nil) by (list_simpl; reflexivity).
   specialize Hga with (nil,nil,A).
   apply Hga.
@@ -364,9 +358,7 @@ Section SyntacticModel.
           intros x; auto.
     - etransitivity; [ | apply ILLcl_increase ].
       unfold ldual, rdual, ctx_orth.
-      intros x Hx [[de1 de2] B] Hy; subst; simpl.
-      specialize Hy with (!A :: nil); apply Hy; auto.
-      split.
+      apply glb_in; intros x Hx; subst.
       + exists (A :: nil); reflexivity.
       + enough (sg (!A :: nil) ⊆ cl(⟦A⟧)) as Hoc by (apply Hoc; reflexivity).
         apply cl_le in IHA01; auto.
@@ -376,8 +368,7 @@ Section SyntacticModel.
         intros [[si1 si2] C] H; simpl.
         apply de_ilr.
         specialize H with (A :: nil); apply H; auto.
-    - apply ILLcl_closed; auto.
-      intros x Hx; inversion Hx; subst.
+    - intros x Hx; inversion Hx; subst.
       inversion H; subst.
       constructor; auto.
       unfold ldual, rdual, ctx_orth in X.

@@ -729,11 +729,17 @@ Section ClosureMagma.
     etransitivity; [ apply mglb_out_l | apply sub_J_1 ].
   Qed.
 
+  Proposition pre_store_comp_2 x y : ♯(x ⊓ y) ≤ ♯x ⊛ ♯y.
+  Proof.
+  etransitivity; [ apply pre_store_compose_idem | ]; apply tensor_monotone;
+   apply pre_store_monotone; auto.
+  Qed.
+
   Proposition store_comp_2 x y : ❗(x ⊓ y) ≤ ❗x ⊛ ❗y.
   Proof.
   apply cl_le; trivial.
-  etransitivity; [ apply pre_store_compose_idem | ]; apply tensor_monotone;
-   (etransitivity; [ | apply cl_increase ]; auto).
+  etransitivity; [ apply pre_store_comp_2 | ].
+  apply tensor_monotone; apply cl_increase.
   Qed.
 
   Proposition store_comp x y : closed x -> closed y -> ❗x ⊛ ❗y ≃ ❗(x ⊓ y).
@@ -793,6 +799,27 @@ Section ClosureMagma.
 
   Hypothesis str_sub_monoid_1 : str_sub_monoid_hyp_1.
   Hypothesis sub_monoid_distr : sub_monoid_distr_hyp.
+
+  Lemma pre_store_commute x y : ♯x • ♯y ≤ ♯y ⊛ ♯x.
+  Proof.
+  clear magicwand_l magicwand_l_adj_l magicwand_l_adj_r magicwand_r magicwand_r_adj_l magicwand_r_adj_r.
+  etransitivity; [ apply k_compose | ].
+  etransitivity; [ apply pre_store_compose_idem | ].
+  transitivity (cl(♯y) ⊛ cl(♯x)); [ | apply cl_le; auto ].
+  apply tensor_monotone; (etransitivity; [ apply sub_monoid_distr | ]).
+  - transitivity (1 • ♯y).
+    + apply compose_monotone; auto.
+      apply pre_store_inc_unit.
+    + etransitivity; [ | apply tensor_unit_l ]; [ | apply cl_idempotent ].
+      etransitivity; [ | apply cl_increase ].
+      apply compose_monotone; auto.
+  - transitivity (♯x • 1).
+    + apply compose_monotone; auto.
+      apply pre_store_inc_unit.
+    + etransitivity; [ | apply tensor_unit_r ]; [ | apply cl_idempotent ].
+      etransitivity; [ | apply cl_increase ].
+      apply compose_monotone; auto.
+  Qed.
 
   Fact lcompose_pre_store l : lcompose (map (fun x => ♯x) l) ≃ ♯(lcompose l).
   Proof.
@@ -922,11 +949,25 @@ Section ClosureSubsetMagma.
     constructor; auto.
   Qed.
 
+  Lemma m_pwr_cl_neutrality_l_1 : m_neutrality_l compose unit -> cl_neutrality_l_1 composes (sg unit).
+  Proof.
+  intros Hc x.
+  etransitivity; [ | apply cl_increase ].
+  intros z Hz; rewrite <- Hc; constructor; auto.
+  Qed.
+
   Lemma m_pwr_cl_neutrality_l_2 : m_neutrality_l compose unit -> cl_neutrality_l_2 composes (sg unit).
   Proof.
   intros Hc x.
   etransitivity; [ | apply cl_increase ].
   intros z Hz; inversion Hz; subst; rewrite Hc; auto.
+  Qed.
+
+  Lemma m_pwr_cl_neutrality_r_1 : m_neutrality_r compose unit -> cl_neutrality_r_1 composes (sg unit).
+  Proof.
+  intros Hc x.
+  etransitivity; [ | apply cl_increase ].
+  intros z Hz; rewrite <- Hc; constructor; auto.
   Qed.
 
   Lemma m_pwr_cl_neutrality_r_2 : m_neutrality_r compose unit -> cl_neutrality_r_2 composes (sg unit).
