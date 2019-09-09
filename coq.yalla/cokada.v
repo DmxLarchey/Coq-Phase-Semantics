@@ -199,15 +199,15 @@ Section Cut_Elim.
   Hypothesis P_gax_at : gax_at P.
   Hypothesis P_gax_cut : gax_cut P.
 
-  Notation "↓" := (fun A Γ => ll (cutupd_pfrag P false) (A::Γ)).
+  Notation "↓" := (fun A Γ => ll (cutrm_pfrag P) (A::Γ)).
   Notation LLval_cf := (fun x => ↓(var x)).
 
-  Instance CPSLL_cf : CPhaseSpace (pperm P) (pmix P) := CPS_ctx (cutupd_pfrag P false).
+  Instance CPSLL_cf : CPhaseSpace (pperm P) (pmix P) := CPS_ctx (cutrm_pfrag P).
 
   Instance PMLL_cf : CPhaseModel P.
-  Proof. split with CPSLL_cf LLval_cf; apply (@LLgax (cutupd_pfrag P false) P_gax_at P_gax_cut). Defined.
+  Proof. split with CPSLL_cf LLval_cf; apply (@LLgax (cutrm_pfrag P) P_gax_at P_gax_cut). Defined.
 
-  Theorem ll_cut_elimination Γ : ll P Γ -> ll (cutupd_pfrag P false) Γ.
+  Theorem ll_cut_elimination Γ : ll P Γ -> ll (cutrm_pfrag P) Γ.
   Proof.
   intros pi.
   apply (ll_soundness PMLL_cf) in pi; auto.
@@ -215,7 +215,7 @@ Section Cut_Elim.
   do 2 eapply lmonot in pi.
   assert (HH := @pole_closed _ _ _ CPSPole CPScommute CPSneutral_1 CPSneutral_2 Γ); apply HH.
   apply pi.
-  apply (@Okada_ctx (cutupd_pfrag P false)); assumption.
+  apply (@Okada_ctx (cutrm_pfrag P)); assumption.
   Qed.
 
 End Cut_Elim.

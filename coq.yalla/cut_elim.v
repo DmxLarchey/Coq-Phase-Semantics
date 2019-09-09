@@ -118,8 +118,8 @@ Section SyntacticModel.
     apply H1; constructor; reflexivity.
   Qed.
 
-  Instance PS_ctx : PhaseSpace (ipperm P) :=
-  { Web := list iformula;
+  Instance PS_ctx : PhaseSpace (ipperm P) := {
+    Web := list iformula;
     PSCL := CL_ctx;
     PScompose := (@app iformula);
     PSunit := nil;
@@ -146,7 +146,7 @@ Section SyntacticModel.
   replace ga with (nil++ga++nil) by (list_simpl; reflexivity).
   specialize Hga with (nil,nil,A).
   apply Hga.
-  intro; rewrite <- app_nil_end; auto.
+  intro; rewrite app_nil_r; auto.
   Qed.
 
   Hint Resolve subset_preorder dc_closed.
@@ -173,12 +173,11 @@ Section SyntacticModel.
   Qed.
 
   Fact ILLgax : forall a, list_form_presem PS_ctx (ILLval P) (fst (projT2 (ipgax P) a))
-                    ⊆ cl(form_presem PS_ctx (ILLval P) (snd (projT2 (ipgax P) a))).
+                          ⊆ cl(form_presem PS_ctx (ILLval P) (snd (projT2 (ipgax P) a))).
   Proof.
   intros.
   etransitivity; [ | apply cl_increase ].
-  destruct (atlist_from_gax a) as [l Heq].
-  rewrite Heq.
+  destruct (atlist_from_gax a) as [l Heq]; rewrite Heq.
   red in P_gax_at_r; specialize P_gax_at_r with a.
   remember (snd (projT2 (ipgax P) a)) as b.
   destruct b; inversion P_gax_at_r; subst.
@@ -186,9 +185,8 @@ Section SyntacticModel.
   enough (forall l0 a l1 l2, map ivar l1 ++ map ivar l0 = fst (projT2 (ipgax P) a) ->
             list_form_presem PS_ctx (ILLval P) (map £ l0) l2 ->
             { c | map ivar l1 ++ l2 = fst (projT2 (ipgax P) c)
-               /\ snd (projT2 (ipgax P) a) = snd (projT2 (ipgax P) c) }).
-  { specialize X with l a nil x; list_simpl in X.
-    symmetry in Heq; apply X in Heq; auto. }
+               /\ snd (projT2 (ipgax P) a) = snd (projT2 (ipgax P) c) })
+    by (specialize X with l a nil x; list_simpl in X; symmetry in Heq; apply X in Heq; auto).
   clear - P_gax_at_l P_gax_cut; induction l0; intros a' l1 l2 Heq Hsem; inversion Hsem; subst.
   - list_simpl in Heq.
     exists a'; split; list_simpl; auto.
@@ -204,7 +202,7 @@ Section SyntacticModel.
       destruct Heq as [d [Heq3 Heq4]].
       destruct (atlist_from_gax c) as [l' Heq'].
       rewrite_all Heq'.
-      apply IHl0 with (a:=d) (l1 := l1 ++ l') in X0; list_simpl; auto.
+      apply IHl0 with (a := d) (l1 := l1 ++ l') in X0; list_simpl; auto.
       list_simpl in X0; destruct X0 as [e [Heq5 Heq6]].
       exists e; split; auto.
       etransitivity; eassumption.
@@ -215,8 +213,8 @@ Section SyntacticModel.
     PMval := ILLval P;
     PMgax := ILLgax }.
 
-  Infix "⊸" := (magicwand_l PScompose) (at level 51, right associativity).
-  Infix "⟜" := (magicwand_r PScompose) (at level 52, left associativity).
+  Infix "⊸" := (magicwand_l PScompose) (at level 52, right associativity).
+  Infix "⟜" := (magicwand_r PScompose) (at level 53, left associativity).
   Notation v := PMval.
   Notation "⟦ A ⟧" := (form_presem PS_ctx (ILLval P) A) (at level 49).
 
@@ -404,18 +402,18 @@ Section cut_admissibility.
 
   (* Coercion: the phase model relying on cut-free provability over P is a phase model for P *)
   Instance PMILL_cfat : PhaseModel P := {
-    PMPS := PS_ctx (cutupd_ipfrag P false);
-    PMval := ILLval (cutupd_ipfrag P false);
-    PMgax := @ILLgax (cutupd_ipfrag P false) P_gax_at_l P_gax_at_r P_gax_cut }.
+    PMPS := PS_ctx (cutrm_ipfrag P);
+    PMval := ILLval (cutrm_ipfrag P);
+    PMgax := @ILLgax (cutrm_ipfrag P) P_gax_at_l P_gax_at_r P_gax_cut }.
 
-  Theorem ill_cut_elimination Γ A : ill P Γ A -> ill (cutupd_ipfrag P false) Γ A.
+  Theorem ill_cut_elimination Γ A : ill P Γ A -> ill (cutrm_ipfrag P) Γ A.
   Proof.
     intros pi.
     apply (ill_soundness PMILL_cfat) in pi; auto.
-    assert (gax_noN_l (cutupd_ipfrag P false)) as HgaxN_cf by assumption.
-    assert (gax_at_l (cutupd_ipfrag P false)) as Hgax_at_l_cf by assumption.
-    assert (gax_at_r (cutupd_ipfrag P false)) as Hgax_at_r_cf by assumption.
-    assert (gax_cut (cutupd_ipfrag P false)) as Hgax_cut_cf by assumption.
+    assert (gax_noN_l (cutrm_ipfrag P)) as HgaxN_cf by assumption.
+    assert (gax_at_l (cutrm_ipfrag P)) as Hgax_at_l_cf by assumption.
+    assert (gax_at_r (cutrm_ipfrag P)) as Hgax_at_r_cf by assumption.
+    assert (gax_cut (cutrm_ipfrag P)) as Hgax_cut_cf by assumption.
     assert (HO := snd (Okada_formula HgaxN_cf Hgax_at_l_cf Hgax_at_r_cf Hgax_cut_cf A)).
     apply (@cl_closed _ _ _ PSCL) in HO; [ | apply dc_closed ].
     apply cl_le in pi.

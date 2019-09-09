@@ -20,18 +20,17 @@ Require Import tl_def.
 
 Import SetNotations.
 
-
 Notation " x '~[' b ']' y " := (PEperm_Type b x y) (at level 70, format "x  ~[ b ]  y").
 
+Notation "£" := tvar.
 Notation "0" := tzero.
 Notation 𝝐 := tone.
 Infix "⊗" := ttens (at level 50).
 Infix "⊕" := tplus (at level 50).
 Notation "¬" := tneg.
-Notation "! x" := (toc x) (at level 53).
+Notation "!" := toc (at level 53).
 Definition tl_lbang := map toc.
 Notation "‼ x" := (tl_lbang x) (at level 53).
-Notation "£" := tvar.
 
 
 Set Implicit Arguments.
@@ -55,34 +54,34 @@ Section Phase_Spaces.
     PSsub_monoid_1 : @pwr_sub_monoid_hyp_1 _ PSCL PSunit PSExp;
     PSsub_monoid_2 : @sub_monoid_hyp_2 _ subset (composes PScompose) PSExp;
     PSsub_J : @pwr_sub_J_hyp _ PSCL PScompose PSunit PSExp;
-    PScl_commute : b = true -> @cl_commutativity _ _ PSCL (composes PScompose)
-  }.
+    PScl_commute : b = true -> @cl_commutativity _ _ PSCL (composes PScompose) }.
 
   (* Interpretation of Tensor Logic *)
 
   Infix "∘" := (composes PScompose) (at level 50, no associativity).
-  Infix "⊛" := (tensor (composes PScompose)) (at level 59).
-  Notation "❗ A" := (bang glb PSExp A) (at level 40, no associativity).
+  Notation "❗" := (@bang _ _ PSCL glb PSExp) (at level 40, no associativity).
   Infix "⊸" := (magicwand_l PScompose) (at level 51, right associativity).
 
   Section Formula_Interpretation.
 
-    Reserved Notation "⟦ A ⟧" (at level 49).
     Variable perm_bool : bool.
     Variable PS : PhaseSpace perm_bool.
     Variable v : TAtom -> Web -> Type.
     Variable pole : Web -> Type.
-    Instance CL0 : ClosureOp := PSCL.
 
+    Notation "□" := (@cl _ _ PSCL).
+
+
+    Reserved Notation "⟦ A ⟧" (at level 49).
     Fixpoint form_presem f :=
       match f with
-      | 0     => zero
+      | 0     => ∅
       | 𝝐              => sg PSunit
       | £ x    => v x
-      | ¬ a => ⟦a⟧ ⊸ cl pole
+      | ¬ a => ⟦a⟧ ⊸ □ pole
       | a ⊗ b  => ⟦a⟧ ∘ ⟦b⟧
       | a ⊕ b  => ⟦a⟧ ∪ ⟦b⟧
-      | !a     => ❗cl(⟦a⟧)
+      | !a     => ❗(□(⟦a⟧))
       end
     where "⟦ a ⟧" := (form_presem a).
 
@@ -238,7 +237,7 @@ Section Phase_Spaces.
 
   Hint Resolve glb_in glb_out_l glb_out_r top_greatest.
 
-  Fact list_form_presem_bang_1 l : cl (⟬߭‼l⟭) ⊆ ❗ (lcap (map (fun x => cl (⟦ x ⟧)) l)).
+  Fact list_form_presem_bang_1 l : cl (⟬߭‼l⟭) ⊆ ❗(lcap (map (fun x => cl (⟦x⟧)) l)).
   Proof.
   induction l.
   - simpl; rewrite list_form_presem_nil.
@@ -246,7 +245,7 @@ Section Phase_Spaces.
     apply sub_monoid_1, PSsub_monoid_1.
   - simpl; rewrite list_form_presem_cons.
     apply cl_le; auto.
-    transitivity (⟦ ! a ⟧ ∘ cl (❗ lcap (map (fun x => cl (⟦ x ⟧)) l))).
+    transitivity (⟦!a⟧ ∘ cl (❗(lcap (map (fun x => cl (⟦x⟧)) l)))).
     + apply composes_monotone; try reflexivity.
       etransitivity; [ | etransitivity; [apply IHl | ] ]; auto; apply cl_increase.
     + etransitivity; [ apply PScl_stable_r | ]; simpl.
@@ -260,14 +259,14 @@ Section Phase_Spaces.
       * reflexivity.
   Qed.
 
-  Fact list_form_presem_bang_2 l : ❗ (lcap (map (fun x => cl (⟦ x ⟧)) l)) ⊆ cl (⟬߭‼l⟭).
+  Fact list_form_presem_bang_2 l : ❗(lcap (map (fun x => cl (⟦x⟧)) l)) ⊆ cl (⟬߭‼l⟭).
   Proof.
   induction l.
   - simpl; rewrite list_form_presem_nil.
     eapply store_unit_2; eauto.
     apply (@sub_J_1 _ _ PScompose PSunit), PSsub_J.
   - simpl; rewrite list_form_presem_cons.
-    transitivity (cl (⟦ ! a ⟧ ∘ ❗ lcap (map (fun x => cl (⟦ x ⟧)) l))).
+    transitivity (cl (⟦!a⟧ ∘ ❗(lcap (map (fun x => cl (⟦x⟧)) l)))).
     + simpl.
       etransitivity; [ | refine (@store_comp_2 _ _ _ _ (composes PScompose) _ _ _ _ _ _ _ _ _) ]; auto.
       * clear IHl; induction l; simpl; auto; apply store_monotone; auto.
@@ -314,7 +313,7 @@ Section Phase_Spaces.
       apply composes_monotone; try reflexivity.
       etransitivity; [ apply cl_increase | ].
       etransitivity; [ apply list_form_presem_bang_1 | ].
-      transitivity (❗ lcap (map (fun x => cl (⟦ x ⟧)) (a :: b :: nil))).
+      transitivity (❗(lcap (map (fun x => cl(⟦x⟧)) (a :: b :: nil)))).
       + apply store_monotone; auto.
         simpl; apply glb_in; auto.
         transitivity (glb (cl (⟦ a ⟧)) top); auto.
@@ -429,7 +428,7 @@ Section Phase_Spaces.
     apply store_dec; auto.
     Qed.
 
-    Fact tl_bang_r_sound Γ a : ⟬߭‼Γ⟭ ⊆ cl(⟦ a ⟧) -> ⟬߭‼Γ⟭ ⊆ cl(❗cl(⟦a⟧)).
+    Fact tl_bang_r_sound Γ a : ⟬߭‼Γ⟭ ⊆ cl(⟦a⟧) -> ⟬߭‼Γ⟭ ⊆ cl(❗(cl(⟦a⟧))).
     Proof.
     intros H.
     apply le_cl; auto.
@@ -500,7 +499,7 @@ Section Phase_Spaces.
     rewrite list_form_presem_cons in H1.
     apply list_form_presem_app_closed_2 in H2; auto.
     rewrite list_form_presem_cons in H2.
-    transitivity (cl ((⟬߭Γ⟭ ⊛(⟦a⟧⊛⟬߭Δ⟭)) ∪ (⟬߭Γ⟭ ⊛(⟦b⟧⊛⟬߭Δ⟭)))).
+    transitivity (cl (cl(⟬߭Γ⟭  ∘ cl(⟦a⟧ ∘ ⟬߭Δ⟭)) ∪ cl(⟬߭Γ⟭  ∘ cl(⟦b⟧ ∘ ⟬߭Δ⟭)))).
     - apply list_form_presem_app_closed_1; [ apply cl_closed | ]; auto; try reflexivity.
       rewrite list_form_presem_cons.
       eapply subset_trans; [ | apply tensor_lub_distrib_r ]; auto.
@@ -514,11 +513,9 @@ Section Phase_Spaces.
       + eapply cl_closed in H1; auto.
         etransitivity; [ | apply H1 ].
         apply cl_le; auto.
-        etransitivity; [ | apply PScl_stable_r ]; reflexivity.
       + eapply cl_closed in H2; auto.
         etransitivity; [ | apply H2 ].
         apply cl_le; auto.
-        etransitivity; [ | apply PScl_stable_r ]; reflexivity.
     Qed.
 
     Fact tl_plus_r1_sound Γ a b : ⟬߭Γ⟭ ⊆ cl(⟦a⟧) -> ⟬߭Γ⟭ ⊆ cl(⟦a ⊕ b⟧).
@@ -535,7 +532,9 @@ Section Phase_Spaces.
     etransitivity; [ | apply cl_increase ].
     apply composes_monotone; try reflexivity.
     etransitivity; [ | apply tensor_zero_distrib_l with (compose := PScompose) (A := ⟬߭Δ⟭)]; auto.
-    etransitivity; [ | apply cl_increase ]; reflexivity.
+    etransitivity; [ | apply cl_increase ].
+    apply composes_monotone; try reflexivity.
+    apply cl_increase.
     Qed.
 
     Hint Resolve tl_ax_sound

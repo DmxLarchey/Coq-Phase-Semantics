@@ -1,6 +1,5 @@
-Require Import List CRelationClasses CMorphisms.
-Require Import List_Type Permutation_Type_more.
-Require Import ll_def.
+Require Import List CMorphisms.
+
 Require Import closure_operators.
 
 Import SetNotations.
@@ -172,8 +171,8 @@ Section MagmaOrthogonality.
 
   Variable adj_compose_l : A -> B -> B.
   Variable adj_compose_r : A -> B -> B.
-  Infix "⤞" := adj_compose_l (at level 51).
-  Infix "⤝" := adj_compose_r (at level 52).
+  Infix "⤞" := adj_compose_l (at level 52).
+  Infix "⤝" := adj_compose_r (at level 53).
 
   Definition rel_associativity_l_l := forall x y z, R y (x ⤞ z) -> R (x • y) z.
   Definition rel_associativity_l_r := forall x y z, R (x • y) z -> R y (x ⤞ z).

@@ -35,13 +35,16 @@ Section ClosurePreOrder.
     fun _ _ _ P Q =>
     match P, Q with (P1,P2), (Q1,Q2) => (@PreOrder_Transitive _ _ POS _ _ _ P1 Q1,
                                          @PreOrder_Transitive _ _ POS _ _ _ Q2 P2) end.
-  Global Instance eqrel_equiv S (POS : PreOrder S) : Equivalence (eqrel S) :=
-    { Equivalence_Reflexive := eqrel_refl POS;
-      Equivalence_Symmetric := eqrel_sym POS;
-      Equivalence_Transitive := eqrel_trans POS }.
+  Global Instance eqrel_equiv S (POS : PreOrder S) : Equivalence (eqrel S) := {
+    Equivalence_Reflexive := eqrel_refl POS;
+    Equivalence_Symmetric := eqrel_sym POS;
+    Equivalence_Transitive := eqrel_trans POS }.
 
   Global Instance eq_eqrel S (POS : PreOrder S) : Proper (eq ==> eqrel S) id.
   Proof. split; subst; reflexivity. Qed.
+
+  Global Instance rel_eqrel_compat S (POS : PreOrder S) : Proper (eqrel S ==> eqrel S ==> Basics.arrow) S.
+  Proof. intros x1 y1 [_ H1] x2 y2 [H2 _] H; transitivity x1; [ | transitivity x2 ] ; assumption. Qed.
 
   Context { R : M -> M -> Type }.
   Variable PO : PreOrder R.
@@ -234,7 +237,7 @@ Section ClosureMagma.
 
   (* Tensor *)
 
-  Definition tensor x y := (cl (x • y)).
+  Definition tensor x y := cl (x • y).
   Infix "⊛" := tensor (at level 59).
 
   Proposition tensor_closed x y : closed (x ⊛ y).
@@ -328,7 +331,7 @@ Section ClosureMagma.
   Hint Resolve magicwand_l_eq_3.
 
   Variable magicwand_r : M -> M -> M.
-  Infix "⟜" := magicwand_r (at level 52, left associativity).
+  Infix "⟜" := magicwand_r (at level 53, left associativity).
 
   Hypothesis magicwand_r_adj_l : forall x y z, x • y ≤ z -> x ≤ z ⟜ y.
   Hypothesis magicwand_r_adj_r : forall x y z, x ≤ z ⟜ y -> x • y ≤ z.
@@ -593,7 +596,7 @@ Section ClosureMagma.
   (* Axioms for Greatest Lower Bound *)
 
   Variable mglb : M -> M -> M.
-  Infix "⊓" := mglb (at level 50, no associativity).
+  Infix "⊓" := mglb (at level 51, right associativity).
   Hypothesis mglb_in : forall x y z, x ≤ y -> x ≤ z -> x ≤ y ⊓ z.
   Hypothesis mglb_out_l : forall x y, x ⊓ y ≤ x.
   Hypothesis mglb_out_r : forall x y, x ⊓ y ≤ y.
@@ -836,6 +839,8 @@ Section ClosureSubsetMagma.
   Context { M : Type }.
   Implicit Types A B : M -> Type.
 
+  (* TODO try opacify through module and lemma for equivalence with definition
+       https://coq-club.inria.narkive.com/1zR1POOu/making-a-definition-really-opaque *)
   Definition subset A B := forall x, A x -> B x.
 
   Global Instance subset_refl : Reflexive subset := fun X a P => P.
@@ -849,8 +854,8 @@ Section ClosureSubsetMagma.
 
   Infix "⊆" := subset (at level 75, no associativity).
   Infix "≃" := eqset (at level 75, no associativity).
-  Infix "∩" := (fun A B z => A z * B z : Type)%type (at level 50, left associativity).
-  Infix "∪" := (fun A B z => A z + B z : Type)%type (at level 50, left associativity).
+  Infix "∩" := (fun A B z => A z * B z : Type)%type (at level 51, right associativity).
+  Infix "∪" := (fun A B z => A z + B z : Type)%type (at level 51, right associativity).
   Notation sg := (@eq _ : _ -> _ -> Type).
 
   Fact sg_subset A x : A x ≡ sg x ⊆ A.
@@ -998,7 +1003,7 @@ Section ClosureSubsetMagma.
   Qed.
 
   Definition magicwand_r B A c := sg c ∘ A ⊆ B.
-  Infix "⟜" := magicwand_r (at level 52, left associativity).
+  Infix "⟜" := magicwand_r (at level 53, left associativity).
 
   Proposition magicwand_r_adj_l A B C : A ∘ B ⊆ C -> A ⊆ C ⟜ B.
   Proof.
@@ -1100,8 +1105,8 @@ Module SetNotations.
   Infix "⊆" := subset (at level 75, no associativity).
   Infix "≃" := eqset (at level 75, no associativity).
   Notation sg := (@eq _ : _ -> _ -> Type).
-  Infix "∩" := (fun A B z => A z * B z : Type)%type (at level 50, left associativity).
-  Infix "∪" := (fun A B z => A z + B z : Type)%type (at level 50, left associativity).
+  Infix "∩" := (fun A B z => A z * B z : Type)%type (at level 51, right associativity).
+  Infix "∪" := (fun A B z => A z + B z : Type)%type (at level 51, right associativity).
   Notation "∅" := ((fun _ => False) : _ -> Type).
   Notation fullset := ((fun _  => True) : _ -> Type).
 

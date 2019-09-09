@@ -30,11 +30,11 @@ Infix "&" := (iwith) (at level 50, only parsing).
 Infix "﹠" := (iwith) (at level 50).
 Infix "⊗" := (itens) (at level 50).
 Infix "⊕" := (iplus) (at level 50).
-Infix "-o" := (ilmap) (at level 51, right associativity).
-Notation "x o- y" := (ilpam y x) (at level 52, left associativity).
-Notation "! x" := (ioc x) (at level 53).
+Infix "-o" := (ilmap) (at level 52, right associativity).
+Notation "x o- y" := (ilpam y x) (at level 53, left associativity).
+Notation "! x" := (ioc x) (at level 55).
 Definition ill_lbang := map ioc.
-Notation "‼ x" := (ill_lbang x) (at level 53).
+Notation "‼ x" := (ill_lbang x) (at level 55).
 Notation "£" := ivar.
 
 
@@ -66,8 +66,8 @@ Section Phase_Spaces.
   (* Interpretation of Linear Logic *)
 
   Infix "∘" := (composes PScompose) (at level 50, no associativity).
-  Infix "⊸" := (magicwand_l PScompose) (at level 51, right associativity).
-  Infix "⟜" := (magicwand_r PScompose) (at level 52, left associativity).
+  Infix "⊸" := (magicwand_l PScompose) (at level 52, right associativity).
+  Infix "⟜" := (magicwand_r PScompose) (at level 53, left associativity).
   Infix "⊛" := (tensor (composes PScompose)) (at level 59).
   Infix "⊓" := glb (at level 50, no associativity).
   Infix "⊔" := lub (at level 50, no associativity).

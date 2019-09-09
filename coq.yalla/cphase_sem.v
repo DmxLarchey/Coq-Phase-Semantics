@@ -13,11 +13,7 @@ Set Implicit Arguments.
 
 Section PhaseSpaces.
 
-  Fixpoint mcomposes {M} n c e x : M -> Type :=
-    match n with
-    | 0    => sg e
-    | S k  => composes c x (mcomposes k c e x)
-    end.
+  Definition mcomposes {M} n c e x := nat_rect (fun _ => (M -> Type)) (sg e) (fun _ => composes c x) n.
 
   Definition cps_orth {M} comp (P : M -> Type) := fun (x y : M) => P (comp x y).
 

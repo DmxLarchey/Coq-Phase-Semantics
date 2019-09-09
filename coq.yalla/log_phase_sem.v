@@ -18,22 +18,9 @@ Require Export closure_operators.
 
 Require Import ill_def.
 
-Import SetNotations.
+Import SetNotations. (* ⊆ ≃ ∩ ∪ ∅ *)
 
-Notation " x '~[' b ']' y " := (PEperm_Type b x y) (at level 70, format "x  ~[ b ]  y").
-
-Notation "£" := ivar.
-Notation "⟙" := (itop).
-Notation "0" := (izero).
-Notation 𝝐 := (ione).
-Infix "﹠" := (iwith) (at level 50).
-Infix "⊗" := (itens) (at level 50).
-Infix "⊕" := (iplus) (at level 50).
-Infix "-o" := (ilmap) (at level 51, right associativity).
-Notation "x o- y" := (ilpam y x) (at level 52, left associativity).
-Notation "! x" := (ioc x) (at level 53).
-
-
+Notation "x ~[ b ] y" := (PEperm_Type b x y) (at level 70, format "x  ~[ b ]  y").
 
 
 Set Implicit Arguments.
@@ -57,11 +44,11 @@ Section PhaseSpaces.
     PSsub_monoid_distr : @sub_monoid_distr_hyp _ subset (composes PScompose) glb PSExp;
     PScl_commute : b = true -> @cl_commutativity _ _ PSCL (composes PScompose) }.
 
-  Infix "∘" := (composes PScompose) (at level 50, no associativity).
-  Infix "⊸" := (magicwand_l PScompose) (at level 51, right associativity).
-  Infix "⟜" := (magicwand_r PScompose) (at level 52, left associativity).
-  Notation "♯ x" := (glb PSExp x) (at level 40, no associativity).
-  Notation "❗ " := (@bang _ _ PSCL glb PSExp) (at level 40, no associativity).
+  Infix "∘" := (composes PScompose) (at level 51).
+  Infix "⊸" := (magicwand_l PScompose) (at level 52, right associativity).
+  Infix "⟜" := (magicwand_r PScompose) (at level 53, left associativity).
+  Notation "♯" := (glb PSExp).
+  Notation "❗" := (@bang _ _ PSCL glb PSExp).
 
 
   Section MonadicInterpretation.
@@ -142,7 +129,7 @@ Section PhaseSpaces.
     Proof.
     intros H.
     apply cl_le in H; auto.
-    transitivity (list_compose l1  ∘ □ (list_compose (x :: l2))).
+    transitivity (list_compose l1 ∘ □ (list_compose (x :: l2))).
     - etransitivity; [ apply list_compose_app | ].
       apply composes_monotone; auto; simpl.
       apply PScl_stable_l.
@@ -153,7 +140,7 @@ Section PhaseSpaces.
     Qed.
 
 (*
-    Lemma sem_monad_list_l l x : l ⊧ □x -> map (fun z => □z) l ⊧ □x.
+    Lemma sem_monad_list_l l x : l ⊧ □x -> map □ l ⊧ □x.
     Proof.
     change l with (nil ++ l).
     rewrite map_app.
@@ -166,6 +153,25 @@ Section PhaseSpaces.
     apply sem_monad_l; assumption.
     Qed.
 *)
+
+    Fact list_compose_monot_sg_mnd x m : □m x -> forall l1 l2 z,
+      l1 ++ m :: l2 ⊧ □z -> l1 ++ sg x :: l2 ⊧ □z.
+    Proof.
+    intros Hx l1 l2 z H; apply list_compose_monot_cons with (□m).
+    - intros y Hy; subst; assumption.
+    - apply sem_monad_l; assumption.
+    Qed.
+
+    Fact list_compose_cons_sg_to_sem x m :
+      (forall l1 l2 z, l1 ++ m :: l2 ⊧ □z -> l1 ++ sg x :: l2 ⊧ □z) -> □m x.
+    Proof.
+    intros H; specialize H with nil nil m; list_simpl in H.
+    enough (eq x ⊆ □ m) as Hin by (apply Hin; reflexivity).
+    etransitivity; [ eapply (m_pwr_cl_neutrality_r_1 (@PS_neutral_r _ PS)) | ].
+    apply cl_le; auto.
+    apply H.
+    apply (m_pwr_cl_neutrality_r_2 (@PS_neutral_r _ PS)).
+    Qed.
 
     Fact sem_ax x : x :: nil ⊧ x.
     Proof. apply (m_pwr_neutrality_r (@PS_neutral_r _ PS)). Qed.
@@ -381,6 +387,18 @@ Section PhaseSpaces.
 
   (* Interpretation of Linear Logic *)
 
+  Notation "£" := ivar.
+  Notation "⟙" := (itop).
+  Notation "0" := (izero).
+  Notation 𝝐 := (ione).
+  Infix "﹠" := (iwith) (at level 50).
+  Infix "⊗" := (itens) (at level 50).
+  Infix "⊕" := (iplus) (at level 50).
+  Infix "-o" := (ilmap) (at level 52, right associativity).
+  Notation "x o- y" := (ilpam y x) (at level 53, left associativity).
+  Notation "! x" := (ioc x) (at level 53).
+
+
   Section FormulaInterpretation.
 
     Variable perm_bool : bool.
@@ -388,7 +406,7 @@ Section PhaseSpaces.
     Variable v : IAtom -> Web -> Type.
     Notation "□" := (@cl _ _ PSCL).
 
-    Reserved Notation "⟦ A ⟧" (at level 49).
+    Reserved Notation "⟦ A ⟧".
     Fixpoint form_presem f :=
       match f with
       | 0     => ∅
@@ -402,7 +420,7 @@ Section PhaseSpaces.
       | a ⊗ b  => ⟦a⟧ ∘ ⟦b⟧
       | a ⊕ b  => ⟦a⟧ ∪ ⟦b⟧
       | a ﹠ b  => □(⟦a⟧) ∩ □(⟦b⟧)
-      | !a     => ♯□(⟦a⟧)
+      | !a     => ♯(□(⟦a⟧))
       end
     where "⟦ a ⟧" := (form_presem a).
 
@@ -419,7 +437,7 @@ Section PhaseSpaces.
   Context { P : ipfrag }.
   Variable PM : MPhaseModel P.
 
-  Infix "∘" := (composes PScompose) (at level 50, no associativity).
+  Infix "∘" := (composes PScompose) (at level 51).
   Notation "l ⊧  x" := (@list_compose _ PMPS l ⊆ x) (at level 70, no associativity).
   Notation "□" := (@cl _ _ PSCL).
   Notation Int := (@form_presem _ PMPS PMval).
@@ -458,7 +476,7 @@ Section PhaseSpaces.
     apply PEperm_Type_map; assumption.
 *)
   - rewrite map_map; rewrite map_map in IHpi.
-    replace (map (fun x => ♯□(Int x)) lw')
+    replace (map (fun x => ♯(□(Int x))) lw')
        with (map (fun t => ♯t) (map (fun x => (□(Int x))) lw'))
       by (rewrite map_map; reflexivity).
     apply sem_prebang_perm with (map (fun x => (□(Int x))) lw); [ | rewrite ? map_map]; auto.
