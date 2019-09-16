@@ -33,8 +33,8 @@ Section ClosurePreOrder.
     fun _ _ H => match H with (H1, H2) => (H2, H1) end.
   Global Instance eqrel_trans S (POS : PreOrder S) : Transitive (eqrel S) :=
     fun _ _ _ P Q =>
-    match P, Q with (P1,P2), (Q1,Q2) => (@PreOrder_Transitive _ _ POS _ _ _ P1 Q1,
-                                         @PreOrder_Transitive _ _ POS _ _ _ Q2 P2) end.
+    match P, Q with (P1,P2), (Q1,Q2) => (PreOrder_Transitive _ _ _ P1 Q1,
+                                         PreOrder_Transitive _ _ _ Q2 P2) end.
   Global Instance eqrel_equiv S (POS : PreOrder S) : Equivalence (eqrel S) := {
     Equivalence_Reflexive := eqrel_refl POS;
     Equivalence_Symmetric := eqrel_sym POS;
@@ -46,8 +46,14 @@ Section ClosurePreOrder.
   Global Instance rel_eqrel_compat S (POS : PreOrder S) : Proper (eqrel S ==> eqrel S ==> Basics.arrow) S.
   Proof. intros x1 y1 [_ H1] x2 y2 [H2 _] H; transitivity x1; [ | transitivity x2 ] ; assumption. Qed.
 
+  Class ClosureOp R := {
+    cl              :> M -> M;
+    cl_increase x   : R x (cl x);                 (* x ≤ cl x *)
+    cl_monotone x y : R x y -> R (cl x) (cl y);   (* x ≤ y -> cl x ≤ cl y *)
+    cl_idempotent x : R (cl (cl x)) (cl x) }.     (* cl (cl x) ≤ cl x *)
+
   Context { R : M -> M -> Type }.
-  Variable PO : PreOrder R.
+  Context { PO : PreOrder R }.
 
   Infix "≤" := R (at level 75, no associativity).
   Infix "≃" := (eqrel R) (at level 75, no associativity).
@@ -55,13 +61,7 @@ Section ClosurePreOrder.
   Hint Resolve (eqrel_refl PO) (eqrel_trans PO).
   Hint Immediate (eqrel_sym PO).
 
-  Class ClosureOp := {
-    cl          : M -> M;
-    cl_increase : forall x, x ≤ cl x;
-    cl_monotone : forall x y, x ≤ y -> cl x ≤ cl y;
-    cl_idempotent : forall x, cl (cl x) ≤ cl x }.
-
-  Context { CL : ClosureOp }.
+  Context { CL : ClosureOp R }.
 
   Proposition cl_le x y : x ≤ cl y -> cl x ≤ cl y.
   Proof.
@@ -86,7 +86,7 @@ Section ClosureMagma.
 
   Context { M : Type } { R : M -> M -> Type }.
   Variable PO : PreOrder R.
-  Context { CL : @ClosureOp _ R }.
+  Context { CL : ClosureOp R }.
 
   Hint Resolve (@PreOrder_Reflexive _ _ PO).
   Hint Resolve (@cl_increase _ _ CL) (@cl_monotone _ _ CL) (@cl_idempotent _ _ CL).
@@ -187,8 +187,8 @@ Section ClosureMagma.
   Proposition cl_eq_congruent_l x y z : cl x ≃ cl y -> cl (z • x) ≃ cl (z • y).
   Proof.
   intros [H1 H2].
-  assert (H3 := le_cl _ _ _ H1).
-  assert (H4 := le_cl _ _ _ H2).
+  apply le_cl in H1; auto.
+  apply le_cl in H2; auto.
   split; apply cl_le; auto;
     (etransitivity ; [ | apply cl_stable_r ]);
     apply compose_monotone; auto.
@@ -197,8 +197,8 @@ Section ClosureMagma.
   Proposition cl_eq_congruent_r x y z : cl x ≃ cl y -> cl (x • z) ≃ cl (y • z).
   Proof.
   intros [H1 H2].
-  assert (H3 := le_cl _ _ _ H1).
-  assert (H4 := le_cl _ _ _ H2).
+  apply le_cl in H1; auto.
+  apply le_cl in H2; auto.
   split; apply cl_le; auto;
     (etransitivity ; [ | apply cl_stable_r ]);
     apply compose_monotone; auto.
@@ -241,7 +241,7 @@ Section ClosureMagma.
   Infix "⊛" := tensor (at level 59).
 
   Proposition tensor_closed x y : closed (x ⊛ y).
-  Proof. simpl; apply cl_idempotent. Qed.
+  Proof. apply cl_idempotent. Qed.
 
   Instance tensor_monotone : Proper (R ==> R ==> R) tensor.
   Proof. simpl; intros ? ? ? ? ? ?; apply cl_monotone, compose_monotone; auto. Qed.
@@ -278,19 +278,13 @@ Section ClosureMagma.
   intros ? ? ? ? ? HB.
   apply magicwand_l_adj_l.
   etransitivity; [ | apply HB ].
-  transitivity (x • (x ⊸ x0)).
-  - apply compose_monotone; auto.
-  - apply magicwand_l_adj_r; auto.
+  transitivity (x • (x ⊸ x0)); [ apply compose_monotone | ]; auto.
   Qed.
 
   Hint Resolve magicwand_l_monotone.
 
   Proposition cl_magicwand_l_1 x y : cl (x ⊸ cl y) ≤ x ⊸ cl y.
-  Proof.
-  apply magicwand_l_adj_l.
-  transitivity (cl (x • (x ⊸ cl y))); auto.
-  apply cl_le; auto.
-  Qed.
+  Proof. apply magicwand_l_adj_l; etransitivity ; [ | apply cl_le ]; auto. Qed.
 
   Proposition cl_magicwand_l_2 x y : cl x ⊸ y ≤ x ⊸ y.
   Proof. apply magicwand_l_monotone; auto; red; auto. Qed.
@@ -352,8 +346,7 @@ Section ClosureMagma.
   Proof.
   clear magicwand_l magicwand_l_adj_l magicwand_l_adj_r.
   apply magicwand_r_adj_l.
-  transitivity (cl ((cl y ⟜ x) • x)); auto.
-  apply cl_le; auto.
+  etransitivity ; [ | apply cl_le ]; auto.
   Qed.
 
   Proposition cl_magicwand_r_2 x y : y ⟜ cl x ≤ y ⟜ x.
@@ -398,10 +391,7 @@ Section ClosureMagma.
 
   (* Adjunction properties *)
   Proposition adjunction_l_l x y z : closed z -> y ⊛ x ≤ z -> x ≤ y ⊸ z.
-  Proof.
-  unfold tensor; intros ? H.
-  apply magicwand_l_adj_l; (etransitivity; [ | apply H ]); auto.
-  Qed.
+  Proof. unfold tensor; intros ? H; apply magicwand_l_adj_l; etransitivity; [ | apply H ]; auto. Qed.
 
   Proposition adjunction_l_r x y z : closed z -> x ≤ y ⊸ z -> y ⊛ x ≤ z.
   Proof.
@@ -410,14 +400,10 @@ Section ClosureMagma.
   apply cl_monotone, magicwand_l_adj_r; auto.
   Qed.
 
-  Hint Resolve tensor_congruent adjunction_l_l (* adjunction_l_r *).
+  Hint Resolve tensor_congruent adjunction_l_l.
 
   Proposition adjunction_r_l x y z : closed z -> x ⊛ y ≤ z -> x ≤ z ⟜ y.
-  Proof.
-  unfold tensor; intros ? H.
-  apply magicwand_r_adj_l.
-  etransitivity; [ | apply H ]; auto.
-  Qed.
+  Proof. unfold tensor; intros ? H; apply magicwand_r_adj_l; etransitivity; [ | apply H ]; auto. Qed.
 
   Proposition adjunction_r_r x y z : closed z -> x ≤ z ⟜ y -> x ⊛ y ≤ z.
   Proof.
@@ -426,7 +412,7 @@ Section ClosureMagma.
   apply cl_monotone, magicwand_r_adj_r; auto.
   Qed.
 
-  Hint Resolve adjunction_r_l (* adjunction_r_r *).
+  Hint Resolve adjunction_r_l.
 
 
   (* Unit *)
@@ -566,7 +552,7 @@ Section ClosureMagma.
   Proof. auto. Qed.
 
   Proposition tensor_commute x y : x ⊛ y ≤ y ⊛ x.
-  Proof. simpl; apply cl_le; auto. Qed.
+  Proof. apply cl_le; auto. Qed.
 
   Hint Resolve tensor_commute.
 
@@ -576,14 +562,10 @@ Section ClosureMagma.
   Proposition cl_associative_l_imp_r : cl_associativity_l -> cl_associativity_r.
   Proof.
   intros Ha a b c.
-  etransitivity; [ apply cl_commute | ].
-  apply cl_le; auto.
-  transitivity (cl (c • (b • a))); auto.
-  apply cl_le; auto.
-  etransitivity; [ apply Ha | ].
-  apply cl_le; auto.
-  transitivity (cl ((b • c) • a)); auto.
-  apply cl_le; auto.
+  etransitivity; [ apply cl_commute | apply cl_le ].
+  transitivity (cl (c • (b • a))); [ | apply cl_le ]; auto.
+  etransitivity; [ apply Ha | apply cl_le ].
+  transitivity (cl ((b • c) • a)); [ | apply cl_le ]; auto.
   Qed.
 
   Proposition cl_neutrality_l_imp_r_1 : cl_neutrality_l_1 -> cl_neutrality_r_1.
@@ -645,8 +627,8 @@ Section ClosureMagma.
   Hypothesis sub_J_2 : sub_J_hyp_2.
 
   Notation "♯ x" := (k ⊓ x) (at level 40, no associativity).
-  Definition bang x := cl (♯x).
-  Notation "❗ " := bang (at level 40, no associativity).
+  Definition bang x := cl(♯x).
+  Notation "❢" := bang (at level 40, no associativity).
 
   Proposition k_compose x y : ♯x • ♯y ≤ ♯(x • y).
   Proof.
@@ -659,18 +641,18 @@ Section ClosureMagma.
   Fact pre_store_inc_unit A : ♯A ≤ 1.
   Proof. transitivity k; auto. Qed.
 
-  Fact store_inc_unit A : ❗ A ≤ 1.
+  Fact store_inc_unit A : ❢A ≤ 1.
   Proof. apply cl_le; auto; apply pre_store_inc_unit. Qed.
 
   Hint Resolve store_inc_unit.
 
-  Proposition store_closed x : closed (❗x).
-  Proof. simpl; apply cl_idempotent. Qed.
+  Proposition store_closed x : closed (❢x).
+  Proof. apply cl_idempotent. Qed.
 
   Proposition pre_store_dec x : ♯x ≤ x.
   Proof. auto. Qed.
 
-  Proposition store_dec x : closed x -> ❗x ≤ x.
+  Proposition store_dec x : closed x -> ❢x ≤ x.
   Proof. intros ?; transitivity (cl x); auto; apply cl_monotone; apply pre_store_dec. Qed.
 
   Global Instance pre_store_monotone : Proper (R ==> R) (fun x => ♯x).
@@ -687,22 +669,22 @@ Section ClosureMagma.
   Proposition pre_store_der x y : ♯x ≤ y -> ♯x ≤ ♯y.
   Proof. intros H; apply mglb_in; auto. Qed.
 
-  Proposition store_der x y : ❗x ≤ y -> ❗x ≤ ❗y.
+  Proposition store_der x y : ❢x ≤ y -> ❢x ≤ ❢y.
   Proof.
   intros H; apply cl_monotone.
   apply pre_store_der.
   etransitivity; [ | apply H ]; apply cl_increase.
   Qed.
 
-  Proposition store_unit_1 : 1 ≤ ❗mtop.
+  Proposition store_unit_1 : 1 ≤ ❢mtop.
   Proof. apply cl_le; auto ; (etransitivity; [ apply sub_monoid_1 | ]); apply cl_monotone; auto. Qed.
 
-  Proposition store_unit_2 : ❗mtop ≤ 1.
+  Proposition store_unit_2 : ❢mtop ≤ 1.
   Proof. apply cl_le; trivial; transitivity k; auto. Qed.
 
   Hint Resolve store_unit_1 store_unit_2.
 
-  Proposition store_unit : 1 ≃ ❗mtop.
+  Proposition store_unit : 1 ≃ ❢mtop.
   Proof. split; auto. Qed.
 
   Hint Resolve store_unit.
@@ -711,7 +693,7 @@ Section ClosureMagma.
   Proposition pre_store_compose_idem x : ♯x ≤ ♯x ⊛ ♯x.
   Proof. apply sub_J_2; auto. Qed.
 
-  Proposition store_compose_idem x : ❗x ≤ ❗x ⊛ ❗x.
+  Proposition store_compose_idem x : ❢x ≤ ❢x ⊛ ❢x.
   Proof.
   apply cl_le; auto; etransitivity; [ apply pre_store_compose_idem | ].
   apply tensor_monotone; apply cl_increase.
@@ -738,14 +720,14 @@ Section ClosureMagma.
    apply pre_store_monotone; auto.
   Qed.
 
-  Proposition store_comp_2 x y : ❗(x ⊓ y) ≤ ❗x ⊛ ❗y.
+  Proposition store_comp_2 x y : ❢(x ⊓ y) ≤ ❢x ⊛ ❢y.
   Proof.
   apply cl_le; trivial.
   etransitivity; [ apply pre_store_comp_2 | ].
   apply tensor_monotone; apply cl_increase.
   Qed.
 
-  Proposition store_comp x y : closed x -> closed y -> ❗x ⊛ ❗y ≃ ❗(x ⊓ y).
+  Proposition store_comp x y : closed x -> closed y -> ❢x ⊛ ❢y ≃ ❢(x ⊓ y).
   Proof.
   intros Hcx Hcy; split.
   - transitivity (cl ((k ⊓ x) • (k ⊓ y))).
@@ -760,11 +742,11 @@ Section ClosureMagma.
 
   Notation ltensor := (fold_right (fun x y => x ⊛ y) 1).
 
-  Proposition ltensor_store l : Forall_Type closed l -> ltensor (map bang l) ≃ ❗(lmglb l).
+  Proposition ltensor_store l : Forall_Type closed l -> ltensor (map bang l) ≃ ❢(lmglb l).
   Proof.
   unfold lmglb.
   induction 1; simpl; auto.
-  transitivity (❗ x ⊛ ❗(lmglb l)).
+  transitivity (❢ x ⊛ ❢(lmglb l)).
   - apply tensor_congruent; auto; reflexivity.
   - apply store_comp; auto.
     apply lmglb_closed; auto.
@@ -778,18 +760,18 @@ Section ClosureMagma.
   Fact lcompose_cons f l : lcompose (f :: l) = f • lcompose l.
   Proof. auto. Qed.
 
-  Fact lcompose_store l : cl (lcompose (map (fun x => ❗(cl x)) l)) ≃ ❗ (lmglb (map cl l)).
+  Fact lcompose_store l : cl (lcompose (map (fun x => ❢(cl x)) l)) ≃ ❢ (lmglb (map cl l)).
   Proof.
   induction l; split; simpl; auto; try (destruct IHl as [IHl1 IHl2]).
   - apply cl_le; auto.
-    transitivity (❗(cl a) • cl(❗ (lmglb (map cl l)))).
+    transitivity (❢(cl a) • cl(❢ (lmglb (map cl l)))).
     + apply compose_monotone; auto.
       etransitivity; [ | etransitivity; [apply IHl1 | ] ]; auto; apply cl_increase.
     + etransitivity; [ apply cl_stable_r | ]; simpl.
       etransitivity; [ apply store_comp | ]; auto.
       apply lmglb_closed; auto.
       clear IHl1 IHl2; induction l; simpl; auto.
-  - transitivity (cl(❗(cl a) • (❗ (lmglb (map cl l))))).
+  - transitivity (cl(❢(cl a) • (❢ (lmglb (map cl l))))).
     + etransitivity; [ | apply store_comp_2 ]; auto.
     + apply cl_le; auto.
   Qed.
@@ -805,7 +787,9 @@ Section ClosureMagma.
 
   Lemma pre_store_commute x y : ♯x • ♯y ≤ ♯y ⊛ ♯x.
   Proof.
-  clear magicwand_l magicwand_l_adj_l magicwand_l_adj_r magicwand_r magicwand_r_adj_l magicwand_r_adj_r.
+  clear - PO compose_monotone unit cl_stable_l cl_stable_r
+          cl_neutral_l_1 cl_neutral_l_2 cl_neutral_r_1 cl_neutral_r_2
+          mglb_in mglb_out_l mglb_out_r sub_monoid_2 sub_J_1 sub_J_2 sub_monoid_distr.
   etransitivity; [ apply k_compose | ].
   etransitivity; [ apply pre_store_compose_idem | ].
   transitivity (cl(♯y) ⊛ cl(♯x)); [ | apply cl_le; auto ].
@@ -836,21 +820,47 @@ End ClosureMagma.
 
 Section ClosureSubsetMagma.
 
+  Section SubSets.
+
+    Context { M : Type }.
+    Implicit Types A B : M -> Type.
+
+    (* TODO try opacify through module and lemma for equivalence with definition
+         https://coq-club.inria.narkive.com/1zR1POOu/making-a-definition-really-opaque *)
+    Definition subset A B := forall x, A x -> B x.
+
+    Global Instance subset_refl : Reflexive subset := fun X a P => P.
+    Global Instance subset_trans : Transitive subset := fun X Y Z P Q a H => Q a (P a H).
+    Global Instance subset_preorder : PreOrder subset :=
+      { PreOrder_Reflexive := subset_refl; PreOrder_Transitive := subset_trans }.
+
+    Hint Resolve subset_refl subset_trans subset_preorder.
+
+    Definition eqset := eqrel subset.
+
+    Infix "⊆" := subset (at level 75, no associativity).
+    Notation sg := (@eq _ : _ -> _ -> Type).
+
+    Fact sg_subset A x : A x ≡ sg x ⊆ A.
+    Proof. split; intros; auto; intros ? []; trivial. Qed.
+
+  End SubSets.
+
+(*
+  Section FunSubsets.
+
+    Variable T V : Type.
+    Variable U : T -> Type.
+    Variable f : forall t : T, U t -> V.
+
+    Inductive power_fun A B : _ -> Type :=
+      In_power_fun : forall a b, A a -> B a b -> power_fun A B (@f a b).
+
+  End FunSubsets.
+*)
+
   Context { M : Type }.
   Implicit Types A B : M -> Type.
-
-  (* TODO try opacify through module and lemma for equivalence with definition
-       https://coq-club.inria.narkive.com/1zR1POOu/making-a-definition-really-opaque *)
-  Definition subset A B := forall x, A x -> B x.
-
-  Global Instance subset_refl : Reflexive subset := fun X a P => P.
-  Global Instance subset_trans : Transitive subset := fun X Y Z P Q a H => Q a (P a H).
-  Global Instance subset_preorder : PreOrder subset :=
-    { PreOrder_Reflexive := subset_refl; PreOrder_Transitive := subset_trans }.
-
-  Hint Resolve subset_refl subset_trans subset_preorder.
-
-  Definition eqset := eqrel subset.
 
   Infix "⊆" := subset (at level 75, no associativity).
   Infix "≃" := eqset (at level 75, no associativity).
@@ -858,10 +868,7 @@ Section ClosureSubsetMagma.
   Infix "∪" := (fun A B z => A z + B z : Type)%type (at level 51, right associativity).
   Notation sg := (@eq _ : _ -> _ -> Type).
 
-  Fact sg_subset A x : A x ≡ sg x ⊆ A.
-  Proof. split; intros; auto; intros ? []; trivial. Qed.
-
-  Context { CL : @ClosureOp _ subset }.
+  Context { CL : ClosureOp (@subset M) }.
   Notation closed := (fun x => cl x ⊆ x).
 
   (* Intersection and Union *)
@@ -913,8 +920,11 @@ Section ClosureSubsetMagma.
   Variable compose : M -> M -> M.
   Variable unit : M.
 
-  (* Composition lifted to subsets *)
-  Inductive composes A B : M -> Type :=
+
+(*
+  Definition composes := fun X Y => power_fun (fun _ => M) compose X (fun _ y => Y y).
+*)
+  Inductive composes A B : _ -> Type :=
     In_composes : forall a b, A a -> B b -> composes A B (compose a b).
 
   Infix "∘" := composes (at level 50, no associativity).
@@ -925,7 +935,7 @@ Section ClosureSubsetMagma.
   Global Instance composes_compat : Proper (eqset ==> eqset ==> eqset) composes.
   Proof. intros X1 Y1 [H1 H2] X2 Y2 [H3 H4]; split; apply composes_monotone; auto. Qed.
 
-  Lemma m_pwr_associativity : m_associativity compose -> m_associativity_rel composes eqset.
+  Lemma m_pwr_associativity : m_associativity compose -> m_associativity_rel composes (@eqset M).
   Proof.
   intros Hass x y z; split; intros a Ha.
   - inversion Ha; inversion X0.
@@ -936,7 +946,7 @@ Section ClosureSubsetMagma.
     repeat constructor; assumption.
   Qed.
 
-  Lemma m_pwr_neutrality_l : m_neutrality_l compose unit -> m_neutrality_l_rel composes (sg unit) eqset.
+  Lemma m_pwr_neutrality_l : m_neutrality_l compose unit -> m_neutrality_l_rel composes (sg unit) (@eqset M).
   Proof.
   intros Hc x; split; intros a Ha.
   - inversion Ha; subst.
@@ -945,7 +955,7 @@ Section ClosureSubsetMagma.
     constructor; auto.
   Qed.
 
-  Lemma m_pwr_neutrality_r : m_neutrality_r compose unit -> m_neutrality_r_rel composes (sg unit) eqset.
+  Lemma m_pwr_neutrality_r : m_neutrality_r compose unit -> m_neutrality_r_rel composes (sg unit) (@eqset M).
   Proof.
   intros Hc x; split; intros a Ha.
   - inversion Ha; subst.
@@ -1025,7 +1035,7 @@ Section ClosureSubsetMagma.
 
   (* Distributivity *)
   Infix "⊛" := (tensor composes) (at level 59).
-  Notation "1" := (@one _ _ CL (sg unit)).
+  Notation "1" := (one (sg unit)).
 
   Hypothesis cl_stable_l : cl_stability_l composes.
   Hypothesis cl_stable_r : cl_stability_r composes.
@@ -1100,13 +1110,14 @@ Section ClosureSubsetMagma.
 End ClosureSubsetMagma.
 
 
-Module SetNotations.
+Module SetNotations. (* ⊆ ≃ ∩ ∪ ∅ ﹛_﹜ *)
 
   Infix "⊆" := subset (at level 75, no associativity).
   Infix "≃" := eqset (at level 75, no associativity).
   Notation sg := (@eq _ : _ -> _ -> Type).
-  Infix "∩" := (fun A B z => A z * B z : Type)%type (at level 51, right associativity).
-  Infix "∪" := (fun A B z => A z + B z : Type)%type (at level 51, right associativity).
+  Notation "﹛ x ﹜" := (sg x).
+  Infix "∩" := (fun A B x => A x * B x : Type)%type (at level 51, right associativity).
+  Infix "∪" := (fun A B x => A x + B x : Type)%type (at level 51, right associativity).
   Notation "∅" := ((fun _ => False) : _ -> Type).
   Notation fullset := ((fun _  => True) : _ -> Type).
 

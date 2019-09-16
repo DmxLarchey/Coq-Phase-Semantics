@@ -5,7 +5,7 @@ Require Export orthogonality.
 
 Require Import ll_def.
 
-Import SetNotations.
+Import SetNotations. (* ⊆ ≃ ∩ ∪ ∅ ﹛_﹜ *)
 Notation "⁇ l" := (map wn l) (at level 53).
 
 
@@ -18,7 +18,7 @@ Section PhaseSpaces.
   Definition cps_orth {M} comp (P : M -> Type) := fun (x y : M) => P (comp x y).
 
   Class CPhaseSpace (bp : bool) (bm : nat -> bool) := {
-    CWeb : Type;
+    CWeb :> Type;
     CPScompose : CWeb -> CWeb -> CWeb;
     CPSunit : CWeb;
     CPSPole : CWeb -> Type;
@@ -52,10 +52,7 @@ Section PhaseSpaces.
     Variable mix_bool : nat -> bool.
     Variable PS : CPhaseSpace perm_bool mix_bool.
     Variable v : Atom -> CWeb -> Type.
-(*
-    Variable cov : Atom -> CWeb -> Type.
-*)
-    Instance CLPS : ClosureOp := bidualCL CPScommute.
+    Instance CLPS : ClosureOp _ := bidualCL CPScommute.
 
     Infix "∘" := (composes CPScompose) (at level 50, no associativity).
     Notation closed := (fun X => dual (dual X) ⊆ X).
@@ -82,7 +79,7 @@ Section PhaseSpaces.
     intros Hc.
     etransitivity; [ apply cl_is_bidual | ].
     transitivity (cl Y) ; [ | apply cl_is_bidual ].
-    apply cl_le; [ apply subset_preorder | assumption ].
+    apply cl_le; assumption.
     Qed.
 
     Lemma bidual_closed X Y : closed Y -> X ⊆ Y -> dual (dual X) ⊆ Y.
@@ -170,7 +167,7 @@ Section PhaseSpaces.
 
 
   Class CPhaseModel (P : pfrag) := {
-    CPMPS : CPhaseSpace (pperm P) (pmix P);
+    CPMPS :> CPhaseSpace (pperm P) (pmix P);
     CPMval : Atom -> CWeb -> Type;
 (*
     CPMcoval : Atom -> CWeb -> Type;
@@ -185,8 +182,7 @@ Section PhaseSpaces.
 
     Context { P : pfrag }.
     Variable PM : CPhaseModel P.
-    Instance PS : CPhaseSpace (pperm P) (pmix P) := CPMPS.
-    Instance CL : ClosureOp := bidualCL CPScommute.
+    Instance CL : ClosureOp _ := bidualCL CPScommute.
 
     Infix "∘" := (composes CPScompose) (at level 50, no associativity).
     Notation closed := (fun X => cl X ⊆ X).
@@ -195,7 +191,7 @@ Section PhaseSpaces.
 
     Hint Resolve subset_preorder glb_in glb_out_l glb_out_r top_greatest.
     Hint Resolve (@dual_is_closed _ _ CPScommute)
-                 (@cl_increase _ _ CL) (@CPSpole_closed _ _ PS)
+                 (@cl_increase _ _ CL) (@CPSpole_closed _ _ CPMPS)
                  CPScommute CPSassociative_l CPSassociative_r CPSneutral_1 CPSneutral_2.
 
     Lemma CPSassociative_l_l : rel_associativity_l_l CPSorth CPScompose (fun x y => CPScompose y x).
@@ -241,7 +237,7 @@ Section PhaseSpaces.
     Proof.
     intros HF Hc.
     etransitivity; [ | apply HF].
-    apply le_cl; [ apply subset_preorder | ].
+    apply le_cl.
     etransitivity; [ apply list_form_presem_app_1 | ].
     apply bidual_subset.
     etransitivity; [ eassumption | apply bidual_increase ].
@@ -267,7 +263,7 @@ Section PhaseSpaces.
     Proof.
     intros HF Hc.
     etransitivity; [ | apply HF].
-    apply le_cl; [ apply subset_preorder | ].
+    apply le_cl.
     etransitivity; [ apply list_form_presem_app_2 | ].
     apply bidual_subset.
     etransitivity; [ eassumption | apply bidual_increase ].

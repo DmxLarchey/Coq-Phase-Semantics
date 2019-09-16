@@ -18,7 +18,7 @@ Require Export closure_operators.
 
 Require Import ill_def.
 
-Import SetNotations. (* ⊆ ≃ ∩ ∪ ∅ *)
+Import SetNotations. (* ⊆ ≃ ∩ ∪ ∅ ﹛_﹜ *)
 
 Notation "x ~[ b ] y" := (PEperm_Type b x y) (at level 70, format "x  ~[ b ]  y").
 
@@ -28,27 +28,27 @@ Set Implicit Arguments.
 Section PhaseSpaces.
 
   Class MPhaseSpace (b : bool) := {
-    Web : Type;
+    Web :> Type;
     PScompose : Web -> Web -> Web;
     PSunit : Web;
     PS_associative : m_associativity PScompose;
     PS_neutral_l : m_neutrality_l PScompose PSunit;
     PS_neutral_r : m_neutrality_r PScompose PSunit;
-    PSCL : @ClosureOp _ (@subset Web);
-    PScl_stable_l : @cl_stability_l _ _ PSCL (composes PScompose);
-    PScl_stable_r : @cl_stability_r _ _ PSCL (composes PScompose);
+    PSCL :> ClosureOp subset;
+    PScl_stable_l : cl_stability_l (composes PScompose);
+    PScl_stable_r : cl_stability_r (composes PScompose);
     PSExp : Web -> Type;
-    PSsub_monoid_1 : @pwr_str_sub_monoid_hyp_1 _ PSunit PSExp;
+    PSsub_monoid_1 : pwr_str_sub_monoid_hyp_1 PSunit PSExp;
     PSsub_monoid_2 : @sub_monoid_hyp_2 _ subset (composes PScompose) PSExp;
-    PSsub_J : @pwr_sub_J_hyp _ PSCL PScompose PSunit PSExp;
+    PSsub_J : pwr_sub_J_hyp PScompose PSunit PSExp;
     PSsub_monoid_distr : @sub_monoid_distr_hyp _ subset (composes PScompose) glb PSExp;
-    PScl_commute : b = true -> @cl_commutativity _ _ PSCL (composes PScompose) }.
+    PScl_commute : b = true -> cl_commutativity (composes PScompose) }.
 
   Infix "∘" := (composes PScompose) (at level 51).
   Infix "⊸" := (magicwand_l PScompose) (at level 52, right associativity).
   Infix "⟜" := (magicwand_r PScompose) (at level 53, left associativity).
   Notation "♯" := (glb PSExp).
-  Notation "❗" := (@bang _ _ PSCL glb PSExp).
+  Notation "❢" := (bang glb PSExp).
 
 
   Section MonadicInterpretation.
@@ -65,7 +65,7 @@ Section PhaseSpaces.
     Proof. auto. Qed.
 
     Notation "l ⊧  x" := (list_compose l ⊆ x) (at level 70, no associativity).
-    Notation "□" := (@cl _ _ PSCL).
+    Notation "□" := cl.
 
     Hint Resolve (@subset_refl Web) (@subset_preorder Web).
     Hint Resolve (@composes_monotone _ PScompose).
@@ -83,11 +83,11 @@ Section PhaseSpaces.
     Fact list_compose_app l1 l2 : list_compose (l1 ++ l2) ≃ list_compose l1 ∘ list_compose l2.
     Proof.
     induction l1 as [ | f l IHl ]; simpl; split.
-    - apply (m_pwr_neutrality_l (@PS_neutral_l _ PS)).
-    - apply (m_pwr_neutrality_l (@PS_neutral_l _ PS)).
-    - etransitivity; [ | apply (m_pwr_associativity (@PS_associative _ PS)) ].
+    - apply m_pwr_neutrality_l, PS_neutral_l.
+    - apply m_pwr_neutrality_l, PS_neutral_l.
+    - etransitivity; [ | apply m_pwr_associativity, PS_associative ].
       destruct IHl; apply composes_monotone; auto.
-    - etransitivity; [ apply (m_pwr_associativity (@PS_associative _ PS)) | ].
+    - etransitivity; [ apply m_pwr_associativity, PS_associative | ].
       destruct IHl; apply composes_monotone; auto.
     Qed.
 
@@ -116,7 +116,7 @@ Section PhaseSpaces.
 
     Notation lcap := (@fold_right (Web -> Type) _ glb top).
 
-    Fact list_compose_bang l : □ (list_compose (map (fun x => ❗(□x)) l)) ≃ ❗ (lcap (map □ l)).
+    Fact list_compose_bang l : □ (list_compose (map (fun x => ❢(□x)) l)) ≃ ❢(lcap (map □ l)).
     Proof.
     eapply lcompose_store; eauto.
     apply sub_monoid_hyp_1_str, str_sub_monoid_1, PSsub_monoid_1; auto.
@@ -167,14 +167,12 @@ Section PhaseSpaces.
     Proof.
     intros H; specialize H with nil nil m; list_simpl in H.
     enough (eq x ⊆ □ m) as Hin by (apply Hin; reflexivity).
-    etransitivity; [ eapply (m_pwr_cl_neutrality_r_1 (@PS_neutral_r _ PS)) | ].
+    etransitivity; [ apply m_pwr_cl_neutrality_r_1, PS_neutral_r | ].
     apply cl_le; auto.
-    apply H.
-    apply (m_pwr_cl_neutrality_r_2 (@PS_neutral_r _ PS)).
     Qed.
 
     Fact sem_ax x : x :: nil ⊧ x.
-    Proof. apply (m_pwr_neutrality_r (@PS_neutral_r _ PS)). Qed.
+    Proof. apply m_pwr_neutrality_r, PS_neutral_r. Qed.
 
     Fact sem_cut Γ ϴ Δ x y : Γ ⊧ x -> Δ ++ x :: ϴ ⊧ y -> Δ ++ Γ ++ ϴ ⊧ y.
     Proof.
@@ -182,7 +180,7 @@ Section PhaseSpaces.
     change (x :: ϴ) with ((x :: nil) ++ ϴ) in H2.
     apply list_compose_monot_app with (x :: nil); auto; simpl.
     etransitivity; [ apply H1 | ]; auto.
-    apply (m_pwr_neutrality_r (@PS_neutral_r _ PS)).
+    apply m_pwr_neutrality_r, PS_neutral_r.
     Qed.
 
     Fact sem_tens_l Γ Δ x y z : Γ ++ x :: y :: Δ ⊧ z -> Γ ++ x ∘ y :: Δ ⊧ z.
@@ -190,7 +188,7 @@ Section PhaseSpaces.
     change (x::y::Δ) with ((x::y::nil)++Δ).
     change (x ∘ y :: Δ) with ((x ∘ y :: nil) ++ Δ).
     intros H; apply list_compose_monot_app with (x :: y :: nil); simpl; auto.
-    apply (m_pwr_associativity (@PS_associative _ PS)).
+    apply m_pwr_associativity, PS_associative.
     Qed.
 
     Fact sem_tens_r Γ Δ x y : Γ ⊧ x -> Δ ⊧ y -> Γ ++ Δ ⊧ x ∘ y.
@@ -224,7 +222,7 @@ Section PhaseSpaces.
     apply magicwand_l_adj_r; auto.
     etransitivity; [ apply sem_ax | ].
     apply (@magicwand_l_monotone _ _ _ (composes PScompose)); auto.
-    apply (m_pwr_neutrality_r (@PS_neutral_r _ PS)).
+    apply m_pwr_neutrality_r, PS_neutral_r.
     Qed.
 
     Fact sem_limp_r Γ x y : x :: Γ ⊧ y -> Γ ⊧ x ⊸ y.
@@ -238,7 +236,7 @@ Section PhaseSpaces.
     apply list_compose_monot_app with (y :: nil); auto; simpl.
     apply magicwand_r_adj_r; auto.
     apply (@magicwand_r_monotone _ _ _ (composes PScompose)); auto.
-    apply (m_pwr_neutrality_r (@PS_neutral_r _ PS)).
+    apply m_pwr_neutrality_r, PS_neutral_r.
     Qed.
 
     Fact sem_rimp_r Γ x y : Γ ++ x :: nil ⊧ y -> Γ ⊧ y ⟜ x.
@@ -248,7 +246,7 @@ Section PhaseSpaces.
     etransitivity; [ | apply H ].
     etransitivity; [ | apply list_compose_app ].
     apply composes_monotone; auto.
-    apply (m_pwr_neutrality_r (@PS_neutral_r _ PS)).
+    apply m_pwr_neutrality_r, PS_neutral_r.
     Qed.
 
     Fact sem_with_l1 Γ Δ x y z : Γ ++ x :: Δ ⊧ z -> Γ ++ x ∩ y :: Δ ⊧ z.
@@ -300,7 +298,7 @@ Section PhaseSpaces.
     apply sem_tens_l, sem_monad_l in H.
     change (□(x ∘ y) :: Δ) with ((□(x ∘ y) :: nil) ++ Δ) in H.
     apply list_compose_monot_app with ((□(x ∘ y) :: nil)); auto; simpl.
-    etransitivity; [ apply (m_pwr_associativity (@PS_associative _ PS)) | ].
+    etransitivity; [ apply m_pwr_associativity, PS_associative | ].
     apply composes_monotone; auto.
     apply PScl_commute; auto.
     Qed.
@@ -335,7 +333,7 @@ Section PhaseSpaces.
     Fact sem_prebang_l Γ Δ x y : Γ ++ x :: Δ ⊧ y -> Γ ++ ♯x :: Δ ⊧ y.
     Proof. intros ?; apply list_compose_monot_cons with x; auto. Qed.
 
-    Fact sem_prebang_r Γ x : map (fun z => ♯z) Γ ⊧ x -> map (fun z => ♯z) Γ ⊧ ♯x.
+    Fact sem_prebang_r Γ x : map ♯ Γ ⊧ x -> map ♯ Γ ⊧ ♯x.
     Proof.
     intros H.
     etransitivity; [ apply (@lcompose_pre_store _ _ subset_preorder) | ]; auto.
@@ -366,9 +364,9 @@ Section PhaseSpaces.
     apply sem_tens_l, sem_monad_l in H.
     change (□(♯x ∘ ♯y) :: Δ) with ((□(♯x ∘ ♯y) :: nil) ++ Δ) in H.
     apply list_compose_monot_app with ((□(♯x ∘ ♯y) :: nil)); auto; simpl.
-    etransitivity; [ apply (m_pwr_associativity (@PS_associative _ PS)) | ].
+    etransitivity; [ apply m_pwr_associativity, PS_associative | ].
     apply composes_monotone; auto.
-    eapply pre_store_commute; auto.
+    apply pre_store_commute with (unit := sg PSunit); auto.
     Qed.
 
     Fact sem_prebang_perm Γ Δ ϴ ϴ' x : Permutation_Type ϴ ϴ' ->
@@ -388,15 +386,15 @@ Section PhaseSpaces.
   (* Interpretation of Linear Logic *)
 
   Notation "£" := ivar.
-  Notation "⟙" := (itop).
-  Notation "0" := (izero).
-  Notation 𝝐 := (ione).
-  Infix "﹠" := (iwith) (at level 50).
-  Infix "⊗" := (itens) (at level 50).
-  Infix "⊕" := (iplus) (at level 50).
-  Infix "-o" := (ilmap) (at level 52, right associativity).
+  Notation "⟙" := itop.
+  Notation "0" := izero.
+  Notation 𝝐 := ione.
+  Infix "﹠" := iwith (at level 50).
+  Infix "⊗" := itens (at level 50).
+  Infix "⊕" := iplus (at level 50).
+  Infix "-o" := ilmap (at level 52, right associativity).
   Notation "x o- y" := (ilpam y x) (at level 53, left associativity).
-  Notation "! x" := (ioc x) (at level 53).
+  Notation "!" := ioc (at level 53).
 
 
   Section FormulaInterpretation.
@@ -404,7 +402,7 @@ Section PhaseSpaces.
     Variable perm_bool : bool.
     Variable PS : MPhaseSpace perm_bool.
     Variable v : IAtom -> Web -> Type.
-    Notation "□" := (@cl _ _ PSCL).
+    Notation "□" := cl.
 
     Reserved Notation "⟦ A ⟧".
     Fixpoint form_presem f :=
@@ -429,29 +427,24 @@ Section PhaseSpaces.
   End FormulaInterpretation.
 
   Class MPhaseModel (P : ipfrag) := {
-    PMPS : MPhaseSpace (ipperm P);
+    PMPS :> MPhaseSpace (ipperm P);
     PMval : IAtom -> Web -> Type;
     PMgax : forall a, list_form_presem PMPS PMval (fst (projT2 (ipgax P) a))
-                    ⊆ @cl _ _ PSCL (form_presem PMPS PMval (snd (projT2 (ipgax P) a))) }.
+                    ⊆ cl (form_presem PMPS PMval (snd (projT2 (ipgax P) a))) }.
 
   Context { P : ipfrag }.
   Variable PM : MPhaseModel P.
 
   Infix "∘" := (composes PScompose) (at level 51).
-  Notation "l ⊧  x" := (@list_compose _ PMPS l ⊆ x) (at level 70, no associativity).
-  Notation "□" := (@cl _ _ PSCL).
-  Notation Int := (@form_presem _ PMPS PMval).
+  Notation "l ⊧  x" := (list_compose PMPS l ⊆ x) (at level 70, no associativity).
+  Notation "□" := cl.
+  Notation Int := (form_presem PMPS PMval).
   Notation "l ⊢ x" := (ill P l x) (at level 70, no associativity).
 
-  Hint Resolve  magicwand_l_adj_l magicwand_l_adj_r magicwand_r_adj_l magicwand_r_adj_r.
-  Hint Resolve (@sem_monad_l _ PMPS).
-  Hint Resolve (@sem_ax _ PMPS)
-               (@sem_one_r _ PMPS) (@sem_one_l _ PMPS) (@sem_tens_r _ PMPS) (@sem_tens_l _ PMPS)
-               (@sem_rimp_r _ PMPS) (@sem_rimp_l _ PMPS) (@sem_limp_r _ PMPS) (@sem_limp_l _ PMPS)
-               (@sem_with_r _ PMPS) (@sem_with_l1 _ PMPS) (@sem_with_l2 _ PMPS)
-               (@sem_plus_l _ PMPS) (@sem_zero_l _ PMPS)
-               (@sem_prebang_r _ PMPS) (@sem_prebang_l _ PMPS)
-               (@sem_prebang_weak _ PMPS) (@sem_prebang_cntr _ PMPS).
+  Hint Resolve sem_monad_l sem_ax sem_one_r sem_one_l sem_tens_r sem_tens_l
+               sem_rimp_r sem_rimp_l sem_limp_r sem_limp_l
+               sem_with_r sem_with_l1 sem_with_l2 sem_plus_l sem_zero_l
+               sem_prebang_r sem_prebang_l sem_prebang_weak sem_prebang_cntr.
 
   Lemma int_ioc_list l : map Int (map ioc l) = map (fun z => ♯(□z)) (map Int l).
   Proof. induction l; auto; simpl; rewrite IHl; auto. Qed.
@@ -462,7 +455,7 @@ Section PhaseSpaces.
     (try rewrite ? map_app);
     (try rewrite ? map_app in IHpi); (try rewrite ? map_app in IHpi1); (try rewrite ? map_app in IHpi2);
     (try rewrite int_ioc_list); (try rewrite int_ioc_list in IHpi);
-    (try now (apply (@sem_monad_r _ PMPS); simpl; auto));
+    (try now (apply sem_monad_r; simpl; auto));
     (try now (simpl; auto)).
   - apply sem_monad_r, sem_ax.
   - assert ({ipperm P = true} + {ipperm P = false}) as Hbool

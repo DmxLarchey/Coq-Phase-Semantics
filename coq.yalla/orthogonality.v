@@ -2,14 +2,15 @@ Require Import List CMorphisms.
 
 Require Import closure_operators.
 
-Import SetNotations.
+
+Import SetNotations. (* ⊆ ≃ ∩ ∪ ∅ ﹛_﹜ *)
 
 Set Implicit Arguments.
 
 
 Section SetOrthogonality.
 
-  Context {A B : Type}.
+  Context { A B : Type }.
 
   Variable R : A -> B -> Type.
 
@@ -88,10 +89,10 @@ Section SetOrthogonality.
   Lemma rclosed_is_rdual Y : rclosed Y -> { X & Y ≃ rdual X }.
   Proof. intros Heq; exists (ldual Y); split; auto. Qed.
 
-  Instance lclosure : @ClosureOp _ (@subset A).
+  Instance lclosure : ClosureOp (@subset A).
   Proof. split with lbidual; auto. Defined.
 
-  Instance rclosure : @ClosureOp _ (@subset B).
+  Instance rclosure : ClosureOp (@subset B).
   Proof. split with rbidual; auto. Defined.
 
 End SetOrthogonality.
@@ -129,7 +130,7 @@ Section MonicSetOrthogonality.
 
   Hint Resolve tridual_eq.
 
-  Instance bidualCL : @ClosureOp _ (@subset A).
+  Instance bidualCL : ClosureOp (@subset A).
   Proof. split with bidual; auto. Defined.
 
   Notation closed := (fun X => cl X ⊆ X).
@@ -151,7 +152,7 @@ End MonicSetOrthogonality.
 
 
 Section MagmaOrthogonality.
-  Context {A B : Type}.
+  Context { A B : Type }.
 
   Variable R : A -> B -> Type.
   Variable compose : A -> A -> A.
@@ -160,11 +161,11 @@ Section MagmaOrthogonality.
   Infix "•" := compose (at level 45, no associativity).
   Notation "𝟏" := unit.
   Infix "∘" := (composes compose) (at level 50, no associativity).
-  Notation lbidual := (fun X => @ldual _ _ R (@rdual _ _ R X)).
+  Notation lbidual := (fun X => ldual R (rdual R X)).
 
   Hint Resolve lmonot rmonot lbimonot.
 
-  Instance lbidualCL : ClosureOp := (@lclosure _ _ R).
+  Instance lbidualCL : ClosureOp (@subset A) := lclosure R.
 
   Notation closed := (fun X => cl X ⊆ X).
   Infix "⊛" := (fun x y => tensor compose y x) (at level 59).
@@ -219,7 +220,7 @@ Section MagmaOrthogonality.
   intros X Y _ [x y Hx Hy].
   intros a Ha.
   apply rel_associative_r_l.
-  revert x Hx; apply (rtridual_eq _ X) ; intros x Hx.
+  revert x Hx; apply (rtridual_eq _ X); intros x Hx.
   apply rel_associative_r_r.
   apply Ha.
   constructor; assumption.
@@ -302,7 +303,7 @@ End MagmaOrthogonality.
 
 Section MonicMagmaOrthogonality.
 
-  Context {M : Type}.
+  Context { M : Type }.
 
   Variable compose : M -> M -> M.
   Variable unit : M.
@@ -403,7 +404,7 @@ Section MonicMagmaOrthogonality.
   Lemma pl_rel_neutrality_r_2 : rel_neutrality_r_2 R compose unit.
   Proof. intros x y H; apply pl_rel_associative_l_l, pl_neutral_2, rel_commute; assumption. Qed.
 
-  Instance mbidualCL : @ClosureOp _ (@subset M) := bidualCL rel_commute.
+  Instance mbidualCL : ClosureOp (@subset M) := bidualCL rel_commute.
 
   Lemma mlbidualcl X : cl X ≃ @cl _ _ (lbidualCL R) X.
   Proof. unfold cl, mbidualCL, bidualCL, lbidualCL, lclosure; apply ldual_eq, lrdual; assumption. Qed.
@@ -505,7 +506,7 @@ Section MonicMagmaOrthogonality.
   Lemma tensor_commute_pole X Y : X ⊛ Y ⊆ Pole -> Y ⊛ X ⊆ Pole.
   Proof.
   intros Hp.
-  apply cl_closed; [ | apply pole_closed | ]; auto.
+  apply cl_closed; [ apply pole_closed | ]; auto.
   apply pole_commute.
   etransitivity; [ | apply pole_closed ].
   apply le_cl; auto.
@@ -535,12 +536,9 @@ Section MonicMagmaOrthogonality.
 
   Variable K : M -> Type.
 
-  Notation "❗ A" := (bang glb K A) (at level 40, no associativity).
-
   Definition whynot X := dual (glb K (dual X)).
-  Notation "❓ A" := (whynot A) (at level 40, no associativity).
 
-  Lemma bang_as_whynot X : closed X -> ❗X ≃ dual (❓ dual X).
+  Lemma bang_as_whynot X : closed X -> bang glb K X ≃ dual (whynot (dual X)).
   Proof.
   split.
   - apply lmonot ; apply lmonot.

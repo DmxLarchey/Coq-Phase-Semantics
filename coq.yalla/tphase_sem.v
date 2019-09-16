@@ -18,7 +18,7 @@ Require Export closure_operators.
 
 Require Import tl_def.
 
-Import SetNotations.
+Import SetNotations. (* ⊆ ≃ ∩ ∪ ∅ ﹛_﹜ *)
 
 Notation " x '~[' b ']' y " := (PEperm_Type b x y) (at level 70, format "x  ~[ b ]  y").
 
@@ -38,10 +38,10 @@ Set Implicit Arguments.
 Section Phase_Spaces.
 
   Class PhaseSpace (b : bool) := {
-    Web : Type;
+    Web :> Type;
     PScompose : Web -> Web -> Web;
     PSunit : Web;
-    PSCL : @ClosureOp _ (@subset Web);
+    PSCL :> ClosureOp subset;
     PSExp : Web -> Type;
     PScl_stable_l : @cl_stability_l _ _ PSCL (composes PScompose);
     PScl_stable_r : @cl_stability_r _ _ PSCL (composes PScompose);
@@ -97,7 +97,7 @@ Section Phase_Spaces.
   End Formula_Interpretation.
 
   Class PhaseModel (P : tpfrag) := {
-    PMPS : PhaseSpace (tpperm P);
+    PMPS :> PhaseSpace (tpperm P);
     PMval : TAtom -> Web -> Type;
     PMpole : Web -> Type;
     PMgax : forall a, match (snd (projT2 (tpgax P) a)) with 
@@ -109,15 +109,13 @@ Section Phase_Spaces.
 
   Context { P : tpfrag }.
   Variable PM : PhaseModel P.
-  Instance PS : PhaseSpace (tpperm P) := PMPS.
-  Instance CL : ClosureOp := PSCL.
 
-  Hint Resolve (@cl_idempotent _ _ CL).
-  Hint Resolve (@PScl_stable_l _ PS) (@PScl_stable_r _ PS)
-               (@PScl_associative_l _ PS) (@PScl_associative_r _ PS)
-               (@PScl_neutral_l_1 _ PS) (@PScl_neutral_l_2 _ PS)
-               (@PScl_neutral_r_1 _ PS) (@PScl_neutral_r_2 _ PS)
-               (@PSsub_monoid_1 _ PS) (@PSsub_monoid_2 _ PS) (@PSsub_J _ PS).
+  Hint Resolve (@cl_idempotent _ _ PSCL).
+  Hint Resolve (@PScl_stable_l _ PMPS) (@PScl_stable_r _ PMPS)
+               (@PScl_associative_l _ PMPS) (@PScl_associative_r _ PMPS)
+               (@PScl_neutral_l_1 _ PMPS) (@PScl_neutral_l_2 _ PMPS)
+               (@PScl_neutral_r_1 _ PMPS) (@PScl_neutral_r_2 _ PMPS)
+               (@PSsub_monoid_1 _ PMPS) (@PSsub_monoid_2 _ PMPS) (@PSsub_J _ PMPS).
   Hint Resolve (@composes_monotone _ PScompose).
   Hint Resolve (@subset_preorder Web).
   Hint Resolve  magicwand_l_adj_l magicwand_l_adj_r.
@@ -187,7 +185,7 @@ Section Phase_Spaces.
   transitivity (⟬߭ l ⟭ ∘ cl (⟬߭ m ⟭ ∘ ⟬߭  n ⟭)).
   - apply composes_monotone; try reflexivity.
     apply le_cl; auto; apply list_form_presem_app_1.
-  - eapply cl_closed in Hc; auto; [ | apply HF ].
+  - eapply cl_closed in Hc; auto.
     etransitivity; [ | apply Hc ].
     etransitivity; [ | apply PScl_stable_r ].
     apply composes_monotone; try reflexivity.
