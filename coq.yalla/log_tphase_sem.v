@@ -29,9 +29,8 @@ Section TPhaseModels.
 
   Infix "∘" := (composes PScompose) (at level 51, right associativity).
   Infix "⊸" := (magicwand_l PScompose) (at level 52, right associativity).
-  Notation "♯ x" := (glb PSExp x) (at level 40, no associativity).
-  Notation "❗ " := (@bang _ _ PSCL glb PSExp) (at level 40, no associativity).
-  Notation "□" := (@cl _ _ PSCL).
+  Notation "♯" := (glb PSExp) (at level 40, no associativity).
+  Notation "□" := cl.
 
   Notation "£" := tvar.
   Notation "0" := tzero.
@@ -39,7 +38,7 @@ Section TPhaseModels.
   Infix "⊗" := ttens (at level 50).
   Infix "⊕" := tplus (at level 50).
   Notation "¬" := tneg.
-  Notation "! x" := (toc x) (at level 54).
+  Notation "!" := toc (at level 54).
   Definition tl_lbang := map toc.
   Notation "‼ x" := (tl_lbang x) (at level 54).
 
@@ -58,41 +57,34 @@ Section TPhaseModels.
       | ¬ a => ⟦a⟧ ⊸ □(v None)
       | a ⊗ b  => ⟦a⟧ ∘ ⟦b⟧
       | a ⊕ b  => ⟦a⟧ ∪ ⟦b⟧
-      | !a     => ♯□(⟦a⟧)
+      | !a     => ♯(□(⟦a⟧))
       end
     where "⟦ a ⟧" := (tform_presem a).
 
-    Definition list_tform_presem l := fold_right (composes PScompose) (sg PSunit) (map tform_presem l).
+    Definition list_tform_presem l := list_compose PS (map tform_presem l).
 
   End Formula_Interpretation.
 
   Class TPhaseModel (P : tpfrag) := {
-    PMPS : MPhaseSpace (tpperm P);
+    PMPS :> MPhaseSpace (tpperm P);
     PMval : option TAtom -> Web -> Type;
-    PMgax : forall a, match (snd (projT2 (tpgax P) a)) with 
-                      | Some A => list_tform_presem PMPS PMval (fst (projT2 (tpgax P) a))
-                                  ⊆ @cl _ _ PSCL (tform_presem PMPS PMval A)
-                      | None   => list_tform_presem PMPS PMval (fst (projT2 (tpgax P) a))
-                                  ⊆ @cl _ _ PSCL (PMval None)
-                      end }.
+    PMgax : forall a, list_tform_presem PMPS PMval (fst (projT2 (tpgax P) a)) ⊆
+                        match snd (projT2 (tpgax P) a) with 
+                        | Some A => cl(tform_presem PMPS PMval A)
+                        | None   => cl(PMval None)
+                        end }.
 
   Context { P : tpfrag }.
   Variable PM : TPhaseModel P.
 
-  Notation "l ⊧  x" := (@list_compose _ PMPS l ⊆ x) (at level 70, no associativity).
-  Notation "□" := (@cl _ _ PSCL).
-  Notation Int := (@tform_presem _ PMPS PMval).
+  Notation "l ⊧  x" := (list_compose PMPS l ⊆ x) (at level 70, no associativity).
+  Notation Int := (tform_presem PMPS PMval).
   Notation "l ⊢ x" := (tl P l x) (at level 70, no associativity).
 
-  Hint Resolve  magicwand_l_adj_l magicwand_l_adj_r.
-  Hint Resolve (@sem_monad_l _ PMPS).
-  Hint Resolve (@sem_ax _ PMPS)
-               (@sem_one_r _ PMPS) (@sem_one_l _ PMPS) (@sem_tens_r _ PMPS) (@sem_tens_l _ PMPS)
-               (@sem_rimp_r _ PMPS) (@sem_rimp_l _ PMPS) (@sem_limp_r _ PMPS) (@sem_limp_l _ PMPS)
-               (@sem_with_r _ PMPS) (@sem_with_l1 _ PMPS) (@sem_with_l2 _ PMPS)
-               (@sem_plus_l _ PMPS) (@sem_zero_l _ PMPS)
-               (@sem_prebang_r _ PMPS) (@sem_prebang_l _ PMPS)
-               (@sem_prebang_weak _ PMPS) (@sem_prebang_cntr _ PMPS).
+  Hint Resolve sem_monad_l sem_ax sem_one_r sem_one_l sem_tens_r sem_tens_l
+               sem_rimp_r sem_rimp_l sem_limp_r sem_limp_l
+               sem_with_r sem_with_l1 sem_with_l2 sem_plus_l sem_zero_l
+               sem_prebang_r sem_prebang_l sem_prebang_weak sem_prebang_cntr.
 
   Notation option_apply := (fun (A B : Type) (f:A->B) dflt x =>
   match x with
@@ -109,7 +101,7 @@ Section TPhaseModels.
     (try rewrite ? map_app);
     (try rewrite ? map_app in IHpi); (try rewrite ? map_app in IHpi1); (try rewrite ? map_app in IHpi2);
     (try rewrite int_toc_list); (try rewrite int_toc_list in IHpi);
-    (try now (apply (@sem_monad_r _ PMPS); simpl; auto));
+    (try now (apply sem_monad_r; simpl; auto));
     (try now (simpl; auto)).
   - apply sem_monad_r, sem_ax.
   - assert ({tpperm P = true} + {tpperm P = false}) as Hbool
@@ -119,7 +111,7 @@ Section TPhaseModels.
       apply Permutation_Type_map; assumption.
     + rewrite <- p; auto.
   - rewrite map_map; rewrite map_map in IHpi; simpl.
-    replace (map (fun x => ♯□(Int x)) lw')
+    replace (map (fun x => ♯(□(Int x))) lw')
        with (map (fun t => ♯t) (map (fun x => (□(Int x))) lw'))
       by (rewrite map_map; reflexivity).
     apply sem_prebang_perm with (map (fun x => (□(Int x))) lw); [ | rewrite ? map_map]; auto.

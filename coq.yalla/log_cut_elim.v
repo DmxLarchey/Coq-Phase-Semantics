@@ -16,7 +16,7 @@ Require Import List_more List_Type_more Permutation_Type genperm_Type.
 Require Import orthogonality log_phase_sem.
 
 Require Import ill_def.
-Import SetNotations. (* ⊆ ≃ ∩ ∪ ∅ *)
+Import SetNotations. (* ⊆ ≃ ∩ ∪ ∅ ﹛_﹜ *)
 Definition ill_lbang := map ioc.
 Notation "‼ x" := (ill_lbang x) (at level 55).
 
@@ -61,13 +61,12 @@ Section SyntacticModel.
   Definition ctx_orth : list iformula -> ctx_hole -> Type :=
     fun ϴ H => match H with (Γ,Δ,A) => Γ ++ ϴ ++ Δ ⊢ A [P] end.
 
-  Instance CL_ctx : ClosureOp := (@lclosure _ _ ctx_orth).
-  Notation cl_ctx := (@cl _ _ CL_ctx).
+  Instance CL_ctx : ClosureOp _ := lclosure ctx_orth.
 
   Lemma cl_ctx_to_logic ϴ ϴ' : cl (sg ϴ') ϴ -> forall Γ Δ A,
     Γ ++ ϴ' ++ Δ ⊢ A [P] -> Γ ++ ϴ ++ Δ ⊢ A [P].
   Proof.
-  unfold cl_ctx, CL_ctx, lclosure, ctx_orth, ldual, rdual.
+  unfold cl, CL_ctx, lclosure, ctx_orth, ldual, rdual.
   intros Hcl Γ Δ A pi.
   specialize Hcl with (Γ,Δ,A); apply Hcl.
   intros x Hx; subst; assumption.
@@ -76,7 +75,7 @@ Section SyntacticModel.
   Lemma logic_to_cl_ctx ϴ ϴ' : (forall Γ Δ A, Γ ++ ϴ' ++ Δ ⊢ A [P] -> Γ ++ ϴ ++ Δ ⊢ A [P]) ->
     cl (sg ϴ') ϴ.
   Proof.
-  unfold cl_ctx, CL_ctx, lclosure, ctx_orth, ldual, rdual.
+  unfold cl, CL_ctx, lclosure, ctx_orth, ldual, rdual.
   intros Hlog [[Γ Δ] A] Hcl.
   apply Hlog, Hcl; reflexivity.
   Qed.
@@ -93,11 +92,11 @@ Section SyntacticModel.
   Lemma rel_associative_r_r : rel_associativity_r_r ctx_orth ctx_compose ctx_adj_l.
   Proof. intros X Y [[X1 Y1] A]; unfold ctx_orth; rewrite <- app_assoc; auto. Qed.
 
-  Fact cl_comm : ipperm P = true -> @cl_commutativity _ _ CL_ctx (composes ctx_compose).
+  Fact cl_comm : ipperm P = true -> cl_commutativity (composes ctx_compose).
   Proof.
   intros Hb Γ Δ ga H.
   inversion H; subst.
-  unfold cl_ctx; simpl; unfold ldual, rdual, ctx_orth; intros [[ga de] A] H1.
+  unfold cl; simpl; unfold ldual, rdual, ctx_orth; intros [[ga de] A] H1.
   specialize H1 with (b ++ a).
   eapply P_perm; [ | apply H1; constructor; assumption ].
   rewrite Hb; simpl.
@@ -118,10 +117,10 @@ Section SyntacticModel.
   unfold ill_lbang; rewrite map_app; reflexivity.
   Qed.
 
-  Notation J := (fun Γ => cl_ctx (sg nil) Γ * cl_ctx (sg Γ ∘ sg Γ) Γ)%type.
+  Notation J := (fun Γ => cl (sg nil) Γ * cl (sg Γ ∘ sg Γ) Γ)%type.
   Local Fact sub_J : K ⊆ J.
   Proof.
-  intros ga H; inversion H; subst; split; unfold cl_ctx; simpl; unfold ldual, rdual, ctx_orth;
+  intros ga H; inversion H; subst; split; unfold cl; simpl; unfold ldual, rdual, ctx_orth;
     intros [[de1 de2] A] H1.
   - apply P_weak.
     specialize H1 with ctx_unit; simpl in H1.
@@ -160,16 +159,20 @@ Section SyntacticModel.
 
   Notation "↓" := (fun A Γ => Γ ⊢ A [P]).
 
-  Fact dc_closed A : cl(↓A) ⊆ ↓A.
+  Fact dc_is_ldual A : ↓A ≃ ldual ctx_orth (sg(nil,nil,A)).
   Proof.
-  intros ga Hga; simpl in Hga; unfold ldual, rdual, ctx_orth in Hga.
-  specialize Hga with (nil,nil,A).
-  replace ga with (nil++ga++nil) by (list_simpl; reflexivity).
-  apply Hga.
-  intro; rewrite app_nil_r; auto.
+  split.
+  - intros ϴ pi [[Γ Δ] C] Heq; inversion Heq; subst.
+    list_simpl; assumption.
+  - intros ϴ H.
+    replace ϴ with (nil++ϴ++nil) by (list_simpl; reflexivity).
+    unfold ldual in H; specialize H with (nil,nil,A); now apply H.
   Qed.
 
-  Fact closure_sg_in_dc A : cl_ctx (sg (A :: nil)) ⊆ ↓A.
+  Fact dc_closed A : cl(↓A) ⊆ ↓A.
+  Proof. eapply ldual_eq_is_lclosed, dc_is_ldual. Qed.
+
+  Fact closure_sg_in_dc A : cl(sg (A :: nil)) ⊆ ↓A.
   (* the converse ↓A ⊆ cl_ctx (sg (A :: nil)) is exactly cut *)
   Proof. etransitivity; [ apply cl_monotone | apply dc_closed ]; apply sg_subset, ax_exp_ill. Qed.
 
@@ -242,8 +245,8 @@ Section SyntacticModel.
   Notation v := PMval.
   Notation "⟦ A ⟧" := (form_presem PS_ctx (ILLval P) A).
   Notation "⟬߭ Γ ⟭" := (list_form_presem PS_ctx (ILLval P) Γ).
-  Notation "□" := (@cl _ _ PSCL).
-  Notation "l ⊧  x" := (@list_compose _ PMPS l ⊆ x) (at level 70, no associativity).
+  Notation "□" := cl.
+  Notation "l ⊧  x" := (list_compose PMPS l ⊆ x) (at level 70, no associativity).
 
   Hint Resolve (@PScl_stable_l _ PMPS) (@PScl_stable_r _ PMPS)
                magicwand_l_adj_l magicwand_l_adj_r magicwand_r_adj_l magicwand_r_adj_r.
@@ -258,7 +261,7 @@ Section SyntacticModel.
   Proof.
   intros H Γ Δ A.
   apply cl_ctx_to_logic.
-  apply (@list_compose_cons_sg_to_sem _ PMPS) in H; assumption.
+  apply list_compose_cons_sg_to_sem in H; assumption.
   Qed.
 
 
@@ -288,9 +291,7 @@ Section SyntacticModel.
       try (destruct IHA as [IHA01 IHA02]);
       try (destruct IHA1 as [IHA11 IHA12]);
       try (destruct IHA2 as [IHA21 IHA22]);
-     (split; [ |
-      try (try (apply ILLcl_closed; auto);
-           intros x Hx; inversion Hx; subst; constructor; auto; fail)]).
+     (split; [ | try (intros x Hx; inversion Hx; subst; constructor; auto; fail)]).
     - etransitivity; [ apply Okada_var_1 | apply ILLcl_increase ].
     - apply Okada_var_2.
     - apply sg_subset, logic_to_cl_ctx, one_ilr.
@@ -311,7 +312,7 @@ Section SyntacticModel.
     - etransitivity; [ eapply (@cl_magicwand_r_3 _ _ _ CL_ctx) | ]; eauto.
       transitivity (↓A2 ⟜ sg(A1::nil)).
       + assert (Hmon := (@magicwand_r_monotone _ _ _ _ (@composes_monotone _ PScompose))); apply Hmon; auto.
-        apply ILLcl_closed; auto.
+        apply cl_closed; auto.
       + intros G HG; apply lpam_irr, HG; constructor; reflexivity.
     - transitivity (cl(sg(N::nil)) ⟜ ↓A).
       + apply sg_subset.
@@ -421,8 +422,7 @@ Section cut_admissibility.
     assert (HO := snd (Okada_formula HgaxN_cf Hgax_at_l_cf Hgax_at_r_cf Hgax_cut_cf A)).
     apply (@cl_closed _ _ _ PSCL) in HO; [ | apply dc_closed ].
     apply cl_le in pi.
-    apply HO, pi, Okada_ctx; auto.
-    apply subset_preorder.
+    apply HO, pi, Okada_ctx; assumption.
   Qed.
 
 End cut_admissibility.

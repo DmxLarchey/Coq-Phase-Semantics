@@ -59,7 +59,7 @@ Section SyntacticModel.
   Definition ctx_orth : list iformula -> ctx_hole -> Type :=
     fun ϴ H => match H with (Γ,Δ,A) => Γ ++ ϴ ++ Δ ⊢ A [P] end.
 
-  Instance CL_ctx : ClosureOp := (@lclosure _ _ ctx_orth).
+  Instance CL_ctx : ClosureOp _ := (@lclosure _ _ ctx_orth).
   Notation cl_ctx := (@cl _ _ CL_ctx).
 
   Lemma rel_associative_l_l : rel_associativity_l_l ctx_orth ctx_compose adj_r.
@@ -418,7 +418,6 @@ Section cut_admissibility.
     apply (@cl_closed _ _ _ PSCL) in HO; [ | apply dc_closed ].
     apply cl_le in pi.
     apply HO, pi, Okada_ctx; auto.
-    apply subset_preorder.
   Qed.
 
 End cut_admissibility.

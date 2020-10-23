@@ -18,7 +18,7 @@ Require Export closure_operators.
 
 Require Import ill_def.
 
-Import SetNotations.
+Import SetNotations. (* ⊆ ≃ ∩ ∪ ∅ ﹛_﹜ *)
 
 
 Notation " x '~[' b ']' y " := (PEperm_Type b x y) (at level 70, format "x  ~[ b ]  y").
@@ -45,10 +45,10 @@ Set Implicit Arguments.
 Section Phase_Spaces.
 
   Class PhaseSpace (b : bool) := {
-    Web : Type;
+    Web :> Type;
     PScompose : Web -> Web -> Web;
     PSunit : Web;
-    PSCL : @ClosureOp _ (@subset Web);
+    PSCL :> ClosureOp subset;
     PSExp : Web -> Type;
     PScl_stable_l : @cl_stability_l _ _ PSCL (composes PScompose);
     PScl_stable_r : @cl_stability_r _ _ PSCL (composes PScompose);
@@ -71,14 +71,13 @@ Section Phase_Spaces.
   Infix "⊛" := (tensor (composes PScompose)) (at level 59).
   Infix "⊓" := glb (at level 50, no associativity).
   Infix "⊔" := lub (at level 50, no associativity).
-  Notation "❗ A" := (bang glb PSExp A) (at level 40, no associativity).
+  Notation "❢" := (bang glb PSExp) (at level 40, no associativity).
 
   Section Formula_Interpretation.
 
     Variable perm_bool : bool.
     Variable PS : PhaseSpace perm_bool.
     Variable v : IAtom -> Web -> Type.
-    Instance CL0 : ClosureOp := PSCL.
 
     Reserved Notation "⟦ A ⟧" (at level 49).
     Fixpoint form_presem f :=
@@ -94,7 +93,7 @@ Section Phase_Spaces.
       | a ⊗ b  => ⟦a⟧ ∘ ⟦b⟧
       | a ⊕ b  => ⟦a⟧ ∪ ⟦b⟧
       | a & b  => cl(⟦a⟧) ∩ cl(⟦b⟧)
-      | !a     => ❗cl(⟦a⟧)
+      | !a     => ❢(cl(⟦a⟧))
       end
     where "⟦ a ⟧" := (form_presem a).
 
@@ -110,22 +109,20 @@ Section Phase_Spaces.
   End Formula_Interpretation.
 
   Class PhaseModel (P : ipfrag) := {
-    PMPS : PhaseSpace (ipperm P);
+    PMPS :> PhaseSpace (ipperm P);
     PMval : IAtom -> Web -> Type;
     PMgax : forall a, list_form_presem PMPS PMval (fst (projT2 (ipgax P) a))
-                    ⊆ @cl _ _ PSCL (form_presem PMPS PMval (snd (projT2 (ipgax P) a))) }.
+                    ⊆ cl (form_presem PMPS PMval (snd (projT2 (ipgax P) a))) }.
 
   Context { P : ipfrag }.
   Variable PM : PhaseModel P.
-  Instance PS : PhaseSpace (ipperm P) := PMPS.
-  Instance CL : ClosureOp := PSCL.
 
-  Hint Resolve (@cl_idempotent _ _ CL).
-  Hint Resolve (@PScl_stable_l _ PS) (@PScl_stable_r _ PS)
-               (@PScl_associative_l _ PS) (@PScl_associative_r _ PS)
-               (@PScl_neutral_l_1 _ PS) (@PScl_neutral_l_2 _ PS)
-               (@PScl_neutral_r_1 _ PS) (@PScl_neutral_r_2 _ PS)
-               (@PSsub_monoid_1 _ PS) (@PSsub_monoid_2 _ PS) (@PSsub_J _ PS).
+  Hint Resolve (@cl_idempotent _ _ PSCL).
+  Hint Resolve (@PScl_stable_l _ PMPS) (@PScl_stable_r _ PMPS)
+               (@PScl_associative_l _ PMPS) (@PScl_associative_r _ PMPS)
+               (@PScl_neutral_l_1 _ PMPS) (@PScl_neutral_l_2 _ PMPS)
+               (@PScl_neutral_r_1 _ PMPS) (@PScl_neutral_r_2 _ PMPS)
+               (@PSsub_monoid_1 _ PMPS) (@PSsub_monoid_2 _ PMPS) (@PSsub_J _ PMPS).
   Hint Resolve (@composes_monotone _ PScompose).
   Hint Resolve (@subset_preorder Web).
   Hint Resolve  magicwand_l_adj_l magicwand_l_adj_r magicwand_r_adj_l magicwand_r_adj_r.
@@ -195,7 +192,7 @@ Section Phase_Spaces.
   transitivity (⟬߭ l ⟭ ∘ cl (⟬߭ m ⟭ ∘ ⟬߭  n ⟭)).
   - apply composes_monotone; try reflexivity.
     apply le_cl; auto; apply list_form_presem_app_1.
-  - eapply cl_closed in Hc; auto; [ | apply HF ].
+  - eapply cl_closed in Hc; auto.
     etransitivity; [ | apply Hc ].
     etransitivity; [ | apply PScl_stable_r ].
     apply composes_monotone; try reflexivity.
@@ -248,7 +245,7 @@ Section Phase_Spaces.
 
   Hint Resolve glb_in glb_out_l glb_out_r top_greatest.
 
-  Fact list_form_presem_bang_1 l : cl (⟬߭‼l⟭) ⊆ ❗ (lcap (map (fun x => cl (⟦ x ⟧)) l)).
+  Fact list_form_presem_bang_1 l : cl (⟬߭‼l⟭) ⊆ ❢(lcap (map (fun x => cl (⟦ x ⟧)) l)).
   Proof.
   induction l.
   - simpl; rewrite list_form_presem_nil.
@@ -256,7 +253,7 @@ Section Phase_Spaces.
     apply sub_monoid_1, PSsub_monoid_1.
   - simpl; rewrite list_form_presem_cons.
     apply cl_le; auto.
-    transitivity (⟦ ! a ⟧ ∘ cl (❗ lcap (map (fun x => cl (⟦ x ⟧)) l))).
+    transitivity (⟦!a⟧ ∘ cl(❢(lcap (map (fun x => cl (⟦ x ⟧)) l)))).
     + apply composes_monotone; try reflexivity.
       etransitivity; [ | etransitivity; [apply IHl | ] ]; auto; apply cl_increase.
     + etransitivity; [ apply PScl_stable_r | ]; simpl.
@@ -270,14 +267,14 @@ Section Phase_Spaces.
       * reflexivity.
   Qed.
 
-  Fact list_form_presem_bang_2 l : ❗ (lcap (map (fun x => cl (⟦ x ⟧)) l)) ⊆ cl (⟬߭‼l⟭).
+  Fact list_form_presem_bang_2 l : ❢(lcap (map (fun x => cl (⟦ x ⟧)) l)) ⊆ cl (⟬߭‼l⟭).
   Proof.
   induction l.
   - simpl; rewrite list_form_presem_nil.
     eapply store_unit_2; eauto.
     apply (@sub_J_1 _ _ PScompose PSunit), PSsub_J.
   - simpl; rewrite list_form_presem_cons.
-    transitivity (cl (⟦ ! a ⟧ ∘ ❗ lcap (map (fun x => cl (⟦ x ⟧)) l))).
+    transitivity (cl(⟦!a⟧ ∘ ❢(lcap (map (fun x => cl (⟦ x ⟧)) l)))).
     + simpl.
       etransitivity; [ | refine (@store_comp_2 _ _ _ _ (composes PScompose) _ _ _ _ _ _ _ _ _) ]; auto.
       * clear IHl; induction l; simpl; auto; apply store_monotone; auto.
@@ -325,12 +322,12 @@ Section Phase_Spaces.
       apply composes_monotone; try reflexivity.
       etransitivity; [ apply cl_increase | ].
       etransitivity; [ apply list_form_presem_bang_1 | ].
-      transitivity (❗ lcap (map (fun x => cl (⟦ x ⟧)) (a :: b :: nil))).
+      transitivity (❢(lcap (map (fun x => cl (⟦ x ⟧)) (a :: b :: nil)))).
       + apply store_monotone; auto.
         simpl; apply glb_in; auto.
         transitivity (cl (⟦ a ⟧) ⊓ top); auto.
       + etransitivity; [ apply list_form_presem_bang_2 | ]; reflexivity.
-    - transitivity (cl (⟬߭ Γ ⟭ ∘ (⟬߭ !a :: !b :: nil ⟭ ∘ ⟬߭ Δ ⟭)));
+    - transitivity (cl(⟬߭ Γ ⟭ ∘ (⟬߭ !a :: !b :: nil ⟭ ∘ ⟬߭ Δ ⟭)));
         [ transitivity (⟬߭ Γ ⟭ ∘ cl (⟬߭ !a :: !b :: nil ⟭ ∘ ⟬߭ Δ ⟭)) | ]; auto.
       + apply composes_monotone; try reflexivity; auto.
       + apply cl_closed; auto.
@@ -508,7 +505,7 @@ Section Phase_Spaces.
     apply store_dec; auto.
     Qed.
 
-    Fact ill_bang_r_sound Γ a : ⟬߭‼Γ⟭ ⊆ cl(⟦ a ⟧) -> ⟬߭‼Γ⟭ ⊆ cl(❗cl(⟦a⟧)).
+    Fact ill_bang_r_sound Γ a : ⟬߭‼Γ⟭ ⊆ cl(⟦ a ⟧) -> ⟬߭‼Γ⟭ ⊆ cl(❢(cl(⟦a⟧))).
     Proof.
     intros H.
     apply le_cl; auto.
