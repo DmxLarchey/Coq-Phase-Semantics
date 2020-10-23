@@ -4,7 +4,7 @@ Bool_more.v
 List_more.v
 Permutation_more.v
 Injective.v
-wf_nat_more.v
+Wf_nat_more.v
 
 List_Type.v
 List_Type_more.v
@@ -14,6 +14,7 @@ Permutation_Type_solve.v
 CyclicPerm_Type.v
 CPermutation_Type_solve.v
 genperm_Type.v
+Dependent_Forall_Type.v
 
 basic_misc.v
 yalla_ax.v
@@ -21,12 +22,18 @@ iformulas.v
 ill_def.v
 formulas.v
 ll_def.v
+ll_cut_at.v
 
-utils_tac.v
+tl_def.v
+
 closure_operators.v
-phase_sem.v
-rules_algebra.v
-cut_elim.v
 orthogonality.v
+phase_sem.v
+cut_elim.v
 cphase_sem.v
 cokada.v
+tphase_sem.v
+log_phase_sem.v
+log_cut_elim.v
+log_tphase_sem.v
+phill.v

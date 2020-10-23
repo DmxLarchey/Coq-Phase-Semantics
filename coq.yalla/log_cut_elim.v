@@ -11,13 +11,15 @@
 (*                                                            *)
 (*                              [**] Affiliation LIP -- CNRS  *)
 
-Require Import List_more List_Type Permutation_Type genperm_Type.
+Require Import List_more List_Type_more Permutation_Type genperm_Type.
 
-Require Import orthogonality phase_sem.
+Require Import orthogonality log_phase_sem.
 
 Require Import ill_def.
+Import SetNotations. (* ⊆ ≃ ∩ ∪ ∅ ﹛_﹜ *)
+Definition ill_lbang := map ioc.
+Notation "‼ x" := (ill_lbang x) (at level 55).
 
-Import SetNotations.
 
 Set Implicit Arguments.
 
@@ -50,8 +52,8 @@ Section SyntacticModel.
 
   Notation ctx_compose := (@app iformula).
   Notation ctx_unit := (@nil iformula).
-  Notation adj_l := (fun ϴ H => match H with (Γ,Δ,A) => (Γ, ϴ ++ Δ, A) end).
-  Notation adj_r := (fun ϴ H => match H with (Γ,Δ,A) => (Γ ++ ϴ, Δ, A) end).
+  Notation ctx_adj_l := (fun ϴ H => match H with (Γ,Δ,A) => (Γ, ϴ ++ Δ, A) end).
+  Notation ctx_adj_r := (fun ϴ H => match H with (Γ,Δ,A) => (Γ ++ ϴ, Δ, A) end).
 
   Notation ctx_hole := (list iformula * list iformula * iformula)%type.
   Infix "∘" := (composes ctx_compose) (at level 50, no associativity).
@@ -59,55 +61,66 @@ Section SyntacticModel.
   Definition ctx_orth : list iformula -> ctx_hole -> Type :=
     fun ϴ H => match H with (Γ,Δ,A) => Γ ++ ϴ ++ Δ ⊢ A [P] end.
 
-  Instance CL_ctx : ClosureOp _ := (@lclosure _ _ ctx_orth).
-  Notation cl_ctx := (@cl _ _ CL_ctx).
+  Instance CL_ctx : ClosureOp _ := lclosure ctx_orth.
 
-  Lemma rel_associative_l_l : rel_associativity_l_l ctx_orth ctx_compose adj_r.
+  Lemma cl_ctx_to_logic ϴ ϴ' : cl (sg ϴ') ϴ -> forall Γ Δ A,
+    Γ ++ ϴ' ++ Δ ⊢ A [P] -> Γ ++ ϴ ++ Δ ⊢ A [P].
+  Proof.
+  unfold cl, CL_ctx, lclosure, ctx_orth, ldual, rdual.
+  intros Hcl Γ Δ A pi.
+  specialize Hcl with (Γ,Δ,A); apply Hcl.
+  intros x Hx; subst; assumption.
+  Qed.
+
+  Lemma logic_to_cl_ctx ϴ ϴ' : (forall Γ Δ A, Γ ++ ϴ' ++ Δ ⊢ A [P] -> Γ ++ ϴ ++ Δ ⊢ A [P]) ->
+    cl (sg ϴ') ϴ.
+  Proof.
+  unfold cl, CL_ctx, lclosure, ctx_orth, ldual, rdual.
+  intros Hlog [[Γ Δ] A] Hcl.
+  apply Hlog, Hcl; reflexivity.
+  Qed.
+
+  Lemma rel_associative_l_l : rel_associativity_l_l ctx_orth ctx_compose ctx_adj_r.
   Proof. intros X Y [[X1 Y1] A]; unfold ctx_orth; rewrite <- ? app_assoc; auto. Qed.
 
-  Lemma rel_associative_l_r : rel_associativity_l_r ctx_orth ctx_compose adj_r.
+  Lemma rel_associative_l_r : rel_associativity_l_r ctx_orth ctx_compose ctx_adj_r.
   Proof. intros X Y [[X1 Y1] A]; unfold ctx_orth; rewrite <- ? app_assoc; auto. Qed.
 
-  Lemma rel_associative_r_l : rel_associativity_r_l ctx_orth ctx_compose adj_l.
+  Lemma rel_associative_r_l : rel_associativity_r_l ctx_orth ctx_compose ctx_adj_l.
   Proof. intros X Y [[X1 Y1] A]; unfold ctx_orth; rewrite <- app_assoc; auto. Qed.
 
-  Lemma rel_associative_r_r : rel_associativity_r_r ctx_orth ctx_compose adj_l.
+  Lemma rel_associative_r_r : rel_associativity_r_r ctx_orth ctx_compose ctx_adj_l.
   Proof. intros X Y [[X1 Y1] A]; unfold ctx_orth; rewrite <- app_assoc; auto. Qed.
 
-  Fact cl_comm : ipperm P = true -> @cl_commutativity _ _ CL_ctx (composes ctx_compose).
+  Fact cl_comm : ipperm P = true -> cl_commutativity (composes ctx_compose).
   Proof.
   intros Hb Γ Δ ga H.
   inversion H; subst.
-  unfold cl_ctx; simpl; unfold ldual, rdual, ctx_orth.
-  intros [[ga de] A] H1.
+  unfold cl; simpl; unfold ldual, rdual, ctx_orth; intros [[ga de] A] H1.
   specialize H1 with (b ++ a).
   eapply P_perm; [ | apply H1; constructor; assumption ].
   rewrite Hb; simpl.
-  apply Permutation_Type_app_head.
-  apply Permutation_Type_app_tail.
-  apply Permutation_Type_app_swap.
+  apply Permutation_Type_app_head, Permutation_Type_app_tail, Permutation_Type_app_swap.
   Qed.
 
-  Notation J := (fun Γ => cl_ctx (sg nil) Γ * cl_ctx (sg Γ ∘ sg Γ) Γ)%type.
   Notation K := (fun Γ => { Δ | Γ = ‼Δ }).
 
-  Local Fact sub_monoid_1 : cl_ctx K nil.
-  Proof. intros [[ga de] A] H; change de with (nil ++ de); apply H; exists nil; auto. Qed.
+  Local Fact str_sub_monoid_1 : K nil.
+  Proof. exists nil; reflexivity. Qed.
 
   Local Fact sub_monoid_2 : K ∘ K ⊆ K.
   Proof.
-  intros ga H.
-  inversion H.
+  intros ga H; inversion H.
   destruct H0 as [de1 Heq1]; subst.
   destruct H1 as [de2 Heq2]; subst.
   exists (de1 ++ de2).
-  unfold ill_lbang.
-  rewrite map_app; reflexivity.
+  unfold ill_lbang; rewrite map_app; reflexivity.
   Qed.
 
-  Local Fact sub_J_1 : K ⊆ J.
+  Notation J := (fun Γ => cl (sg nil) Γ * cl (sg Γ ∘ sg Γ) Γ)%type.
+  Local Fact sub_J : K ⊆ J.
   Proof.
-  intros ga H; inversion H; subst; split; unfold cl_ctx; simpl; unfold ldual, rdual, ctx_orth;
+  intros ga H; inversion H; subst; split; unfold cl; simpl; unfold ldual, rdual, ctx_orth;
     intros [[de1 de2] A] H1.
   - apply P_weak.
     specialize H1 with ctx_unit; simpl in H1.
@@ -118,36 +131,50 @@ Section SyntacticModel.
     apply H1; constructor; reflexivity.
   Qed.
 
-  Instance PS_ctx : PhaseSpace (ipperm P) := {
+  Local Fact sub_monoid_distr : @sub_monoid_distr_hyp _ subset (composes (@app iformula)) glb K.
+  Proof.
+  apply pwr_str_sub_monoid_distr.
+  intros G D [S HS].
+  unfold ill_lbang in HS.
+  decomp_map_Type HS; subst; simpl.
+  split; [ exists l0 | exists l1 ]; reflexivity.
+  Qed.
+
+  Instance PS_ctx : MPhaseSpace (ipperm P) := {
     Web := list iformula;
-    PSCL := CL_ctx;
     PScompose := (@app iformula);
     PSunit := nil;
-    PSExp := K;
+    PS_associative := (@app_assoc _);
+    PS_neutral_l := (@app_nil_l _);
+    PS_neutral_r := (@app_nil_r _);
+    PSCL := CL_ctx;
     PScl_stable_l := stable_l rel_associative_r_l rel_associative_r_r;
     PScl_stable_r := stable_r rel_associative_l_l rel_associative_l_r;
-    PScl_associative_l := associative_l (m_rel_associativity_ll _ (@app_assoc _));
-    PScl_associative_r := associative_r (m_rel_associativity_lr _ (@app_assoc _));
-    PScl_neutral_l_1 := neutral_l_1 (m_rel_neutrality_l_1 _ (@app_nil_l _));
-    PScl_neutral_l_2 := neutral_l_2 (m_rel_neutrality_l_2 _ (@app_nil_l _));
-    PScl_neutral_r_1 := neutral_r_1 (m_rel_neutrality_r_1 _ (@app_nil_r _));
-    PScl_neutral_r_2 := neutral_r_2 (m_rel_neutrality_r_2 _ (@app_nil_r _));
-    PSsub_monoid_1 := sub_monoid_1;
+    PSExp := K;
+    PSsub_monoid_1 := str_sub_monoid_1;
     PSsub_monoid_2 := sub_monoid_2;
-    PSsub_J := sub_J_1;
+    PSsub_J := sub_J;
+    PSsub_monoid_distr := sub_monoid_distr;
     PScl_commute := cl_comm }.
 
   Notation "↓" := (fun A Γ => Γ ⊢ A [P]).
 
-  Fact dc_closed A : cl (↓A) ⊆ ↓A.
+  Fact dc_is_ldual A : ↓A ≃ ldual ctx_orth (sg(nil,nil,A)).
   Proof.
-  intros ga Hga; red in Hga.
-  simpl in Hga; unfold ldual, rdual, ctx_orth in Hga.
-  replace ga with (nil++ga++nil) by (list_simpl; reflexivity).
-  specialize Hga with (nil,nil,A).
-  apply Hga.
-  intro; rewrite app_nil_r; auto.
+  split.
+  - intros ϴ pi [[Γ Δ] C] Heq; inversion Heq; subst.
+    list_simpl; assumption.
+  - intros ϴ H.
+    replace ϴ with (nil++ϴ++nil) by (list_simpl; reflexivity).
+    unfold ldual in H; specialize H with (nil,nil,A); now apply H.
   Qed.
+
+  Fact dc_closed A : cl(↓A) ⊆ ↓A.
+  Proof. eapply ldual_eq_is_lclosed, dc_is_ldual. Qed.
+
+  Fact closure_sg_in_dc A : cl(sg (A :: nil)) ⊆ ↓A.
+  (* the converse ↓A ⊆ cl_ctx (sg (A :: nil)) is exactly cut *)
+  Proof. etransitivity; [ apply cl_monotone | apply dc_closed ]; apply sg_subset, ax_exp_ill. Qed.
 
   Hint Resolve subset_preorder dc_closed.
 
@@ -183,7 +210,7 @@ Section SyntacticModel.
   destruct b; inversion P_gax_at_r; subst.
   intros x Hx; right; rewrite Heqb.
   enough (forall l0 a l1 l2, map ivar l1 ++ map ivar l0 = fst (projT2 (ipgax P) a) ->
-            list_form_presem PS_ctx (ILLval P) (map £ l0) l2 ->
+            list_form_presem PS_ctx (ILLval P) (map ivar l0) l2 ->
             { c | map ivar l1 ++ l2 = fst (projT2 (ipgax P) c)
                /\ snd (projT2 (ipgax P) a) = snd (projT2 (ipgax P) c) })
     by (specialize X with l a nil x; list_simpl in X; symmetry in Heq; apply X in Heq; auto).
@@ -208,7 +235,7 @@ Section SyntacticModel.
       etransitivity; eassumption.
   Qed.
 
-  Instance PMILL : PhaseModel P := {
+  Instance PMILL : MPhaseModel P := {
     PMPS := PS_ctx;
     PMval := ILLval P;
     PMgax := ILLgax }.
@@ -216,15 +243,36 @@ Section SyntacticModel.
   Infix "⊸" := (magicwand_l PScompose) (at level 52, right associativity).
   Infix "⟜" := (magicwand_r PScompose) (at level 53, left associativity).
   Notation v := PMval.
-  Notation "⟦ A ⟧" := (form_presem PS_ctx (ILLval P) A) (at level 49).
+  Notation "⟦ A ⟧" := (form_presem PS_ctx (ILLval P) A).
+  Notation "⟬߭ Γ ⟭" := (list_form_presem PS_ctx (ILLval P) Γ).
+  Notation "□" := cl.
+  Notation "l ⊧  x" := (list_compose PMPS l ⊆ x) (at level 70, no associativity).
 
   Hint Resolve (@PScl_stable_l _ PMPS) (@PScl_stable_r _ PMPS)
                magicwand_l_adj_l magicwand_l_adj_r magicwand_r_adj_l magicwand_r_adj_r.
+
+
+  Lemma logic_to_plogic ϴ ϴ' : (forall Γ Δ A, Γ ++ ϴ' ++ Δ ⊢ A [P] -> Γ ++ ϴ ++ Δ ⊢ A [P]) ->
+    forall Γ Δ A, Γ ++ (sg ϴ') :: Δ ⊧ □A -> Γ ++ sg ϴ :: Δ ⊧ □A.
+  Proof. intros H Γ Δ A; apply list_compose_monot_sg_mnd, logic_to_cl_ctx; assumption. Qed.
+
+  Lemma plogic_to_logic ϴ ϴ' : (forall Γ Δ A, Γ ++ (sg ϴ') :: Δ ⊧ □A -> Γ ++ sg ϴ :: Δ ⊧ □A) ->
+    forall Γ Δ A, Γ ++ ϴ' ++ Δ ⊢ A [P] -> Γ ++ ϴ ++ Δ ⊢ A [P].
+  Proof.
+  intros H Γ Δ A.
+  apply cl_ctx_to_logic.
+  apply list_compose_cons_sg_to_sem in H; assumption.
+  Qed.
+
 
   Section Okada_Lemma.
 
     Notation ILLcl_closed := (@cl_closed _ _ _ CL_ctx).
     Notation ILLcl_increase := (@cl_increase _ _ CL_ctx).
+    Notation ILLcl_monotone := (@cl_monotone _ _ CL_ctx).
+    Notation ILLcl_le := (@cl_le _ _ _ CL_ctx).
+
+    Hint Resolve glb_in glb_out_l glb_out_r.
 
     Lemma Okada_var_1 X : sg (ivar X :: nil) ⊆ ⟦ivar X⟧.
     Proof. intros x Hx; subst; left; reflexivity. Qed.
@@ -237,153 +285,110 @@ Section SyntacticModel.
       apply gax_ir.
     Qed.
 
-    Lemma Okada_formula A : ((sg (A :: nil) ⊆ cl(⟦A⟧)) * (⟦A⟧ ⊆ ↓A))%type.
+    Lemma Okada_formula A : ((sg (A :: nil) ⊆ □(⟦A⟧)) * (⟦A⟧ ⊆ ↓A))%type.
     Proof.
     induction A; simpl;
       try (destruct IHA as [IHA01 IHA02]);
       try (destruct IHA1 as [IHA11 IHA12]);
       try (destruct IHA2 as [IHA21 IHA22]);
-     (split; [ |
-      try (try (apply ILLcl_closed; auto);
-           intros x Hx; inversion Hx; subst; constructor; auto; fail)]).
+     (split; [ | try (intros x Hx; inversion Hx; subst; constructor; auto; fail)]).
     - etransitivity; [ apply Okada_var_1 | apply ILLcl_increase ].
     - apply Okada_var_2.
-    - unfold ldual, rdual, ctx_orth.
-      intros x Hx [[de1 de2] A] Hy; subst; simpl.
-      constructor.
-      specialize Hy with nil; apply Hy; auto.
-    - transitivity (cl (cl (⟦ A1 ⟧) ∘ cl(⟦ A2 ⟧))).
-      + transitivity (cl_ctx (sg (A1 :: nil) ∘ sg (A2 :: nil))).
-        * unfold cl_ctx; simpl; unfold rdual, ctx_orth.
-          intros x Hx [[de1 de2] A] Hy; subst.
-          constructor.
-          specialize Hy with ((A1 :: nil) ++ A2 :: nil); apply Hy; auto.
-          split; auto.
-        * apply cl_monotone.
-          apply composes_monotone; assumption.
-      + apply (@cl_le _ _ _ CL_ctx).
-        apply cl_stable; auto.
-    - unfold magicwand_r.
-      etransitivity; [ | apply ILLcl_increase ].
-      intros x Hx y Hy [[G D] B] Hz; inversion Hy; subst; simpl.
-      apply lpam_ilr; auto.
-      assert (rdual ctx_orth (cl_ctx (⟦ A2 ⟧)) (G, D, B)) as Hz2
-        by (apply (fst (rtridual_eq ctx_orth _)); apply Hz).
-      change (A2 :: D) with ((A2 :: nil) ++ D); apply Hz2; auto.
+    - apply sg_subset, logic_to_cl_ctx, one_ilr.
+    - transitivity (cl (sg ((A1 :: nil) ++ A2 :: nil))).
+      + apply sg_subset, logic_to_cl_ctx, tens_ilr.
+      + apply ILLcl_le.
+        etransitivity; [ | apply cl_stable ]; auto.
+        simpl; change (A1 :: A2 :: nil) with ((A1 :: nil) ++ A2 :: nil).
+        apply sg_subset in IHA11; apply sg_subset in IHA21.
+        apply sg_subset; constructor; try assumption.
+    - transitivity (cl(sg(A2::nil)) ⟜ ↓A1).
+      + apply sg_subset.
+        intros x Hx; inversion Hx; subst.
+        apply logic_to_cl_ctx; intros; apply lpam_ilr; assumption.
+      + etransitivity; [ | apply ILLcl_increase ].
+        assert (Hmon := (@magicwand_r_monotone _ _ _ _ (@composes_monotone _ PScompose))); apply Hmon; auto.
+        apply ILLcl_le; assumption.
     - etransitivity; [ eapply (@cl_magicwand_r_3 _ _ _ CL_ctx) | ]; eauto.
-      intros x Hx; constructor.
-      apply ILLcl_closed in IHA22; auto.
-      apply IHA22, Hx; constructor; auto.
-    - unfold magicwand_r.
-      etransitivity; [ | apply ILLcl_increase ].
-      intros x Hx y Hy [[G D] B] Hz; inversion Hy; subst; simpl.
-      apply gen_pam_rule; auto.
-      change (N :: D) with ((N :: nil) ++ D); apply Hz.
-      apply (@Okada_var_1 atN); auto.
+      transitivity (↓A2 ⟜ sg(A1::nil)).
+      + assert (Hmon := (@magicwand_r_monotone _ _ _ _ (@composes_monotone _ PScompose))); apply Hmon; auto.
+        apply cl_closed; auto.
+      + intros G HG; apply lpam_irr, HG; constructor; reflexivity.
+    - transitivity (cl(sg(N::nil)) ⟜ ↓A).
+      + apply sg_subset.
+        intros x Hx; inversion Hx; subst.
+        apply logic_to_cl_ctx; intros; apply gen_pam_rule; assumption.
+      + etransitivity; [ | apply ILLcl_increase ].
+        assert (Hmon := (@magicwand_r_monotone _ _ _ _ (@composes_monotone _ PScompose))); apply Hmon; auto.
+        apply ILLcl_monotone, Okada_var_1.
     - etransitivity; [ eapply (@cl_magicwand_r_3 _ _ _ CL_ctx) | ]; eauto.
-      intros x Hx; constructor.
-      assert (IHN := @Okada_var_2 atN).
-      apply ILLcl_closed in IHN; auto.
-      apply IHN, Hx; constructor; auto.
-    - unfold magicwand_l.
-      etransitivity; [ | apply ILLcl_increase ].
-      intros x Hx y Hy [[G D] B] Hz; inversion Hy; subst; simpl.
-      rewrite <- ? app_assoc; apply lmap_ilr; auto.
-      assert (rdual ctx_orth (cl_ctx (⟦ A2 ⟧)) (G, D, B)) as Hz2
-        by (apply (fst (rtridual_eq ctx_orth _)); apply Hz).
-      change (A2 :: D) with ((A2 :: nil) ++ D); apply Hz2; auto.
+      transitivity (↓N ⟜ sg(A::nil)).
+      + assert (Hmon := (@magicwand_r_monotone _ _ _ _ (@composes_monotone _ PScompose))); apply Hmon; auto.
+        apply ILLcl_closed, Okada_var_2; auto.
+      + intros G HG; apply gen_irr, HG; constructor; reflexivity.
+    - transitivity (↓A1 ⊸ cl(sg(A2::nil))).
+      + apply sg_subset.
+        intros x Hx; inversion Hx; subst.
+        apply logic_to_cl_ctx; intros; list_simpl; apply lmap_ilr; assumption.
+      + etransitivity; [ | apply ILLcl_increase ].
+        assert (Hmon := (@magicwand_l_monotone _ _ _ _ (@composes_monotone _ PScompose))); apply Hmon; auto.
+        apply ILLcl_le; assumption.
     - etransitivity; [ eapply (@cl_magicwand_l_3 _ _ _ CL_ctx) | ]; eauto.
-      intros x Hx; constructor.
-      apply ILLcl_closed in IHA22; auto.
-      apply IHA22, Hx.
-      change (A1 :: x) with ((A1 :: nil) ++ x); constructor; auto.
-    - unfold magicwand_l.
-      etransitivity; [ | apply ILLcl_increase ].
-      intros x Hx y Hy [[G D] B] Hz; inversion Hy; subst; simpl.
-      rewrite <- ? app_assoc; apply neg_map_rule; auto.
-      change (N :: D) with ((N :: nil) ++ D); apply Hz.
-      apply (@Okada_var_1 atN); auto.
+      transitivity (sg(A1::nil) ⊸ ↓A2).
+      + assert (Hmon := (@magicwand_l_monotone _ _ _ _ (@composes_monotone _ PScompose))); apply Hmon; auto.
+        apply ILLcl_closed; auto.
+      + intros G HG; apply lmap_irr, HG.
+        change (A1 :: G) with ((A1::nil) ++ G) ; constructor; reflexivity.
+    - transitivity (↓A ⊸ cl(sg(N::nil))).
+      + apply sg_subset.
+        intros x Hx; inversion Hx; subst.
+        apply logic_to_cl_ctx; intros; list_simpl; apply neg_map_rule; assumption.
+      + etransitivity; [ | apply ILLcl_increase ].
+        assert (Hmon := (@magicwand_l_monotone _ _ _ _ (@composes_monotone _ PScompose))); apply Hmon; auto.
+        apply ILLcl_monotone, Okada_var_1.
     - etransitivity; [ eapply (@cl_magicwand_l_3 _ _ _ CL_ctx) | ]; eauto.
-      intros x Hx; constructor.
-      assert (IHN := @Okada_var_2 atN).
-      apply ILLcl_closed in IHN; auto.
-      apply IHN, Hx.
-      change (A :: x) with ((A :: nil) ++ x); constructor; auto.
+      transitivity (sg(A::nil) ⊸ ↓N).
+      + assert (Hmon := (@magicwand_l_monotone _ _ _ _ (@composes_monotone _ PScompose))); apply Hmon; auto.
+        apply ILLcl_closed, Okada_var_2; auto.
+      + intros G HG; apply neg_irr, HG.
+        change (A :: G) with ((A::nil) ++ G) ; constructor; reflexivity.
     - etransitivity; [ | apply ILLcl_increase ].
       apply top_greatest.
-    - etransitivity; [ | apply ILLcl_increase ].
-      apply glb_in.
-      + apply cl_le in IHA11; auto.
-        etransitivity; [ | apply IHA11 ].
-        intros x Hx; subst.
-        unfold cl; simpl; unfold ldual, rdual, ctx_orth.
-        intros [[si1 si2] C] H; simpl.
-        apply with_ilr1.
-        specialize H with (A1 :: nil); apply H; auto.
-      + apply cl_le in IHA21; auto.
-        etransitivity; [ | apply IHA21 ].
-        intros x Hx; subst.
-        unfold cl; simpl; unfold ldual, rdual, ctx_orth.
-        intros [[si1 si2] C] H; simpl.
-        apply with_ilr2.
-        specialize H with (A2 :: nil); apply H; auto.
-    - unfold ldual, rdual, ctx_orth.
-      intros x Hx; inversion Hx; subst; constructor; auto.
-      + specialize X with (nil,nil,A1); list_simpl in X; apply X.
-        intros y Hy; list_simpl.
-        apply IHA12; auto.
-      + specialize X0 with (nil,nil,A2); list_simpl in X0; apply X0.
-        intros y Hy; list_simpl.
-        apply IHA22; auto.
+    - transitivity (cl (sg(A1 :: nil)) ∩ cl(sg(A2 :: nil))).
+      + apply glb_in; apply sg_subset, logic_to_cl_ctx; [ apply with_ilr1 | apply with_ilr2 ].
+      + etransitivity; [ | apply ILLcl_increase ].
+        apply (@mglb_monotone _ _ subset_preorder glb); auto; apply ILLcl_le; assumption.
+    - transitivity (cl(↓A1) ∩ cl(↓A2)).
+      + apply (@mglb_monotone _ _ subset_preorder glb);auto; apply ILLcl_monotone; assumption.
+      + etransitivity; [ apply (@mglb_monotone _ _ subset_preorder glb), dc_closed | ]; auto.
+        intros G [pi1 pi2]; apply with_irr; [ apply pi1 | apply pi2 ].
     - unfold ldual, rdual, ctx_orth.
       intros x Hx [[de1 de2] A] Hy; subst; simpl.
-      constructor.
-    - transitivity (lub (cl (⟦ A1 ⟧)) (cl(⟦ A2 ⟧))).
+      apply zero_ilr.
+    - transitivity (lub (sg (A1::nil)) (sg(A2::nil))).
       + intros x Hx [[de1 de2] A] Hy; subst; simpl.
         unfold rdual, ctx_orth, lub in Hy.
-        constructor.
-        * specialize Hy with (A1 :: nil); apply Hy; auto.
-        * specialize Hy with (A2 :: nil); apply Hy; auto.
-      + apply lub_out; auto.
-        * apply (@cl_idempotent _ _ CL_ctx).
-        * apply (@cl_monotone _ _ CL_ctx).
-          intros x; auto.
-        * apply (@cl_monotone _ _ CL_ctx).
-          intros x; auto.
-    - etransitivity; [ | apply ILLcl_increase ].
-      unfold ldual, rdual, ctx_orth.
-      intros x Hx [[de1 de2] B] Hy; subst; simpl.
-      specialize Hy with (!A :: nil); apply Hy; auto.
-      split.
-      + exists (A :: nil); reflexivity.
-      + enough (sg (!A :: nil) ⊆ cl(⟦A⟧)) as Hoc by (apply Hoc; reflexivity).
-        apply cl_le in IHA01; auto.
-        etransitivity; [ | apply IHA01 ].
-        intros x Hx; subst.
-        unfold cl; simpl; unfold ldual, rdual, ctx_orth.
-        intros [[si1 si2] C] H; simpl.
-        apply de_ilr.
-        specialize H with (A :: nil); apply H; auto.
-    - apply ILLcl_closed; auto.
-      intros x Hx; inversion Hx; subst.
-      inversion H; subst.
-      constructor; auto.
-      unfold ldual, rdual, ctx_orth in X.
-      specialize X with (nil,nil,A); list_simpl in X; apply X.
-      intros y Hy; list_simpl.
-      apply IHA02; auto.
+        apply plus_ilr; cons2app; apply Hy; auto.
+      + apply lub_out; auto; [ apply (@cl_idempotent _ _ CL_ctx) | | ];
+          (etransitivity; [ eassumption | ]); apply ILLcl_monotone; intros ?; auto.
+    - etransitivity; [ | apply ILLcl_increase ]; apply glb_in.
+      + apply sg_subset; exists (A::nil); reflexivity.
+      + transitivity (cl (sg (A :: nil))).
+        * apply sg_subset, logic_to_cl_ctx; apply de_ilr.
+        * apply ILLcl_le; assumption.
+    - etransitivity; [ apply pre_store_monotone, ILLcl_monotone, IHA02 | ]; auto.
+      etransitivity; [ apply pre_store_monotone, dc_closed | ]; auto.
+      intros G [Hoc pi]; inversion Hoc; subst; apply oc_irr, pi.
     Qed.
-
-    Notation "⟬߭ Γ ⟭" := (list_form_presem PS_ctx (ILLval P) Γ) (at level 49).
 
     (* We lift the result to contexts, ie list of formulas *)
 
-    Lemma Okada_ctx Γ: cl (⟬߭Γ⟭)  Γ.
+    Lemma Okada_ctx Γ: □⟬߭Γ⟭ Γ.
     Proof.
-    induction Γ as [ | A ga Hga ]; unfold list_form_presem; simpl.
+    induction Γ as [ | A Γ HG ]; unfold list_form_presem; simpl.
     - apply ILLcl_increase; reflexivity.
     - apply (@cl_stable _ _ _ CL_ctx); auto.
-      change (A :: ga) with ((A :: nil) ++ ga); constructor; auto.
+      change (A :: Γ) with ((A :: nil) ++ Γ); constructor; auto.
       apply Okada_formula; auto.
     Qed.
 
@@ -401,7 +406,7 @@ Section cut_admissibility.
   Hypothesis P_gax_cut : gax_cut P.
 
   (* Coercion: the phase model relying on cut-free provability over P is a phase model for P *)
-  Instance PMILL_cfat : PhaseModel P := {
+  Instance PMILL_cfat : MPhaseModel P := {
     PMPS := PS_ctx (cutrm_ipfrag P);
     PMval := ILLval (cutrm_ipfrag P);
     PMgax := @ILLgax (cutrm_ipfrag P) P_gax_at_l P_gax_at_r P_gax_cut }.
@@ -417,7 +422,7 @@ Section cut_admissibility.
     assert (HO := snd (Okada_formula HgaxN_cf Hgax_at_l_cf Hgax_at_r_cf Hgax_cut_cf A)).
     apply (@cl_closed _ _ _ PSCL) in HO; [ | apply dc_closed ].
     apply cl_le in pi.
-    apply HO, pi, Okada_ctx; auto.
+    apply HO, pi, Okada_ctx; assumption.
   Qed.
 
 End cut_admissibility.

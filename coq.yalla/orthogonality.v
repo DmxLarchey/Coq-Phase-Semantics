@@ -1,21 +1,16 @@
-Require Import List CRelationClasses CMorphisms.
-Require Import List_Type Permutation_Type_more.
-Require Import ll_def.
+Require Import List CMorphisms.
+
 Require Import closure_operators.
 
-Notation "⁇ x" := (map wn x) (at level 52).
 
-Notation "X '⊆' Y" := (subset X Y) (at level 75, format "X  ⊆  Y", no associativity).
-Notation "X '≃' Y" := (eqset X Y) (at level 75, format "X  ≃  Y", no associativity).
-Notation sg := (@eq _).
-Notation "A '∩' B" := (fun z => A z * B z : Type)%type (at level 50, format "A  ∩  B", left associativity).
-Notation "A '∪' B" := (fun z => A z + B z : Type)%type (at level 50, format "A  ∪  B", left associativity).
+Import SetNotations. (* ⊆ ≃ ∩ ∪ ∅ ﹛_﹜ *)
 
 Set Implicit Arguments.
 
-Section Set_Orthogonality.
 
-  Context {A B : Type}.
+Section SetOrthogonality.
+
+  Context { A B : Type }.
 
   Variable R : A -> B -> Type.
 
@@ -27,8 +22,8 @@ Section Set_Orthogonality.
   Notation rtridual := (fun X => rdual (ldual (rdual X))).
   Notation ltridual := (fun Y => ldual (rdual (ldual Y))).
 
-  Notation lfact := (fun X => lbidual X ⊆ X).
-  Notation rfact := (fun Y => rbidual Y ⊆ Y).
+  Notation lclosed := (fun X => lbidual X ⊆ X).
+  Notation rclosed := (fun Y => rbidual Y ⊆ Y).
 
   Lemma rmonot X1 X2 : X1 ⊆ X2 -> rdual X2 ⊆ rdual X1.
   Proof. intros Hsub x Hx x' Hx'; auto. Qed.
@@ -66,170 +61,64 @@ Section Set_Orthogonality.
 
   Hint Resolve lbidual_eq rbidual_eq rtridual_eq ltridual_eq.
 
-  Lemma ldual_eq_is_lfact X : forall Y, X ≃ ldual Y -> lfact X.
+  Lemma ldual_eq_is_lclosed X : forall Y, X ≃ ldual Y -> lclosed X.
   Proof.
   intros Y [Heql Heqr]; auto.
-  apply subset_trans with (ldual Y); auto.
+  transitivity (ldual Y); auto.
   apply lmonot.
-  apply subset_trans with (rbidual Y); auto.
+  transitivity (rbidual Y); auto.
   Qed.
 
-  Lemma ldual_is_lfact : forall Y, lfact (ldual Y).
-  Proof. intros Y; apply ldual_eq_is_lfact with Y; reflexivity. Qed.
+  Lemma ldual_is_lclosed : forall Y, lclosed (ldual Y).
+  Proof. intros Y; apply ldual_eq_is_lclosed with Y; reflexivity. Qed.
 
-  Lemma lfact_is_ldual X : lfact X -> { Y & X ≃ ldual Y }.
+  Lemma lclosed_is_ldual X : lclosed X -> { Y & X ≃ ldual Y }.
   Proof. intros Heq; exists (rdual X); split; auto. Qed.
 
-  Lemma rdual_eq_is_rfact Y : forall X, Y ≃ rdual X -> rfact Y.
+  Lemma rdual_eq_is_rclosed Y : forall X, Y ≃ rdual X -> rclosed Y.
   Proof.
   intros X [Heql Heqr]; auto.
-  apply subset_trans with (rdual X); auto.
+  transitivity (rdual X); auto.
   apply rmonot.
-  apply subset_trans with (lbidual X); auto.
+  transitivity (lbidual X); auto.
   Qed.
 
-  Lemma rdual_is_lfact : forall X, rfact (rdual X).
-  Proof. intros X; apply rdual_eq_is_rfact with X; reflexivity. Qed.
+  Lemma rdual_is_lclosed : forall X, rclosed (rdual X).
+  Proof. intros X; apply rdual_eq_is_rclosed with X; reflexivity. Qed.
 
-  Lemma rfact_is_rdual Y : rfact Y -> { X & Y ≃ rdual X }.
+  Lemma rclosed_is_rdual Y : rclosed Y -> { X & Y ≃ rdual X }.
   Proof. intros Heq; exists (ldual Y); split; auto. Qed.
 
-  Instance lclosure : @ClosureOp A.
+  Instance lclosure : ClosureOp (@subset A).
   Proof. split with lbidual; auto. Defined.
 
-  Instance rclosure : @ClosureOp B.
+  Instance rclosure : ClosureOp (@subset B).
   Proof. split with rbidual; auto. Defined.
 
-End Set_Orthogonality.
+End SetOrthogonality.
 
 
-Section Monoid_Orthogonality.
 
-  Context {M : Type}.
 
-  Variable Compose : M -> M -> M.
-  Variable Unit : M.
+Section MonicSetOrthogonality.
 
-  (* Composition lifted to predicates *)
-  Inductive MComposes (X Y : M -> Type) : M -> Type :=
-    In_composes : forall x y, X x -> Y y -> MComposes X Y (Compose x y).
-  Infix "∘" := MComposes (at level 50, no associativity).
+  Context {A : Type}.
 
-  Global Instance MComposes_monotone : Proper (subset ==> subset ==> subset) MComposes.
-  Proof. intros X1 Y1 H1 X2 Y2 H2 x [a b Ha Hb]; constructor; auto. Qed.
-
-  Global Instance MComposes_compat : Proper (eqset ==> eqset ==> eqset) MComposes.
-  Proof. intros X1 Y1 [H1 H2] X2 Y2 [H3 H4]; split; apply MComposes_monotone; auto. Qed.
-
-  Variable Pole : M -> Type.
-
-  Definition R := fun x y => Pole (Compose x y).
-
-  Definition pole_commute := forall x y, R x y -> R y x.
-  Definition pole_fcommute := forall x y z, R (Compose x y) z -> R (Compose y x) z.
-  Definition pole_associative_l := forall x y z, R x (Compose y z) -> R (Compose x y) z.
-  Definition pole_associative_r := forall x y z, R (Compose x y) z -> R x (Compose y z).
-  Definition pole_associative_ll := forall x y z t,
-    R (Compose x (Compose y z)) t -> R (Compose (Compose x y) z) t.
-  Definition pole_associative_lr := forall x y z t,
-    R (Compose (Compose x y) z) t -> R (Compose x (Compose y z)) t.
-  Definition pole_neutral_1 := forall x, Pole (Compose Unit x) -> Pole x.
-  Definition pole_neutral_2 := forall x, Pole x -> Pole (Compose Unit x).
-  Definition pole_neutral_l_1 := forall x z, R (Compose Unit x) z -> R x z.
-  Definition pole_neutral_l_2 := forall x z, R x z -> R (Compose Unit x) z.
-  Definition pole_neutral_r_1 := forall x z, R (Compose x Unit) z -> R x z.
-  Definition pole_neutral_r_2 := forall x z, R x z -> R (Compose x Unit) z.
-
-  Lemma monoid_commute_pole : (forall x y, Compose x y = Compose y x) -> pole_commute.
-  Proof.
-  intros Hc x y HR.
-  unfold R; rewrite Hc; assumption.
-  Qed.
-
-  Lemma monoid_associative_pole_l :
-    (forall x y z, Compose x (Compose y z) = Compose (Compose x y) z) -> pole_associative_l.
-  Proof.
-  intros Ha x y z HR.
-  unfold R; rewrite <- Ha; assumption.
-  Qed.
-
-  Lemma monoid_associative_pole_r :
-    (forall x y z, Compose x (Compose y z) = Compose (Compose x y) z) -> pole_associative_r.
-  Proof.
-  intros Ha x y z HR.
-  unfold R; rewrite Ha; assumption.
-  Qed.
-
-  Lemma monoid_associative_pole_ll :
-    (forall x y z, Compose x (Compose y z) = Compose (Compose x y) z) -> pole_associative_ll.
-  Proof.
-  intros Ha x y z t HR.
-  unfold R in HR; rewrite <- ? Ha in HR.
-  unfold R; rewrite <- ? Ha; try assumption.
-  Qed.
-
-  Lemma monoid_associative_pole_lr :
-    (forall x y z, Compose x (Compose y z) = Compose (Compose x y) z) -> pole_associative_lr.
-  Proof.
-  intros Ha x y z t HR.
-  unfold R in HR; rewrite <- ? Ha in HR.
-  unfold R; rewrite <- ? Ha; try assumption.
-  Qed.
-
-  Lemma monoid_neutral_pole_1 : (forall x, Compose Unit x = x) -> pole_neutral_1.
-  Proof.
-  intros Hn x HP.
-  rewrite Hn in HP; assumption.
-  Qed.
-
-  Lemma monoid_neutral_pole_2 : (forall x, Compose Unit x = x) -> pole_neutral_2.
-  Proof.
-  intros Hn x HP.
-  rewrite Hn; assumption.
-  Qed.
-
-  Lemma monoid_neutral_pole_l_1 : (forall x, Compose Unit x = x) -> pole_neutral_l_1.
-  Proof.
-  intros Hn x y HR.
-  unfold R; rewrite <- (Hn x) ; assumption.
-  Qed.
-
-  Lemma monoid_neutral_pole_l_2 : (forall x, Compose Unit x = x) -> pole_neutral_l_2.
-  Proof.
-  intros Hn x y HR.
-  unfold R; rewrite (Hn x) ; assumption.
-  Qed.
-
-  Lemma monoid_neutral_pole_r_1 : (forall x, Compose x Unit = x) -> pole_neutral_r_1.
-  Proof.
-  intros Hn x y HR.
-  unfold R; rewrite <- (Hn x) ; assumption.
-  Qed.
-
-  Lemma monoid_neutral_pole_r_2 : (forall x, Compose x Unit = x) -> pole_neutral_r_2.
-  Proof.
-  intros Hn x y HR.
-  unfold R; rewrite (Hn x) ; assumption.
-  Qed.
-
-  Hypothesis commute : pole_commute.
-  Hypothesis associative_l : pole_associative_l.
-  Hypothesis associative_r : pole_associative_r.
-  Hypothesis associative_ll : pole_associative_ll.
-  Hypothesis associative_lr : pole_associative_lr.
-  Hypothesis neutral_1 : pole_neutral_1.
-  Hypothesis neutral_2 : pole_neutral_2.
-  Hypothesis neutral_l_1 : pole_neutral_l_1.
-  Hypothesis neutral_l_2 : pole_neutral_l_2.
-  Hypothesis neutral_r_1 : pole_neutral_r_1.
-  Hypothesis neutral_r_2 : pole_neutral_r_2.
-
-  Lemma lrdual X : ldual R X ≃ rdual R X.
-  Proof. split; intros x Hx x' Hx'; apply commute; apply Hx; assumption. Qed.
+  Variable R : crelation A.
 
   Notation dual := (ldual R).
   Notation bidual := (fun X => dual (dual X)).
   Notation tridual := (fun X => dual (dual (dual X))).
+  Notation lbidual := (fun X => ldual R (rdual R X)).
+
+  Definition rel_commutativity := forall x y, R x y -> R y x.
+  Hypothesis rel_commute : rel_commutativity.
+
+  Lemma lrdual X : ldual R X ≃ rdual R X.
+  Proof. split; intros x Hx x' Hx'; apply rel_commute; apply Hx; assumption. Qed.
+
+  Lemma bilbidual X : bidual X ≃ lbidual X.
+  Proof. apply ldual_eq; apply lrdual. Qed.
 
   Lemma bimonot X : X ⊆ bidual X.
   Proof. intros x Hx x' Hx'; auto. Qed.
@@ -241,163 +130,386 @@ Section Monoid_Orthogonality.
 
   Hint Resolve tridual_eq.
 
-  Instance bidualCL : @ClosureOp M.
+  Instance bidualCL : ClosureOp (@subset A).
   Proof. split with bidual; auto. Defined.
 
-  Notation "'fact' X" := (cl X ⊆ X) (at level 50).
+  Notation closed := (fun X => cl X ⊆ X).
 
-  Lemma dual_eq_is_fact X : forall Y, X ≃ dual Y -> fact X.
+  Lemma dual_eq_is_closed X : forall Y, X ≃ dual Y -> closed X.
   Proof.
   intros Y [Heql Heqr]; auto.
-  apply subset_trans with (dual Y); auto.
+  transitivity (dual Y); auto.
   apply lmonot.
-  apply subset_trans with (bidual Y); auto.
+  transitivity (bidual Y); auto.
   Qed.
 
-  Lemma dual_is_fact : forall X, fact (dual X).
-  Proof. intros X; apply dual_eq_is_fact with X; reflexivity. Qed.
+  Lemma dual_is_closed : forall X, closed (dual X).
+  Proof. intros X; apply dual_eq_is_closed with X; reflexivity. Qed.
 
-  Lemma stability_l : cl_stability_l MComposes.
+End MonicSetOrthogonality.
+
+
+
+
+Section MagmaOrthogonality.
+  Context { A B : Type }.
+
+  Variable R : A -> B -> Type.
+  Variable compose : A -> A -> A.
+  Variable unit : A.
+
+  Infix "•" := compose (at level 45, no associativity).
+  Notation "𝟏" := unit.
+  Infix "∘" := (composes compose) (at level 50, no associativity).
+  Notation lbidual := (fun X => ldual R (rdual R X)).
+
+  Hint Resolve lmonot rmonot lbimonot.
+
+  Instance lbidualCL : ClosureOp (@subset A) := lclosure R.
+
+  Notation closed := (fun X => cl X ⊆ X).
+  Infix "⊛" := (fun x y => tensor compose y x) (at level 59).
+
+  Variable adj_compose_l : A -> B -> B.
+  Variable adj_compose_r : A -> B -> B.
+  Infix "⤞" := adj_compose_l (at level 52).
+  Infix "⤝" := adj_compose_r (at level 53).
+
+  Definition rel_associativity_l_l := forall x y z, R y (x ⤞ z) -> R (x • y) z.
+  Definition rel_associativity_l_r := forall x y z, R (x • y) z -> R y (x ⤞ z).
+  Definition rel_associativity_r_l := forall x y z, R x (y ⤝ z) -> R (x • y) z.
+  Definition rel_associativity_r_r := forall x y z, R (x • y) z -> R x (y ⤝ z).
+  Definition rel_associativity_ll := forall x y z t, R ((x • y) • z) t -> R (x • (y • z)) t.
+  Definition rel_associativity_lr := forall x y z t, R (x • (y • z)) t -> R ((x • y) • z) t.
+  Definition rel_neutrality_l_1 := forall x z, R (𝟏 • x) z -> R x z.
+  Definition rel_neutrality_l_2 := forall x z, R x z -> R (𝟏 • x) z.
+  Definition rel_neutrality_r_1 := forall x z, R (x • 𝟏) z -> R x z.
+  Definition rel_neutrality_r_2 := forall x z, R x z -> R (x • 𝟏) z.
+
+  Lemma m_rel_associativity_ll : m_associativity compose -> rel_associativity_ll.
+  Proof. intros Ha x y z t HR; rewrite Ha; assumption. Qed.
+
+  Lemma m_rel_associativity_lr : m_associativity compose -> rel_associativity_lr.
+  Proof. intros Ha x y z t HR; rewrite <- Ha; assumption. Qed.
+
+  Lemma m_rel_neutrality_l_1 : m_neutrality_l compose unit -> rel_neutrality_l_1.
+  Proof. intros Hn x y HR; rewrite <- (Hn x) ; assumption. Qed.
+
+  Lemma m_rel_neutrality_l_2 : m_neutrality_l compose unit -> rel_neutrality_l_2.
+  Proof. intros Hn x y HR; rewrite (Hn x) ; assumption. Qed.
+
+  Lemma m_rel_neutrality_r_1 : m_neutrality_r compose unit -> rel_neutrality_r_1.
+  Proof. intros Hn x y HR; rewrite <- (Hn x) ; assumption. Qed.
+
+  Lemma m_rel_neutrality_r_2 : m_neutrality_r compose unit -> rel_neutrality_r_2.
+  Proof. intros Hn x y HR; rewrite (Hn x) ; assumption. Qed.
+
+  Hypothesis rel_associative_l_l : rel_associativity_l_l.
+  Hypothesis rel_associative_l_r : rel_associativity_l_r.
+  Hypothesis rel_associative_r_l : rel_associativity_r_l.
+  Hypothesis rel_associative_r_r : rel_associativity_r_r.
+  Hypothesis rel_associative_ll : rel_associativity_ll.
+  Hypothesis rel_associative_lr : rel_associativity_lr.
+  Hypothesis rel_neutral_l_1 : rel_neutrality_l_1.
+  Hypothesis rel_neutral_l_2 : rel_neutrality_l_2.
+  Hypothesis rel_neutral_r_1 : rel_neutrality_r_1.
+  Hypothesis rel_neutral_r_2 : rel_neutrality_r_2.
+
+  Lemma stable_l : cl_stability_l (composes compose).
   Proof.
   intros X Y _ [x y Hx Hy].
   intros a Ha.
-  apply associative_l; apply commute.
-  revert x Hx; apply (tridual_eq X) ; intros x Hx.
-  apply commute; apply associative_r; apply commute.
+  apply rel_associative_r_l.
+  revert x Hx; apply (rtridual_eq _ X); intros x Hx.
+  apply rel_associative_r_r.
   apply Ha.
   constructor; assumption.
   Qed.
 
-  Lemma stability_r : cl_stability_r MComposes.
+  Lemma stable_r : cl_stability_r (composes compose).
   Proof.
   intros X Y _ [x y Hx Hy].
   intros a Ha.
-  apply commute; apply associative_r.
-  revert y Hy; apply (tridual_eq Y); intros y Hy.
-  apply associative_l.
+  apply rel_associative_l_l.
+  revert y Hy; apply (rtridual_eq _ Y); intros y Hy.
+  apply rel_associative_l_r.
   apply Ha.
   constructor; assumption.
   Qed.
 
-  Lemma associative_1 : associative_1_g MComposes.
+  Lemma stable : cl_stability (composes compose).
+  Proof. apply cl_stable; [ apply subset_preorder | apply stable_l | apply stable_r ]. Qed.
+
+  Lemma associative_l : cl_associativity_l (composes compose).
   Proof.
-  intros A B C x Hx y Hy.
+  intros X Y Z x Hx y Hy.
+  inversion Hx; subst.
+  inversion X1; subst.
+  apply rel_associative_ll.
+  apply Hy.
+  constructor; auto.
+  constructor; auto.
+  Qed.
+
+  Lemma associative_r : cl_associativity_r (composes compose).
+  Proof.
+  intros X Y Z x Hx y Hy.
   inversion Hx; subst.
   inversion X0; subst.
-  apply associative_lr; apply commute.
+  apply rel_associative_lr.
   apply Hy.
   constructor; auto.
   constructor; auto.
   Qed.
 
-  Lemma associative_2 : associative_2_g MComposes.
+  Lemma neutral_l_1 : cl_neutrality_l_1 (composes compose) (sg unit).
   Proof.
-  intros A B C x Hx y Hy.
-  inversion Hx; subst.
-  inversion X; subst.
-  apply associative_ll; apply commute.
-  apply Hy.
-  constructor; auto.
-  constructor; auto.
-  Qed.
-
-  Lemma neutral_l_1_g : neutrality_l_1_g MComposes Unit.
-  Proof.
-  intros A x Hx y Hy.
-  apply neutral_l_1; apply commute.
+  intros X x Hx y Hy.
+  apply rel_neutral_l_1.
   apply Hy.
   constructor; auto.
   Qed.
 
-  Lemma neutral_l_2_g : neutrality_l_2_g MComposes Unit.
+  Lemma neutral_l_2 : cl_neutrality_l_2 (composes compose) (sg unit).
   Proof.
-  intros A x Hx y Hy.
+  clear rel_neutral_l_1 rel_neutral_r_1 rel_neutral_r_2.
+  intros X x Hx y Hy.
   inversion Hx; subst.
   rewrite <- H.
-  apply neutral_l_2; auto.
+  apply rel_neutral_l_2; auto.
   Qed.
 
-  Lemma neutral_r_1_g : neutrality_r_1_g MComposes Unit.
+  Lemma neutral_r_1 : cl_neutrality_r_1 (composes compose) (sg unit).
   Proof.
-  intros A x Hx y Hy.
-  apply neutral_r_1; apply commute.
+  intros X x Hx y Hy.
+  apply rel_neutral_r_1.
   apply Hy.
   constructor; auto.
   Qed.
 
-  Lemma neutral_r_2_g : neutrality_r_2_g MComposes Unit.
+  Lemma neutral_r_2 : cl_neutrality_r_2 (composes compose) (sg unit).
   Proof.
-  intros A x Hx y Hy.
+  clear rel_neutral_l_1 rel_neutral_l_2 rel_neutral_r_1.
+  intros X x Hx y Hy.
   inversion Hx; subst.
   rewrite <- H.
-  apply neutral_r_2; auto.
+  apply rel_neutral_r_2; auto.
   Qed.
 
-  Lemma commute_pole X Y : X ∘ Y ⊆ Pole -> Y ∘ X ⊆ Pole.
+End MagmaOrthogonality.
+
+
+
+
+Section MonicMagmaOrthogonality.
+
+  Context { M : Type }.
+
+  Variable compose : M -> M -> M.
+  Variable unit : M.
+
+  Variable Pole : M -> Type.
+  Definition R := fun x y => Pole (compose x y).
+
+  Infix "∘" := (composes compose) (at level 50, no associativity).
+
+  Notation dual := (ldual R).
+  Notation bidual := (fun X => dual (dual X)).
+  Notation tridual := (fun X => dual (dual (dual X))).
+
+  Hint Resolve (@subset_preorder M).
+
+  Definition pl_fcommutativity := forall x y z, R (compose x y) z -> R (compose y x) z.
+  Definition pl_neutrality_1 := forall x, Pole (compose unit x) -> Pole x.
+  Definition pl_neutrality_2 := forall x, Pole x -> Pole (compose unit x).
+
+  Lemma m_pl_rel_associativity_ll : m_associativity compose -> rel_associativity_ll R compose.
+  Proof. intros Ha x y z t; unfold R; rewrite <- ? Ha; intros H; assumption. Qed.
+
+  Lemma m_pl_rel_associativity_lr : m_associativity compose -> rel_associativity_lr R compose.
+  Proof. intros Ha x y z t; unfold R; rewrite ? Ha; intros H; assumption. Qed.
+
+  Lemma m_pl_commutativity : m_commutativity compose -> rel_commutativity R.
+  Proof. intros Hc x y HR; unfold R; rewrite Hc; assumption. Qed.
+
+  Lemma m_pl_neutrality_1 : m_neutrality_l compose unit -> pl_neutrality_1.
+  Proof. intros Hn x HP; rewrite Hn in HP; assumption. Qed.
+
+  Lemma m_pl_neutrality_2 : m_neutrality_l compose unit -> pl_neutrality_2.
+  Proof. intros Hn x HP; rewrite Hn; assumption. Qed.
+
+  Hypothesis rel_commute : rel_commutativity R.
+  Hypothesis rel_associative_l : rel_associativity_ll R compose.
+  Hypothesis rel_associative_r : rel_associativity_lr R compose.
+  Hypothesis pl_neutral_1 : pl_neutrality_1.
+  Hypothesis pl_neutral_2 : pl_neutrality_2.
+
+  Lemma pl_rel_associative_l_l : rel_associativity_l_l R compose (fun x y => compose y x).
   Proof.
-  intros Hp z Hz; inversion Hz.
-  apply commute; apply Hp; constructor; assumption.
+  intros x y z; unfold R; intros H.
+  apply rel_commute.
+  apply pl_neutral_1.
+  apply rel_commute.
+  apply rel_associative_l.
+  apply rel_commute.
+  apply pl_neutral_2.
+  apply rel_commute ; assumption.
   Qed.
+
+  Lemma pl_rel_associative_l_r : rel_associativity_l_r R compose (fun x y => compose y x).
+  Proof.
+  intros x y z; unfold R; intros H.
+  apply rel_commute.
+  apply pl_neutral_1.
+  apply rel_commute.
+  apply rel_associative_r.
+  apply rel_commute.
+  apply pl_neutral_2.
+  apply rel_commute ; assumption.
+  Qed.
+
+  Lemma pl_rel_associative_r_l : rel_associativity_r_l R compose compose.
+  Proof.
+  intros x y z; unfold R; intros H.
+  apply pl_neutral_1.
+  apply rel_commute.
+  apply rel_associative_r.
+  apply rel_commute.
+  apply pl_neutral_2; assumption.
+  Qed.
+
+  Lemma pl_rel_associative_r_r : rel_associativity_r_r R compose compose.
+  Proof.
+  intros x y z; unfold R; intros H.
+  apply pl_neutral_1.
+  apply rel_commute.
+  apply rel_associative_l.
+  apply rel_commute.
+  apply pl_neutral_2; assumption.
+  Qed.
+
+  Lemma pl_rel_neutrality_l_1 : rel_neutrality_l_1 R compose unit.
+  Proof.
+  intros x y H.
+  apply pl_rel_associative_r_r, rel_commute in H.
+  apply pl_neutral_1, rel_commute ; assumption.
+  Qed.
+
+  Lemma pl_rel_neutrality_l_2 : rel_neutrality_l_2 R compose unit.
+  Proof. intros x y H; apply pl_rel_associative_r_l, pl_neutral_2; assumption. Qed.
+
+  Lemma pl_rel_neutrality_r_1 : rel_neutrality_r_1 R compose unit.
+  Proof. intros x y H; apply pl_rel_associative_l_r, pl_neutral_1, rel_commute in H; assumption. Qed.
+
+  Lemma pl_rel_neutrality_r_2 : rel_neutrality_r_2 R compose unit.
+  Proof. intros x y H; apply pl_rel_associative_l_l, pl_neutral_2, rel_commute; assumption. Qed.
+
+  Instance mbidualCL : ClosureOp (@subset M) := bidualCL rel_commute.
+
+  Lemma mlbidualcl X : cl X ≃ @cl _ _ (lbidualCL R) X.
+  Proof. unfold cl, mbidualCL, bidualCL, lbidualCL, lclosure; apply ldual_eq, lrdual; assumption. Qed.
+
+  Notation closed := (fun X => cl X ⊆ X).
+
+  Hint Resolve rel_commute
+               pl_rel_associative_l_l pl_rel_associative_l_r pl_rel_associative_r_l pl_rel_associative_r_r
+               pl_rel_neutrality_l_1 pl_rel_neutrality_l_2 pl_rel_neutrality_r_1 pl_rel_neutrality_r_2.
+
+  Lemma pole_commute X Y : X ∘ Y ⊆ Pole -> Y ∘ X ⊆ Pole.
+  Proof. intros Hp z Hz; inversion Hz; apply rel_commute; apply Hp; constructor; assumption. Qed.
 
   Lemma compose_adj_l X Y : X ∘ Y ⊆ Pole -> X ⊆ dual Y.
   Proof.
   intros Hp x Hx y Hy.
-  apply commute_pole in Hp.
-  apply commute.
+  apply pole_commute in Hp.
+  apply rel_commute.
   apply Hp.
   constructor; assumption.
   Qed.
 
   Lemma compose_adj_r X Y : X ⊆ dual Y -> X ∘ Y ⊆ Pole.
+  Proof. intros Hd x Hx; inversion Hx; apply Hd in X0; apply X0; assumption. Qed.
+
+
+  Lemma mstable_l : cl_stability_l (composes compose).
   Proof.
-  intros Hd x Hx; inversion Hx.
-  apply Hd in X0.
-  apply X0; assumption.
+  intros X Y _ [x y Hx Hy].
+  apply mlbidualcl in Hx; apply mlbidualcl.
+  apply (@stable_l _ _ _ _ compose) ; auto.
+  constructor; assumption.
   Qed.
 
-  Lemma pole_as_bot : Pole ≃ dual (sg Unit).
+  Lemma mstable_r : cl_stability_r (composes compose).
   Proof.
-  split.
-  - intros x Hx y Hy.
-    rewrite <- Hy.
-    apply commute; apply neutral_2; auto.
-  - intros x Hx.
-    apply neutral_1; apply commute; auto.
+  intros X Y _ [x y Hx Hy].
+  apply mlbidualcl in Hy; apply mlbidualcl.
+  apply (@stable_r _ _ _ _ (fun x y => compose y x)) ; auto.
+  constructor; assumption.
   Qed.
 
-  Lemma fact_pole : fact Pole.
+  Lemma mstable : cl_stability (composes compose).
+  Proof. apply cl_stable; [ apply subset_preorder | apply mstable_l | apply mstable_r ]. Qed.
+
+  Lemma massociative_l : cl_associativity_l (composes compose).
+  Proof. intros X Y Z x Hx; apply mlbidualcl, associative_l; auto. Qed.
+
+  Lemma massociative_r : cl_associativity_r (composes compose).
   Proof.
-  apply (dual_eq_is_fact pole_as_bot).
+  intros X Y Z x Hx.
+  apply mlbidualcl.
+  apply associative_r; auto.
   Qed.
 
+  Lemma mneutral_l_1 : cl_neutrality_l_1 (composes compose) (sg unit).
+  Proof. intros X x Hx; apply mlbidualcl; apply neutral_l_1; auto. Qed.
+
+  Lemma mneutral_l_2 : cl_neutrality_l_2 (composes compose) (sg unit).
+  Proof. intros X x Hx; apply mlbidualcl; apply (@neutral_l_2 _ _ R) in Hx; auto. Qed.
+
+  Lemma mneutral_r_1 : cl_neutrality_r_1 (composes compose) (sg unit).
+  Proof. intros X x Hx; apply mlbidualcl; apply neutral_r_1; auto. Qed.
+
+  Lemma mneutral_r_2 : cl_neutrality_r_2 (composes compose) (sg unit).
+  Proof. intros X x Hx; apply mlbidualcl; apply (@neutral_r_2 _ _ R) in Hx; auto. Qed.
+
+
+  Lemma pole_as_bot : Pole ≃ dual (sg unit).
+  Proof.
+  split; intros x Hx.
+  - intros y Hy; rewrite <- Hy.
+    apply rel_commute; apply pl_neutral_2; auto.
+  - apply pl_neutral_1; apply rel_commute; auto.
+  Qed.
+
+  Lemma pole_closed : closed Pole.
+  Proof. apply (dual_eq_is_closed pole_as_bot). Qed.
+
+(*
   Lemma diag_pole X : (dual X) ∘ X ⊆ Pole.
   Proof. apply compose_adj_r; reflexivity. Qed.
+*)
 
-  Lemma pole_vs_one : forall X, X ⊆ Pole -> dual X Unit.
-  Proof.
-  intros X Hd x Hx.
-  apply neutral_2.
-  apply Hd; assumption.
-  Qed.
+  Lemma pole_vs_one : forall X, X ⊆ Pole -> dual X unit.
+  Proof. intros X Hd x Hx; apply pl_neutral_2; apply Hd; assumption. Qed.
 
-  Lemma pole_vs_one_2 : forall X, dual X Unit -> X ⊆ Pole.
+  Lemma pole_vs_one_2 : forall X, dual X unit -> X ⊆ Pole.
   Proof.
   intros X Hu x Hx.
-  apply cl_increase in Hu.
-  apply neutral_1.
-  apply Hu.
-  apply cl_increase in Hx; assumption.
+  apply pole_as_bot.
+  intros y Hy; subst.
+  apply rel_commute.
+  apply Hu; assumption.
   Qed.
 
-  Infix "⊛" := (fun X Y => tensor MComposes Y X) (at level 59).
+  Infix "⊛" := (fun X Y => tensor (composes compose) Y X) (at level 59).
 
-  Lemma times_commute_pole X Y : X ⊛ Y ⊆ Pole -> Y ⊛ X ⊆ Pole.
+  Lemma tensor_commute_pole X Y : X ⊛ Y ⊆ Pole -> Y ⊛ X ⊆ Pole.
   Proof.
   intros Hp.
-  apply cl_closed; [ apply fact_pole | ].
-  apply commute_pole.
-  etransitivity; [ | apply fact_pole ].
-  apply subset_cl.
+  apply cl_closed; [ apply pole_closed | ]; auto.
+  apply pole_commute.
+  etransitivity; [ | apply pole_closed ].
+  apply le_cl; auto.
   etransitivity; [ eassumption | apply cl_increase ].
   Qed.
 
@@ -408,44 +520,32 @@ Section Monoid_Orthogonality.
   Proof.
   split.
   - apply lmonot; apply lmonot.
-    apply MComposes_monotone; apply bimonot.
+    apply composes_monotone; apply bimonot; auto.
   - apply lmonot.
-    apply subset_trans with (tridual (Y ∘ X)).
-    + apply bimonot. 
+    transitivity (tridual (Y ∘ X)).
+    + apply bimonot; auto.
     + apply lmonot.
-      refine (@cl_stable _ _ MComposes _ _ Y X); [ apply stability_l | apply stability_r ].
+      transitivity (dual (rdual R Y) ∘ dual (rdual R X));
+        [ | transitivity (dual (rdual R (Y ∘ X))) ];
+        try apply composes_monotone; try (apply lmonot);
+        try (apply lrdual; auto; fail);
+        try (refine (fst (lrdual _ _)); auto; fail).
+      refine (@cl_stable _ _ _ (lbidualCL R) (composes compose)_ _ Y X);
+        [ apply (@stable_l _ _ _ _ compose) | apply (@stable_r _ _ _ _ (fun x y => compose y x)) ]; auto.
   Qed.
 
-  Notation "x ⊓ y" := (glb x y) (at level 50, no associativity).
-  Notation "x ⊔ y" := (lub x y) (at level 50, no associativity).
-
   Variable K : M -> Type.
-  Hypothesis sub_monoid_1 : sub_monoid_hyp_1 Unit K.
-  Hypothesis sub_monoid_2 : sub_monoid_hyp_2 MComposes K.
-  Hypothesis sub_J : sub_J_hyp MComposes Unit K.
 
-  Notation "❗ A" := (bang K A) (at level 40, no associativity).
+  Definition whynot X := dual (glb K (dual X)).
 
-  Definition whynot X := dual (K ∩ (dual X)).
-  Notation "❓ A" := (whynot A) (at level 40, no associativity).
-
-  Lemma bang_as_whynot X : fact X -> ❗X ≃ dual (❓ dual X).
+  Lemma bang_as_whynot X : closed X -> bang glb K X ≃ dual (whynot (dual X)).
   Proof.
   split.
   - apply lmonot ; apply lmonot.
     split; destruct X1; auto.
-    apply cl_increase in x0; assumption.
+    apply (@cl_increase _ _ mbidualCL) in x0; assumption.
   - apply lmonot; apply rmonot; split; destruct X1; auto.
   Qed.
 
-End Monoid_Orthogonality.
-
-
-
-
-
-
-
-
-
+End MonicMagmaOrthogonality.
 
